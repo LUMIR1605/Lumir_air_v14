@@ -43,7 +43,8 @@ Zwróć WYŁĄCZNIE poprawny JSON.
 """
 
 def build_prompt(context: str):
-
+    """Build LLM prompt with context"""
+    
     return f"""{SYSTEM_PROMPT}
 
 DANE:

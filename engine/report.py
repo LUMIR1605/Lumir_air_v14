@@ -1,6 +1,7 @@
 from datetime import datetime
 
 def header():
+    """Print report header"""
     print("=" * 60)
     print("🧠 LUMIR AIR")
     print("=" * 60)
@@ -8,6 +9,7 @@ def header():
     print()
 
 def section(title):
+    """Print report section"""
     print()
     print("─" * 60)
     print(title)

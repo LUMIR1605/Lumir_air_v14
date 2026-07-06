@@ -1,3 +1,4 @@
+from core import config
 from engine.report import header, section
 from output.markdown import save
 
@@ -15,77 +16,83 @@ from intelligence.discovery_engine import discover
 from intelligence.memory_engine import compare
 
 def main():
-
+    # Initialize config and directories early
+    config.init_paths()
+    
     header()
     report = []
-
+    
     section("🐙 GitHub")
     repos = github(3)
     for r in repos:
-        print(f"⭐ {r['full_name']}")
-        report.append(f"- GitHub: {r['full_name']}")
-
+        print(f"⭐ {r.get('full_name', 'N/A')}")
+        report.append(f"- GitHub: {r.get('full_name', 'N/A')}")
+    
     section("📰 Hacker News")
     stories = hacker(3)
     for s in stories:
-        print(f"📰 {s['title']}")
-        report.append(f"- HN: {s['title']}")
-
+        print(f"📰 {s.get('title', 'N/A')}")
+        report.append(f"- HN: {s.get('title', 'N/A')}")
+    
     section("🤗 Hugging Face")
     models = hugging(3)
     for m in models:
-        print(f"🤖 {m['id']}")
-        report.append(f"- HF: {m['id']}")
-
+        print(f"🤖 {m.get('id', 'N/A')}")
+        report.append(f"- HF: {m.get('id', 'N/A')}")
+    
     section("🚀 AI News")
     ai = news()
     for n in ai:
-        print(f"📰 {n['title']}")
-        report.append(f"- AI: {n['title']}")
-
+        print(f"📰 {n.get('title', 'N/A')}")
+        report.append(f"- AI: {n.get('title', 'N/A')}")
+    
     section("👽 Reddit")
     posts = reddit(3)
     for p in posts[:6]:
-        print(f"💬 r/{p['subreddit']} • {p['title']}")
-        report.append(f"- Reddit: {p['title']}")
-
+        print(f"💬 r/{p.get('subreddit', 'N/A')} • {p.get('title', 'N/A')}")
+        report.append(f"- Reddit: {p.get('title', 'N/A')}")
+    
     context = build(repos, stories, models, ai)
-
+    
     trends = trend_engine(repos, stories, models, ai)
-
+    
     section("📈 Trendy dnia")
     for word, score in trends[:10]:
         print(f"{word:<20} {score}")
-
+    
+    result = {}
     try:
         result = llm_analyze(context)
     except Exception as e:
         print(f"⚠ LLM: {e}")
         result = analyze(repos, stories, models)
-
+    
     discover(result)
-
+    
     memory = compare(result)
-
+    
     section("🧠 Pamięć Lumíra")
-    print(memory["message"])
-    report.append("\n## Pamięć\n" + memory["message"])
-
+    print(memory.get("message", "N/A"))
+    report.append("\n## Pamięć\n" + memory.get("message", "N/A"))
+    
     section("💰 Okazja dnia")
-    print(result["opportunity"])
-    report.append("\n## Okazja dnia\n" + result["opportunity"])
-
+    opp = result.get("opportunity", "N/A")
+    print(opp)
+    report.append("\n## Okazja dnia\n" + opp)
+    
     section("🎬 Pomysł na film")
-    print(result.get("video") or "Brak")
-    report.append("\n## Pomysł na film\n" + (result.get("video") or "Brak"))
-
+    video = result.get("video") or "Brak"
+    print(video)
+    report.append("\n## Pomysł na film\n" + video)
+    
     section("🎵 Prompt Suno")
-    print(result.get("suno") or "Brak")
-    report.append("\n## Prompt Suno\n" + (result.get("suno") or "Brak"))
-
+    suno = result.get("suno") or "Brak"
+    print(suno)
+    report.append("\n## Prompt Suno\n" + suno)
+    
     report.append("\n## Context AI\n")
     report.append(context)
-
+    
     save("\n".join(report))
 
 if __name__ == "__main__":

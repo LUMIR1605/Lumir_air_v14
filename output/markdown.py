@@ -1,12 +1,13 @@
 from pathlib import Path
 from datetime import datetime
-
-OUT = Path("/storage/emulated/0/Download/LUMIR")
-OUT.mkdir(parents=True, exist_ok=True)
+from core import config
+from core.logger import ok
 
 def save(text: str):
+    """Save report to reports directory"""
+    reports_dir = config.get_reports()
     name = f"radar_{datetime.now():%Y-%m-%d_%H-%M}.md"
-    path = OUT / name
+    path = reports_dir / name
     path.write_text(text, encoding="utf-8")
-    print(f"\n📄 Raport zapisany:\n{path}")
+    ok(f"Raport zapisany: {path}")
     return path
