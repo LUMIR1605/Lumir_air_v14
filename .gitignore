@@ -1,1 +1,72 @@
-tmp/
+# LUMIR AIR v14 - .gitignore
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+config/music_api.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Data and logs (project-specific)
+data/
+logs/
+reports/
+cache/
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.backup
+
+# OS
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
