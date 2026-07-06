@@ -1,18 +1,41 @@
 def build(repos, hackernews, models, news):
     lines = []
 
-    lines.append("TRENDY:")
+    lines.append("=== RAPORT LUMIR ===\n")
 
-    for r in repos[:2]:
-        lines.append(f"GitHub: {r.get('full_name','')}")
+    lines.append("=== GITHUB ===")
+    for r in repos[:3]:
+        lines.append(f"Repozytorium: {r.get('full_name','')}")
+        if r.get("description"):
+            lines.append(f"Opis: {r['description']}")
+        lines.append("")
 
-    for h in hackernews[:2]:
-        lines.append(f"HN: {h.get('title','')}")
+    lines.append("=== HACKER NEWS ===")
+    for h in hackernews[:3]:
+        lines.append(f"Tytuł: {h.get('title','')}")
+        if h.get("url"):
+            lines.append(f"Link: {h['url']}")
+        lines.append("")
 
-    for m in models[:2]:
+    lines.append("=== MODELE AI ===")
+    for m in models[:3]:
         lines.append(f"Model: {m.get('id','')}")
+        lines.append("")
 
-    for n in news[:3]:
-        lines.append(f"News: {n.get('title','')}")
+    lines.append("=== AI NEWS ===")
+    for n in news[:5]:
+        lines.append(f"Temat: {n.get('title','')}")
+        if n.get("summary"):
+            lines.append(f"Opis: {n['summary']}")
+        lines.append("")
+
+    lines.append("=== ZADANIE DLA LUMIR ===")
+    lines.append(
+        "Połącz wszystkie informacje. "
+        "Znajdź wspólne motywy. "
+        "Wskaż manipulacje, okazje biznesowe, trendy, "
+        "pomysły na filmy, muzykę i edukację. "
+        "Myśl jak strateg, a nie jak zwykły generator tekstu."
+    )
 
     return "\n".join(lines)

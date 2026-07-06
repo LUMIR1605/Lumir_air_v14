@@ -1,1 +1,33 @@
-{}
+{
+  "discoveries": [
+    {
+      "topic": "Manipulacja informacjami i edukacja w \u015bwiecie AI",
+      "trend": "AI manipulation and education trends in the digital age",
+      "opportunity": "U\u017cycie technologii AI w edukacji i poprawa\u6218\u9632\u5b89\u5168\u7b56\u7565",
+      "business": "Podnoszenie popularno\u015bci kurs\u00f3w edukacyjnych dotycz\u0105cych AI zaznaczonych jako bezpieczne",
+      "video": "Manipulacja informacjami w \u015bwiecie AI - oto co powinno si\u0119 zrobi\u0107",
+      "ebook": "AI Manipulation Detection: A Practical Guide for Educators and Students"
+    },
+    {
+      "topic": "Manipulacja i Przysz\u0142o\u015bci AI",
+      "trend": "Manipulacja Danych i Zintegrowanie AI w Szkoleniach",
+      "opportunity": "Konwersatorium na temat Manipulacji Danych i Zintegrowania AI w Szkoleniach",
+      "business": "Oficjalna platforma do szkoleni",
+      "video": "Manipulacja i Przysz\u0142o\u015bci AI: Sztuczna Inteligencja w Szkoleniach",
+      "ebook": ""
+    },
+    {
+      "topic": "",
+      "trend": "",
+      "opportunity": "Najwi\u0119kszy trend dnia to:\n\n\u2022 GitHub: public-apis/public-apis\n\u2022 Hacker News: Don't post generated/AI-edited comments. HN is for conversation between humans\n\u2022 Model AI: sentence-transformers/all-MiniLM-L6-v2\n\nJe\u017celi trend utrzyma si\u0119 przez kilka dni, warto przygotowa\u0107 materia\u0142 i wykorzysta\u0107 go jako przewag\u0119.",
+      "business": "",
+      "video": "Tytu\u0142:\n5 narz\u0119dzi AI, kt\u00f3re w\u0142a\u015bnie zmieniaj\u0105 Internet\n\nPlan:\n1. GitHub \u2192 public-apis/public-apis\n2. Hacker News \u2192 Don't post generated/AI-edited comments. HN is for conversation between humans\n3. Model \u2192 sentence-transformers/all-MiniLM-L6-v2\n4. Dlaczego warto \u015bledzi\u0107 ten trend.\n5. Co b\u0119dzie nast\u0119pne?",
+      "ebook": ""
+    }
+  ],
+  "topics": {
+    "Manipulacja informacjami i edukacja w \u015bwiecie AI": 1,
+    "Manipulacja i Przysz\u0142o\u015bci AI": 1
+  },
+  "hypotheses": []
+}

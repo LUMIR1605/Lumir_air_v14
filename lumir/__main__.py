@@ -11,6 +11,8 @@ from intelligence.analyze import analyze
 from intelligence.trend_engine import analyze as trend_engine
 from intelligence.context_builder import build
 from intelligence.llm_engine import analyze as llm_analyze
+from intelligence.discovery_engine import discover
+from intelligence.memory_engine import compare
 
 def main():
 
@@ -60,6 +62,14 @@ def main():
     except Exception as e:
         print(f"⚠ LLM: {e}")
         result = analyze(repos, stories, models)
+
+    discover(result)
+
+    memory = compare(result)
+
+    section("🧠 Pamięć Lumíra")
+    print(memory["message"])
+    report.append("\n## Pamięć\n" + memory["message"])
 
     section("💰 Okazja dnia")
     print(result["opportunity"])
