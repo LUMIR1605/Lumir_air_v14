@@ -1,0 +1,53 @@
+<div class="card">
+
+<h2>Executive Summary</h2>
+
+{% if report.executive_summary %}
+<ul>
+{% for item in report.executive_summary %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>Brak danych.</p>
+{% endif %}
+
+</div>
+
+<div class="card">
+
+<h2>Overall Risk</h2>
+
+{% set ns = namespace(score=0) %}
+
+{% for m in report.modules %}
+{% if m.risk_score is defined and m.risk_score.score > ns.score %}
+{% set ns.score = m.risk_score.score %}
+{% endif %}
+{% endfor %}
+
+<p><strong>Score:</strong> {{ ns.score }}/100</p>
+
+{% if ns.score >= 90 %}
+<p class="low">LOW RISK</p>
+{% elif ns.score >= 70 %}
+<p class="medium">MEDIUM RISK</p>
+{% else %}
+<p class="high">HIGH RISK</p>
+{% endif %}
+
+</div>
+
+<div class="card">
+
+<h2>Recommendations</h2>
+
+{% if report.advice %}
+<ul>
+{% for item in report.advice %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+</div>

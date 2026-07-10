@@ -1,0 +1,86 @@
+{
+  "generated": "2026-07-10T02:06:51.975900",
+  "engine": "Lumir SHIELD",
+  "version": "0.2",
+  "summary": {
+    "scan_type": "phone",
+    "risk": null,
+    "score": 0
+  },
+  "advice": [
+    "Nie wykryto istotnych zagrożeń. Zachowaj dobre praktyki bezpieczeństwa."
+  ],
+  "result": {
+    "scan_type": "phone",
+    "target": "+48123456789",
+    "modules": [
+      {
+        "module": "phone_scan",
+        "number": "+48123456789",
+        "valid": true,
+        "country": "Kraków",
+        "operator": "",
+        "international": "+48 12 345 67 89",
+        "risk": "low",
+        "findings": [],
+        "sources": [
+          {
+            "name": "phonenumbers",
+            "status": "enabled",
+            "description": "Walidacja numeru, operator, kraj"
+          },
+          {
+            "name": "phoneinfoga",
+            "status": "enabled",
+            "description": "OSINT dla numerów telefonu"
+          }
+        ],
+        "risk_score": {
+          "score": 98,
+          "risk": "LOW"
+        }
+      }
+    ],
+    "fusion": {
+      "confidence": "HIGH",
+      "findings": [
+        "Numer został poprawnie zweryfikowany przez phonenumbers.",
+        "PhoneInfoga sprawdziła 45 publicznych zapytań OSINT."
+      ],
+      "trusted_source": "phonenumbers"
+    },
+    "coverage": {
+      "passed": 7,
+      "total": 8,
+      "checks": {
+        "Walidacja numeru": true,
+        "Operator": false,
+        "Kraj": true,
+        "Format międzynarodowy": true,
+        "Publiczna obecność": true,
+        "Źródła reputacyjne": true,
+        "Publiczne powiązania": true,
+        "Źródła internetowe": true
+      }
+    },
+    "attack_surface": [
+      "Numer telefonu może być celem ataków SMS i vishingu."
+    ],
+    "advice": [
+      "Nie wykryto istotnych zagrożeń. Zachowaj dobre praktyki bezpieczeństwa."
+    ],
+    "action_plan": {
+      "now": [],
+      "today": [
+        "Włącz uwierzytelnianie dwuskładnikowe (2FA), jeśli jeszcze go nie używasz."
+      ],
+      "later": [
+        "Sprawdzaj wycieki danych raz w miesiącu.",
+        "Używaj unikalnych haseł dla każdego serwisu."
+      ]
+    },
+    "executive_summary": [
+      "Nie wykryto krytycznych zagrożeń."
+    ]
+  }
+}

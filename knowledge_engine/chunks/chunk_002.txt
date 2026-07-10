@@ -1,0 +1,72 @@
+esteśmy pod nimi, wszędzie dookoła nich,
+ cokolwiek jakby my sobie poradzimy, to jest tak świetnie zabezpieczone, natomiast kluł tego, co w inchików tych maelach, to oni od samego początku to planowali, w sensie od samego początku planowali, że na początku będziemy non profit, żeby przyciągnąć najlepsze talenty, a potem w czasie będziemy odcinać kupony w takim kierunku, że będziemy jakby, zrobili dobrze dla ludzkości, bo będziemy bliżej AGI, natomiast no nie będziemy już tego twarci i będziemy szliby bardziej w kierunku komercyjnej.
+ I ile na tym nie wiedział? My się że o tym nie wiedział?
+ No jakby to było w tych maelach, więc jakby po mojemu nie mogę wiedzieć, ale tym bardziej śmieszek pod tytułem mieliście być otwarcia, teraz jesteście zamknięci i uważam, że coś w tym jest, niestety taka jest prawda.
+ No bo mamy na szczęście wyrosła konkurencja, jakbyśmy, jak rok temu gdzieś tam rozmawialiśmy, no to Open AI było i długo, długo dług nic nie? Teraz mamy mistralar, mamy cloda, mamy francuski start-up, który robi modelę.
+ Jak to jest możliwe, że wtedy nikogo nie było i teraz w tak krótkim czasie nagle powstało tyle firm, które mogą rywalizować?
+ Łatwiej jest być fast-followerem niż prekursorem, bo jak budujesz jakikolwiek produkt jako pierwszy, to musisz najpierw wyjaśnić, co to jest, zakomunikować go ludziom, muszą zacząć z tego korzystać, nie?
+ I to jest kupa roboty, to jest taki case Samsung ContraApple, nie będę teraz przytaczał przykładu, żeby się gdzieś tam wiesz, nie złapać, ale teleskopowa kamerania, kiedy pojawiła się w Samsungu, kiedy pojawiła się w Apple.
+ Jakieś rysiki, rzeczy związane z fingerplintem, z rozpoznawania twarzy, widać, kto był prekursorem, a kto potem to kopiował?
+ No bo taniej jest skopiować i po prostu wypuścić jakich produkt później na was patrzę Apple.
+ I po prostu wiesz, no zawsze bardziej dopracowane, natomiast nie wiem, teraz też tak jest, takie modele do sztucznej inteligencji już są wielu telefonach na pixelach, na Samsungach, oczywiście w najnowszej aktualizacjach itd.
+ Natomiast w Apple teraz ma rozmowy dopiero z dostarczyć cilami takich modeli i podziewałmy się, że w kolejnych wersjach systemu pracy,
+ właśnie takie LLM będą lokalnie, czyli takie modele duże językowe, które będą nam pomagały z różnymi rzeczami.
+ Ten sam Altman wrócił w końcu, na czym się skończyła ta drama?
+ Dramka się skończyła i na chwilę obecną sam Altman dalej jest w tym miejscu, w którym był, czyli jest prezesem poukładali sobie inaczej zarząd inne rzeczy, ale nie mówią o tym gośno.
+ No i zaczął grać w lidze jeszcze większych misjów, no bo na chwilę obecną sytuacja wygląda tak, że wszystkie serwerownie na świecie takie wierzchnie, duże chmury.
+ Czy to Microsoft, czy to Google, oni muszą kupować od NVIDIA, bo NVIDIA jest absolutną topką, jeżeli chodzi o takie rozwiązania.
+ Google ma swojego tensora, to są ich takie karty graficzne, ale to nie są karty graficzne, natomiast to wspomaga AI, to wystarczy nam wiedzieć.
+ No i teraz sam Altman stwierdził, że ściągki dajcie mi kupę hejsu, zaczniemy produkcję swoich chipów, więc rzuca rękawice wiesz, NVIDIA rzuca rękawice całej reszcie.
+ Jak coś takiego powstania, no to nie mówię, że jest monopol, no bo jest jeszcze wiesz AMD w tym świecie karty graficznych,
+ ale widać, że oni się tam wiesz, rozrastają, rozrastają coraz bardziej nawet w kierunku sprzętu, więc no to jest próba budowania monopolu przez Open AI.
+ W takim razie będą jeszcze ciekawsze informacje niedługo, no na pewno będą starali się jej zablokować na każdym grachu.
+ No na pewno będzie grubo, to znaczy ja ostatnio w ogóle mam takie szanuje, podziwiam, ale mam brak zaufania do Open AI, no bo wiesz, pokazali sore, nie?
+ Ten generator video, że możesz sobie napisać, że tam chcesz latającą krowę na łabędziach, która skacze po potęczy, no i pięknie to wygląda naprawdę ładnie.
+ Nie wiem, skąd wiedzieli dane, ale naprawdę ładnie. No i to jest wiary logiczne, nie?
+ W sensie tam wiary nie komu na stanę. Nie można z tego skorzystać, swiej spróbuj wejść i nie masz się, jak normalny człowiek nie dostaniesz.
+ Czy rybacja tylko płatna wersja? Nawet jak zapłacić nie dostaniesz, nie możesz tego dostać, pokazaliśmy patrze, jakie fajne obrazki, ale nie możesz tego skorzystać.
+ I teraz jakby nie, wy, wy, wy, wy, wy, wy, okazuje się, że...
+ Także, że dzięki, że nie muszę zadawać te ten... Sorry, to jest taki wiesz, autotun. I okazało się, że wie, czy to wymaga tak dużo moc obliczeniowej, że prawdopodobnie, bo tak to gdzieś policzili, że to jest miesiąc jakby do wygenerowania, jakieś pracy tam karty graficznej, żeby wygenerować takie obraz,
+ a w tego miesiąc, w czasie tego miesiąca mógłbyś obsłużyć 10 tysięcy użytkowników, czata drzipitić, czy tam, wiesz, drzipiti po api, więc na razie im się to nie opłaca, jakby albo musiałoby toć horrendalnie drogie, więc muszą uzyskać efekskali.
+ No i spoko, ale zrobili to samo z dźwiękiem, bo mają generator, jakby ten kloner głosu, swój, który niedawno się chwalili, mordy, mamy zarąbisty kloner głosu, ale nie damy wam dostępu, bo się boimy, że zrobicie z nim coś złego.
+ I znowu takie, no, że wki fajnie, że śmiech falicie, że macie, ale no jakby, co tu jest pod spodem, nie? Ja się domyślam, że nie mają wystarczająco komputer, w sensie, wystarczająco kart graficznych,
+ i ale chcą pokazać, że od prawa do lewa są w stanie wszystko zrobić.
+ Czyli myślę, że będą to wypuszczali, po prostu jeśli będą mieli lepsze możliwości technologiczne, że to nie jest żadna, żadna jakiś trick.
+ Wydaje mi się, że tak, no, wiesz, wszyscy zamargli, bo było trzęsienie ziemi na tej waniach, a tam się produkujemy mnóstwo, jakby układów, więc był strach, że w ogóle nie będziemy ich dostawać, co pewnie wpłynęło nas wszystkich.
+ Teraz jakby, jednego naprawdę, taki gruby ruch zrobił Mark Zuckerberg, ile nie lubię mety, to oni kosztem nawet swoich zysków, nie pamiętam, czy to dwa lata temu.
+ Oni kupili z rynku parę set tysięcy grafik od Nvidia'ing, które potem nie były niedodkupienia.
+ Grafik? Kart graficznych takich dedykowanych, to są takie karty wierzchnie, tam za pięć koła, tylko tak 100, 120, 200 koła.
+ Czyli zrobili sobie zapasę, bo wiedzieli, że tak może być?
+ Tak, no i, i to był naprawdę ciekawy ruch w sensie na tej szachownicy całej, bo okazało się, że no potem mieli wystarczająco mocy, żeby wypuścić lame.
+ Lama to jest taki model, który jest otwarto źródło, znaczy opencorsowy w takim sensie, że możesz sobie z niego skorzystać do tam różnych rzeczy, nie wszystko tam ładnie, komercyjnie działa, ale rzucili rękawice, nie poddali się w tym, nie?
+ Więc oni poszli d inną ścieżką, poszli po sprzęt najpierw, nawet kosztem swoich gdzieś tam zysków na giełdzie, co jest rzadkie, no było niestety giełda tam ciśnie strasznie.
+ Ale teraz się odbili, bardzo mocno, z tego, co wiedziała, no odbili się, odbili się tak, ale to, wiesz, kiedyś musieli być w dołku, właśnie przez to, że zrobili takie użymie zakupy, nie?
+ Chciałam cię z tobą porozmować o Pegazusie, to jest rzecz, o której nie ma mi zionego pojęcia, więc wydaje mi się, że możemy zacznę od tego, że w ogóle powierz od, bo ja słyszę cały czas, że ktoś kupi Pegazusa, że ktoś kogoś inwidylował Pegazusa, moiniany przy zionego pojęcia, co to jest Pegazusa, tak właściwie.
+ To jest jedno z różnych oprogramowań, które służą do tego, żeby inwidilować i teraz służby różna tego świata kupują sobie różne takiego programowania, które miałyby w zamyśle inwidilować przestępców.
+ Idealnie by słuszna, ale metody no, umówmy się. Na początku taka głośna sprawa, którą mega wyciekła, to był hackn team, to włoska firma, która sprzedawała właśnie takie, całe programowanie, żeby wijać się na telefon, podsłuchiwać SMS-y i tak dalej i tak dalej, potem był Izraelski Pegazus, Predator, jakby tych firm, które to robią jest sporo.
+ - Czyli on jest Izraelski Pegazus, mówię, że to wszystko wina po Izraela, w którym nie kupię.
+ - I co giganty SMS-y? Dziękuję, jakby.
+ - To nie tak było.
+ - Tak, powiedziałem się, natomiast firma rzeczywiście tam powstała.
+ - Tak, że co można wprost powiedzieć, to nie jedna firma, która takimi rzeczami się zajmuje, ma tam swoje korzenie.
+ Natomiast rzeczywiście jest tak, że, czyli tym bardziej wina Izraela, tym bardziej sytuacja wygląda tak, że musisz mieć jakiś parasą, żeby takie firmy działały.
+ I tym parasolem jest to, że musisz mieć reputację, musisz ktoś od ciebie kupować i tak dalej i tak dalej.
+ Wychodzi, bo teraz jest kolejne komisje, że czekur, że oglądam dużo komisji fleczczych z Jezana z Pegazusem, to okazuje się, że tam wprowadzali sprzedawców Pegazusa na spotkanie,
+ z jakimiś tam uficielami, żeby pokazać możliwości, a potem CBA, tak, to zakupiło po prostu do kontroli.
+ No, że to nie tylko jest u nas, był taka wielka, aferka, która była na przykład w Grecji, gdzie tam, czy to Pegazusem, czy predatorem też opozycję podsłuchiwano, wielkie afery...
+ - Czyli to nie tylko u nas?
+ - Nie tylko u nas, jak ktoś ma władze, to je nadużywane, jakby to, wiesz, to jest szeroki problem, nie?
+ To zawsze tam podnosiłem te przykłady, nie wiem, tam, Arabi Saudyjskiej, czy Emiratów Arabskich, czy podsłuchiwania tam dziennikarzy innych, natomiast to pozycję, też Grecja jest parę takich miejsc, gdzie, no niestety, no ale wykorzystywali ten, ten sob, niezgodnie z przeznaczeniem.
+ - I to nie jest przyjemne, nie? Mięć się, to jest, to jest, jest, zgodnie z przeznaczeniem, to znaczy, że jeśli podcuhiwali przeciwną partię, co, jeśli podjeżdżawali, że ta przeciwna partia robi coś złego?
+ - Jakby, wiesz, to nie są moje tomaty, nie, jakby tam kontrola operacyjna, tak, się to nazywa, natomiast wyobrażam sobie, że w normalnym takim kraju, no to musiałby taki wniosek i z dosądów, w sądzie trzeba by teraz zrobić dwa i zaiprzeciw i teraz odpalasz taką kontrola operacyjną albo nie.
+ - Z wycieków snoudena, który był związany z tym, jak tam NSA szpiegowało i swoich obywateli nie tylko, było tak, że słuchaj z domuś tutaj są sprawy o inwiglewanie obywateli, ich tam jest ileś, ileś nawet, nikt prawdopodobnie tego nie czytał, tylko po prostu klepał, nie możemy ci powiedzieć dlaczego botajne.
+ No i taki wytrychnie, no jakby, no klepnimi, potrzebujemy, więc uważam, że nad tym nie ma kontrolia, jakaś kontrola powinna być.
+ - I takie narzędzie działa, tak jak właśnie z tego filmu snoudena, żeby po prostu możesz podkądać ludzi, w którym to za, zaplikujesz?
+ - No, jakby największą wartością jest to, że w dzisiejszej świecie nikt normalny, kto potrzebuje bezpieczeństwa, nie korzysta z telefonu do rozmawiania i z SMS-u do wysłania wiadomości.
+ Teraz prawie każdy to signal, WhatsApp czy jakieś inne, tam szyfrowane komunikatory, więc, a do tego ciężej jest to dostać, nie? To nie jest tak, że już teraz zacznie sobie posłuchiwać już swojego operatora, z którym, wiesz, narzucasz na niego takie czy inne prawo i on musi ci dać te dane, tak było rzewniej.
+ - Mhm. - Teraz jest tak, że musisz wbić się po prostu na czyść telefon i to powyciągać, bo inaczej nie masz skąd.
+ I do tego właśnie służą predatory i poegazusy tego świata, bo one mają zdaniem przełamać zabezpieczenia na twoim telefonie albo ewentualnie zmusić cię, wiesz, wejśmi tutaj klikni linka, bo coś tam i potem się przejmuje kontrolę.
+ I to nie tylko poegazusy predatory, bo okazuje się, że, na przykład, takie grupy APT, czyli to są różne to wywiady czy inne organizacje działające nałam rzecz krajów.
+ Ja ostatnio robiłem taki film APT-29, czyli o rosyjskim wywiadzie wojskowym, korzystali z bardzo podobnych metod, czyli podsyłali jakiegoś linka takiego dedykowanego na zasadzie tutaj, jakaś tam przyszłość Ukraina Rosja, coś takiego, do dyplomatów i później dyplomacji w to albo klikali i się infekowali, dzięki temu oni wiesz tam, dostawali dostęp do jakichś danych na tyle sekretnych, że im to pomagało.
+ Albo i nie, więc to jest to same metoda, która jest tu wykorzystowana i tam oczywiście one będą bardziej mniej zawensowane, to ma zidea jest taka, żeby wbić się do jednego albo drugiego systemu.
+ Ale są podobne te podat
