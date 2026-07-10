@@ -1,0 +1,27 @@
+
+{% for m in report.modules %}
+
+<div class="card">
+
+<h2>{{ m.module|replace('_',' ')|title }}</h2>
+
+<table>
+
+{% for k,v in m.items() %}
+
+{% if k != "module" %}
+
+<tr>
+<td><strong>{{ k }}</strong></td>
+<td>{{ v }}</td>
+</tr>
+
+{% endif %}
+
+{% endfor %}
+
+</table>
+
+</div>
+
+{% endfor %}

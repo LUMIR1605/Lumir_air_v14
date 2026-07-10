@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>LUMIR SHIELD – Executive Security Brief</title>
+
+<style>
+
+body{
+margin:0;
+background:#0f172a;
+font-family:Arial,Helvetica,sans-serif;
+color:#e5e7eb;
+}
+
+.container{
+width:900px;
+margin:40px auto;
+background:#111827;
+border-radius:16px;
+overflow:hidden;
+box-shadow:0 0 30px rgba(0,0,0,.5);
+}
+
+.header{
+padding:40px;
+background:linear-gradient(90deg,#0f172a,#1e3a8a);
+}
+
+h1{
+margin:0;
+font-size:42px;
+color:#fbbf24;
+}
+
+.subtitle{
+margin-top:8px;
+color:#cbd5e1;
+}
+
+.score{
+font-size:72px;
+font-weight:bold;
+color:#22c55e;
+margin-top:25px;
+}
+
+.section{
+padding:30px 40px;
+border-top:1px solid #334155;
+}
+
+.section h2{
+color:#fbbf24;
+margin-bottom:15px;
+}
+
+.card{
+background:#1e293b;
+padding:18px;
+border-radius:10px;
+margin-bottom:15px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th{
+background:#1d4ed8;
+padding:12px;
+}
+
+td{
+padding:12px;
+border-bottom:1px solid #334155;
+}
+
+.footer{
+padding:30px;
+text-align:center;
+color:#94a3b8;
+font-size:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+
+<h1>🛡 LUMIR SHIELD</h1>
+
+<div class="subtitle">
+Executive Security Brief
+</div>
+
+<div class="score">
+{{ report.modules[0].risk_score.score }}/100
+</div>
+
+<div>
+Poziom bezpieczeństwa:
+<strong>{{ report.modules[0].risk_score.risk }}</strong>
+</div>
+
+</div>
+
+<div class="section">
+
+<h2>Attack Surface Analysis</h2>
+
+<div class="card">
+
+<ul>
+{% for item in report.attack_surface %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+<div class="section">
+
+<h2>Recommendations</h2>
+
+<div class="card">
+
+<ul>
+{% for item in report.advice %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+<div class="section">
+
+<h2>Technical Findings</h2>
+
+<table>
+
+<tr>
+<th>Moduł</th>
+<th>Ryzyko</th>
+<th>Score</th>
+</tr>
+
+{% for m in report.modules %}
+
+<tr>
+<td>{{ m.module }}</td>
+<td>{{ m.risk }}</td>
+<td>{{ m.risk_score.score }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+
+{% if report.fusion is defined %}
+<div class="section">
+
+<h2>Fusion Analysis</h2>
+
+<div class="card">
+
+<p><strong>Poziom zaufania:</strong> {{ report.fusion.confidence }}</p>
+
+<p><strong>Źródło referencyjne:</strong> {{ report.fusion.trusted_source }}</p>
+
+<ul>
+{% for item in report.fusion.findings %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+{% endif %}
+
+<div class="footer">
+
+LUMIR SHIELD • Executive Security Brief
+
+</div>
+
+</div>
+
+</body>
+</html>

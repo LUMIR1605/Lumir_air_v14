@@ -1,0 +1,89 @@
+ nowe dług ludzi, którzy tam popełnią ten temat materiał, natomiast to jest prawdopodobnie sprzętu nazwa się Tobą
+ i to powoduje, że on podaje samoloty, które cały czas wysyłają informacje o tym, gdzie są przez takie nadajniki, które nazywają się ATS.
+ No trochę głupiają i tam wiesz driftują w powietrzu, co jest niemożliwe, więc tak możemy to zaobserwować jako normalny człowiek.
+ A na Ukrainie jest sytuacja, w której w tej chwili zagraniczne.
+ zakupują starlingi z tego samego powodu, bo okazuje się, że starlingi, żeby wiedzieć, gdzie tam strzelać do statelity, gdzie one przelatują, one potrzebują GPS.
+ No więc jak zakupić GPS, no to nie wiedzą, jak się ustawić, gdzie się komunikować.
+ No więc okazuje się, że z tego, co czytałem te takie WRE, czyli elementy walki radii elektronicznej.
+ One zakupają GPS, więc żeby te anteny nie były zagłuszane, to je wkupują tam, wiesz, półtorej metra pod ziemią, albo dają je w jakichś klatkach, żeby złapały GPS, a bo tylko wtedy będą mogły robić komunikacje.
+ Czyli nie zasypują ich, tylko robimy takie dziurze o tym, że jakby właśnie ktoś, kto tam wiesz wysyłaci wiązkę i ciścia miast GPS, żeby nie był w stanie na ciebie wpłynąć.
+ Czyli teoretycznie da się to zrobić tak, żeby po prostu wysyłaś jakichś GPS, deming i on będzie działa w całej Polsce i wszyscy będziemy mieli przekoszone GPS i wszyscy będziemy żyli w złym kierunku.
+ Tak, znaczy w przypadku Polski to jeszcze wiesz, mamy na szczęście, sorry, pość koziem celem, krzywiczne ziemi, więc tam z takiego ryjonu królewca to nie jest taki proste, żeby wpłynąć na katowice.
+ Natomiast rzeczy, które są bliżej, bardziej można by wpłynąć, no i to też byłaby brzmię siłanie.
+ Ale pokazywałaś mapę tych czerwonych, tak, sześcioką to było duża.
+ Tak, tylko to mapa jest jakby my to obserwujemy na poziomie samolotów, to są wiesz 9 tysięcy, więc tam da się, no bo masz krzywiczne ziemi, więc tam jesteś w stanie zakłócić spokojnie.
+ Natomiast żeby to było przyziemi, no to albo musiałbyś mieć co, robiszcie wysoki maszc, albo no jakby z innego miejsca to robić, więc ta szczęście na auta nie będzie miał takiego wpływ na razie.
+ Jak to jest możliwe, skoro wiedzą, skąd ten sygnał dochodzi, jak to jest możliwe, że jeszcze tego nie zablokowali.
+ I dlaczego nie jesteś mi jeszcze w wojnie z Rosją, skoro nam uchakujam GPS-a?
+ Czekaj, wypowiadać się na temat wojny do rozwiązań, chyba.
+ Nie, no spokojnie jest jednym ekspertany, możesz...
+ Tak, tak, ja jestem ekspertor od tego dokładnie.
+ Nie, tak, zupełnie serio, no to myślę, że to jest taki, taki element, który nie wierzę, że goście, którzy się tym nie zajmują zawodowo.
+ Bo tam latają jakieś helikoptery, latają jakieś ołaksy, w sensie to takie samoloty, wiesz, do wykrywania, że oni nie wiedzą.
+ Tylko takich rzeczy pewnie nie puszczają do opinii publicznej na grubo, w sensie tak mi się wydaje.
+ Pewnie mają swoje powody na zasadzie, hej, na jakieś tam paniki, niesiać itd.
+ Ja kumam rozumiem, natomiast co, co miałbyś im zrobić?
+ No i tak jest, to jest państwo, z którym nie pogadasz za bardzo na chwilę obecną mnie.
+ Da się przed tym jakoś blokować, o proszę tego, że zakupować starolinki pod ziemią?
+ No na poziomie ziemi, no tak, to jaka taka metoda fizyczna, w powietrzu gorzej, bo w powietrzu jest trochę więcej zakłóceni,
+ są sygnały GPS, które są takimi wąskimi wiązkami, jak na czas, kiedy, znaczy w innym z GNSS, bo GPS to jest tam wiesz, jest kilka systemów, ale na czas np. operacji GNS, to jest ten całoglubalny.
+ Tak, tak, system pozycjonowania.
+ Wszystkie tam, wiesz, Beidu, Glonas, czy...
+ Bo to GPS, jeżeli leo?
+ Różne w w zależności od tego, w jakiejś okalizacji chiny, Europa...
+ To są, to jest tak, że masz systemy w zależności od państw.
+ Amerykania to myśli. GPS-a, Europejczycy mają Galileo, chińczycy mają Beidu, Glonas jest rosyjski.
+ I, jakby oni każdy ma swoje setelity. I teraz normalnie w urządzaniach swoich, to masz tak, że one są wielosystemowe, więc są w stanie łapać wiesz tam z różnych pasm.
+ Natomiast, jest coś takiego, jak wiązka silna, w jakiś taki wąski zakres, wyobraż sobie, że masz nie wiem, wojny w jakimś miejscu Afganistan pierwszym przychodzi do głowy.
+ I teraz na potrzeby tego, żeby tam lepiej wszystko działało, to taka setelita wzmacnia bardzo silny wiązkę w tamtym kierunku i tam o wiele ciężej to wtedy zakłócić, nie?
+ Bo tam trwa jakaś operacja. Więc z poziomu militarnego oni tam mają metody, żeby nie dać się tak łatwo zakłócić.
+ Poza tym widać to też po ewolucji broni, gdzieś tam na przykład, jak wiesz, rosjanie zaczęli korzystać z dronów, które ciągnął za sobą światłowód.
+ Bo to, żeby im nie zakłócili, więc masz tam wiesz parę kilometrów światłowodu i lecisz sobie dron sterowany z światłowodem jakimś tam...
+ - Tak jest wisającym... - Tak jest wisającym to, tym. Inne drony robią tak, że są repiterami, czyli masz jednego takiego, który ma anteny w jedną w drugą, który przesyła sygnał dalej.
+ No jakby ta walka tam radio elektroniczna, pojemci, nie jest na naprawdę nieżem poziomie, w sensie, można się dużo nauczyć o tym, jak to śmiga.
+ Czego się najciekawszego nauczyłeś takim razie?
+ - Wiesz, to ostatnio widziałem taki start-up, który to był jakiś, taki hakatom, chyba w silikom w waliczych gdzieś, dwóch ziomków wymyśliło, że będą wgrywać mapy, typograficzne do dronów.
+ I na podstawie map, typograficznych bez żadnego sygnał, GPS, żadnego radia itd., będą w stanie trafiać cel, napisali tam, nie pamiętam, czy 48 godzin?
+ - Czyli, bo teraz w ten sposób, że wyznaczasz czegoś lokalizację i on cały czas leci, w kontakcie z tobą i określając tą lokalizację, tak? Zaprogramujesz, musiałam polecieć i już bez żadnego kontaktu z bazą po prostu tam poleci, doleci w jednym miejscach i wybuchnie.
+ - No, wiesz, masz przelecieć nad tą szklanką, więc on będzie szukał dobra szklanka, to korguje kurs lecę gdzieś tam dalej, masz wgranę taką mapę typograficzną, że będzie patrzą na elementy charakterystyczne.
+ Gdzieś tam to może być zupełnie nieprawda, więc mała gwiazdka, ale czytałem, że to pierwsze szachedy, które mi strzelali właśnie rosjanie, one miały jakiś taki rodzaj navigacji, że najpierw leciały na punkty orientacyjne, a potem miały dopiero trafiać swoje cele, więc było łatwo, bo wierzę, wszystkie się zbierały w jednym miejscu, to łatwiej ich było wystrzelać.
+ Teraz podobno jest to coraz trudniejsze, ale też mogę trochę ocenować, bo wierzę, bo ja nie mam takich wieści z frontu, ja obserwuję to, co ludzie znajdują w tych zabawkach, jakie tam są przecieki, że potem opacz tu taka antena, tutaj taki system, więc to dużo się dzieje dużo.
+ Wiesz, w takim razie jak przechwycić czegoś drona i ukraźgo, umiałbyś to zrobić? No do tego czas przętu, natomiast metody z kilka, metoda, nie wiem jak na lotnisku w Krakowie, to znaczy oni tam mają taki, teraz zami mi, ale czy to jest trzębie sakowy?
+ Wydaje mi się, że słyszałam o jest trzębach i byłem bardzo dziwionek, ktoś mi to pierwszy raz powiedział.
+ Tak, to mogą być z trębie, przepraszam wszystkich z analogów, które są trenowane do tego, żeby wbijać się w takie drone i po prostu je uziemiać jelą.
+ Druga metoda, która jest metodą, którą muszą przestrzegać wszyscy producenci dronów, to masz, tak jak mówiliśmy, wiesz, o mapkach tam, przy tych produkcji pociągów, to masz mapki, gdzie masz kordynaty GPS-u wszystkich lotnisk.
+ Jeżeli jakikolwiek dron, to znajdzie się na terenie lotniska, natychmiast musi wylądować, jakby to musi być wbudowane w oprogramowanie, żeby w ogóle, wiesz, u nas sprzedawać drona.
+ Czyli jak ja bym sobie takiego DJI-a, i polecam na lotnisko, co mi wyląduję tam od razu?
+ Tak, nie zachęcam, żebyś to robił jakby, nie, no straszne, przepał, stary, to kryminał, tak, to nie są fajne rzeczy.
+ Natomiast, teraz, jak, jak przejąć czy jego z drona, no więc masz na dining GPS, w sensie próbujesz teraz zespofować GPS-a.
+ I jak powiem ci, że zamiast tu gdzieś idziemy, że tu jest lotnisko, mimo na dziewięć centrum publicacyjny, musi w jakiś sposób na niego wpłynąć.
+ No więc wysywasz swój sygnał GPS, mówię, jakoś, jesteś w innym miejscu niż ci się wydaje.
+ Jakoś antelną, tak, antelną.
+ Czyli musisz sobie spokojnie, bierzesz takiego otenie, no.
+ I słyszałem, że w Iranie coś takiego zrobili, jest jakąś poważnym granem.
+ Tam to był dron wojskowy, który, co musi być tysiąt razy trudniejsza, który był zespofowany w ten sposób, że trafił w bazę,
+ jeżeli dobrze pamiętam rosyjską, nie, to był rosyjski dron wojskowy.
+ I tak prawdopodobnie ktoś zespofował sygnał, że trafili w swoich, więc no cóż.
+ To jest niesamowite, w jakiej rzeczy można robić te pomosły tych sygnałów i w programowania.
+ To będzie coraz ciekawe, słyszałeś, coś ciekawego, co się dzieje w wojnie w Israelu, właśnie z tego zakresu.
+ Bo tam też się pewnie dziełem jakieś no właśnie.
+ No tam EIA jest już wykorzystywane, tak z tego, co czytałem dosyć o stronę, natomiast tużo jest też szumu informacyjnego.
+ W sensie ciężko jest wyfilterować coś, żeby, wiesz, nie weptą, nie weptą się na minę, nawet dla ciebie.
+ Nawet dla mnie w sensie, no bo ciężko jest mieć ludzi, którym jesteś w stanie tak wiesz, gdzieś tam zaufać.
+ Podobno system EIA i takie autonomiczne są wykorzystywane do wbierania celów.
+ No i to jest tak jak z tym słynnym przypadkiem bierz Snowdena i ile życi jest warty dany cel, bo tam była taka lista, która...
+ 13 osób chyba mówiła, że 13 sygniów można zabić, jeśli zabija się jeden w jakiś ważny cel, tak pamiętam, ale mogę chalu cenować.
+ Nie, no to ja w ogóle żyłem właśnie, że tam w zależności od tego, jak cel był ważne, to mogłeś zabić więcej albo mniej więcej w ilinie.
+ I teraz jakby nie mieści mi się to wełbienie.
+ Straszne, więc... Ale ostatnio słucham pod kastu urogana z jakimś gościem dziennikarzem, który tłumaczył ile po ilość zabitych osób cywili w Izraelu i podawał to w kontekście tego ile według Izraela zabili żołnierze i ile cywili i mówił, że według tego, co się działo wcześniej w Iraku Jenga Afghanistania, to jest chyba spoko.
+ Czyli że to jest okey, że to jest okey, żeby tych ludzki walów zginął.
+ A to jest tego słuchamów, więc... a to było chyba 10 tysięcy żołnierzy i 20 tysięcy cywili.
+ Czy coś w tym stylu? Nie, ale tak, czyli raczej tragedianie. Natomiast rzeczywiście jest tak, że dookoła takich rzeczy zawsze rozwijają się technologię, gdzie się ruszają, gdzie tam wiesz, technologię, gdzie pod jakąś...
+ To była jakaś taka międzynarodowa organizacja, która zajmowała się... nie wiem, czy Juna i Tednaišę, czy coś w strefie gazy, odkryto zakopaną serwerownię, z której Hamas korzystał. Wyobraź sobie.
+ Tylko pięknie wyglądało, to była serwerownia zakopana pod ilu moś tam metrami. Z tego, co się okazało, to oczywiście też informacje, że tam wiesz, podczas przesłucha nidiew znalazł informum.
+ Mocję o tym, że w ogóle jest taka serwerownia, wkopali się tam o tą normalnie serwery, które... tam ci nawet nie wiedzieli chyba... nie pamiętam, czy to było Juna i Tednaišę, czy coś innego, także tu chalucynuję.
+ Ale tam ci nawet nie wiedzieli, że pod co mają wykopaną serwerownię i ktoś im tam ciągnie prąd na lewo i wszystko, no a przecież nie zbombardujesz czegoś takiego, nie?
+ Fajnie, że teraz można używać tego słowa "chalucynuje", i że ludzie wiedzą o co chodzi, i że tak właściwie trochę więcej się dowiedzieliśmy o ludzkiej pamięci, tego jak działa nasz młodko, że my to wykopujemy, tej informacje 10 z tyłu.
+ Być może, to jest prawda, być może trochę naprzekręcaliśmy, jest na co na bezsłowa, że po prostu chalucynujesz i się już nie trzeba przynować. Czadzie pity też tak robi. Tak, więc wszyscy tak trochę robimy wiesz, adopcja w sumie inne takie rzeczy dla mnie trochę ważniejszy jest przekaz, staram się, żeby wierzyć tam w linkach, były te rzeczy takie bardzo, bardzo precyzyjne, ale jak rozmawiamy sobie na takim otwartym flow-u, no to zawsze trochę chalucynuję.
+ Czy tobie ktoś kiedyś proponował składał taką propozycję, że skoro masz takie umiejętności, to czy byście sobie nie ukradli jakichś duża ilości pieniędzy? Ja już kiedyś jak taką rozmowę.
+ Przychodziły d

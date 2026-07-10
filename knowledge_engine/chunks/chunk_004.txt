@@ -1,0 +1,126 @@
+ieczni.
+ No, tak to niestety nie działa, jakby wypijen nie chroni nas przed takimi atakami.
+ Natomiast to jest trochę podatek odbycia na bieżąco, który trzeba zapłacić,
+ no bo fajnie, żebyś miał na swoim telefonie najnowszą aktualizację,
+ bo jak nie ma, bo już wiesz, można stary model.
+ No to ludzie, którzy pracują w tych wszystkich googlach, samsungach, aplach i innych tego świata,
+ oni wykryją te ataki, oni je znajdą, oni je spaczują.
+ Natomiast oni też mają wytyczne, które mówią słuchajcie ściągki,
+ tylko telefony z ostatnich, nie wiem, czych lat, pięciu, siedmi, nie ważne, nie?
+ Masz stary telefon, jakby no, już jesteś zapudarmol natacy.
+ Czyli aktualizację warto robić w takim razie,
+ bo to jest mi m.in. aby dajty właśnie w kwestii podatności.
+ Zawsze, zawsze to takie stabilne aktualizacje warto robić.
+ Cześć, słucha nas wielu interesujących ludzi.
+ Taki jak ty, jeżeli przeszło ci przezmyć,
+ że fajnie byłoby zainteresować ich twoją usługą lub produktem, powinniśmy porozmawiać.
+ Co istotne reklamujemy tylko sprawdzone firmy i porządne produkty.
+ Jeżeli jesteś rzytelną marką, napisz na partner, małpa Pegge, podcast, Kropka.pl
+ i zastanówmy się wspólnie nad partnercwem.
+ Nasz adres e-mail znajdziesz też w opisie tego odcinka.
+ Dobra, wracamy do rozmowy. O co chodzić z Bug Bounty?
+ Cała idea polega na tym, że masz dwie ścieżki.
+ Albo idziesz na Darknet, w sensie idziesz i sprzedajesz, przemranym typum coś, co się znalazłeś.
+ Na przykład jakiś atak.
+ Co później prawdopodobnie właśnie trafia do takich firm, jak Pegazus?
+ Co oni później są brokerzy, oni sprzedają to właśnie do Pegazusów, Predatorów.
+ Tam to zada działa tak, że jestem wśród być pierwszy, sprzedajemy ci i roztajemy się.
+ No i ataki są wiesz, na wszystko, narutery, firewall, telefony i tak dalej i tak dalej.
+ I ten rek istnieje zawsze będzie istniały.
+ Wiem więcej wszystko wskazuje na to, że ten rekrośnie borośnie zapotrzebowanie.
+ A co raz więc jest taki rzecz, że się korzysta?
+ I właśnie ilość oprogramowania, a w każdym oprogramowaniem można znaleźć jakieś dziure.
+ Tak, tak. No jakby z jakmi świecie żyjemy, że trzeba wiedzieć jak używać tych noży i innych młodków.
+ Tak, generatywnej sztucze inteligencji, też można się po palcach pobić.
+ W każdym razie masz drugą ścieżkę, która jest tą jasną stroną mocy, no zasadzie hej znalazłem coś.
+ I teraz normalne dobre firmy mają bakbąty, czy nie mówią "słuchaj".
+ Jeżeli coś znalazłeś, przejdź do nas, daj nam znać, daj nam trochę czasu, zazwyczaj na naprawę.
+ Dostanie, że za to hejz, dostanie, że za to rekogniszę, to znaczy powiemy hej dzięki, że to znalazłeś.
+ I tuże firmy tak, znaczy dobre firmy tak robią w sensie, wiesz, jak znajdziesz błąd w nie wiem, w iOS, w Androidzie itd.
+ Dostanież konkretne pieniądze, no to nie są tam miliony i dziesiątki milionów, jak w przypadku dragnetu,
+ ale, czyli nadargnę się więcej, można zarabiać.
+ Wielokrotnie, więc, natomiast, no to jest gra taka moim zdaniem krótko dystansowanie.
+ Po pierwsze, byś nie spawł, w nocy, by się ja bym nie spawł, w nocy.
+ A po drugie, no to... To może być twoja kariera szukanie takiego dziur w opachramowaniu.
+ Myślę, że jest tyle roboty, żeby ktoś mógł sobie zrobić z tego kariera i po prostu odzywać się dla dobrych firmy i mówić "sukacie, znalazłem tutaj dziurę, znalazłem tutaj dziurę, znalazłem tutaj dziurę".
+ I podobno te kwoty też są dłuższe, takich firmy, te pusze tysiące.
+ To są freelancerzy, ludzie, którzy szukają w różnych miejscach.
+ To jest w mega ciekawe robota, w takim razie.
+ Zaromista i wyobraź sobie, że tej ryboteństwa jest coraz więcej. No bo ja mam na przykład zziomka, który zajmuje się pentestowaniem różnych blockchainów, tak w uproszczeniu, nie?
+ Wychodzi nowa kryptowaluta, okazuje się, że ktoś tam wrzucił 10 milionów, on znajduje, że "hej, te 10 milionów można byłoby tak ci zarąbać w moment, nie?"
+ No i powstaje nowy projekt, nowy i cały czas powstają nowe rzeczy dookoła AI jest tak samo, czyli te metody takie "promting Jackson" atakowanie AI, żeby zrobiło to, co rzeczywiście chcesz, żeby zrobiło.
+ No bo normalnie ten taki, jest krawy przykład, co ja zawsze lubię używać przy GPT-4 i "hej, mam dolara".
+ Jak można za pomocą dolara zabidziek najwięcej osób, nie?
+ W pierwszej wersji GPT-4 to ci odpowiadało, tak?
+ Ja nie wiem, dlaczego ty wpadasz, a takie pomysła.
+ To jest oficjalnego white paper, jakby, ja to tylko testowałem. W każdym razie później odpowiednie zabezpieczyli ten model, że on nie odpowiadał na takie pytania, nie?
+ Nie będę krzywdził ludzi i tak dalej, to jest miere oczywiste. Natomiast da się poprowadzić rozmowę tak, i tych metod, jak można kogoś przekonać, jest coraz więcej, nie?
+ Taka śmieszna, bo graficzna, to jest metoda na AstiArt. Nie robisz tekstu, bo on wykryje sobie, że tam tekst jest podejrzany, tylko robisz Asti, że podajmy jak zbudować bombę.
+ I bombę, nie, jako pisysz bomba, tylko astiartem BOMB. Przechodziło, niedawno jeszcze.
+ I podawał ci, jak robić bombę?
+ Tak, tak, tak. To są takie typowe, wiesz przykład. To nie znaczy, że tej wiedzy nie ma w internecie, nie?
+ W sensie nie wiem, koktajle, mołotowa czy coś. Ale to bo to jest, jak będziesz ci o to znajdziesz, natomiast na tym się to zazwyczaj testuję, no bo te modely mają nie robić takich rzeczy, nie?
+ Są metody ataku na powtarzanie, są metody takie muldzisz od prompting, to jest taka ciągła walka, wiesz, ognia z wodą, jedni starają się bronić i nie atakować.
+ Natomiast dzięki temu np. wyciekły te rzeczy związane wiesz, z góglowym modelem i z nazistami różnych kolorów.
+ Jak się nazywa osoba, która się czymś takim zajmuje, czy oni mają jakieś określone stanowisko, osoba, która szuka takich dziur tych.
+ Ogólnie to pętesterzy, nie? Czyli ludzie, którzy próbują umywać się i znajdować różne luki.
+ Ja mam sporo osób w potryjasnej stronie mocy dookoła siebie, którzy pochwalą się czasem, że hej tutaj jakiś taki lokalny, urzędowy system udało mi się złapać.
+ Tutaj jakiś system operacyjny, tutaj coś i to jest super. I to są ludzie, którzy mogliby wiesz jeździć lębo, jak byli po drugiej stronie mocy, ale nie robią tego.
+ Także ja mam mega szacunek dla ludzi, którzy, wiesz, pomagają nam wszystkim i to jest coś o czym warto głoś namowić,
+ bo ci ludzie to są często ci, którzy zasługują namiano hackerów, ale takich prawdziwych hackerów, którzy znajdują błędy, mówią o nich,
+ są oczywiście za to wynagradzani, bo należy być za to wynagradzany, natomiast nie psują nikomu życia.
+ A ci, którzy są pociągnąć stronie mocy, to nie są hackerzy, to są po prostu przestępcy, jakby tutaj nie mam, nie ma o czym mówić.
+ I teraz wszyscy tam wiesz na główki, o, hackerzy zrobi to to, nie, to jest złe użycie tego słowa, taka moja wewnętrzna walka wiesz, o dobre użycie słów.
+ No i bardzo dobrze, bo hacker, bo ja dlatego do siebie już napisałem, bo ja chcę pogadać z jakimiś hackerami, więc jako uda mi się kogoś dorwać, bardzo mu chciało.
+ Tam ci kontakt, pary np. tu do chłopaków może się ich udać, to może się.
+ No, no z hackeriem jeszcze nie gadajam, to byłam me przeciekawa rozmowaczy, to jest trudne według Ciebie.
+ Być trzeba mieć jakieś super zawansowane umiejętności kodarskie, żeby takie rzeczy rozmieniać?
+ O, panie, no to są gwiazdroka, w sensie.
+ Czyli to normalne programie, co się tym nie może zajmować?
+ I powiem tak, to jest do pewnego stopnia wiptu ozeria, to znaczy takim, że ludzie, którzy tym się zajmują, oni...
+ Nie wiem, porównam ci to do muzyki, nie? Do gry, nie, np. na skrybcach.
+ Jak masz odwalić jakiś taki półtora godziny koncert na skrybcach, nie pomylić się ani razu, jeszcze dograć tam rzeczy, to to jest po prostu gra przez płotki, przez poleminowe.
+ I ci goście tak świetnie działają na tym poliminowym, mają intuicję, znają metody, że przechodzą, że oni wierzę, jakby przyskakują tu nad płotkiem, tu do bezpieczenia, tu wymyślili coś, tu rozkminili, jak coś może działać, nie wiedzą, bo oni działają po ciemku, nie?
+ To bardzo często, że jakby na poziomie światowym to są takie gwiazdy roka, które po prostu jak już coś piszą, to drżą posady.
+ Mamy trochę takich ludzi z Polski, którzy są naprawdę mega, wygrywają nagrody, womują się w różne miejsca, ale po tej dobrej stronie mocy, więc jakby...
+ Wygrywają nagrody, womują się w różne miejsca.
+ To poej, że to nie jest zabawa, jakby, jak ja z chłopakami rozmawiałem, słuchaj, no co tam, no no hakujemy pociąg, zarambiście.
+ Nie bawicie to nie, co już tam, bo ja się pojawiłem w chłopakami.
+ Dokładnie, no i tutaj projekt pociąg, no to czemu niektórzy atakują autopilota Tesla, to też jest super, nie?
+ O, że tam pokazywali w grudniu w Hamburgu, bo na takie konferencji, gdzie pokazywali jak na chwilę zmniejszając napięcie do procesora,
+ który miał tam sprawdzić czy ty masz uprawnienia czy nie, w takim uproszczeniu, jak zmniejszyż napięcie, no to nie wykona tej instrukcji, nie sprawdzi, więc przepuszczał cię dalej.
+ I mogłeś tam wpływać na autopilota Tesla.
+ Po przyzmianę napięcia.
+ Tak, takie rzeczy dookoła. Ander Woltecz klicz się to nazywa, jak ktoś chce poszukać.
+ To jest przerażające.
+ To jest piękne.
+ Ja ale też przerażające. To jest przerażające, bo ja w im więcej będziemy mieli oprogramowania tym więcej ci ludzie mają kontroli.
+ I jakby, jak się jeśli w tym w pewnym momencie tej osoby troszeczkę odjebie, to jest naprawdę dużo problem.
+ Wiesz co? Ja to widzę jak taki rozrost lasu. To znaczy mamy drzewa, masz jakąś technologię,
+ z tego wyrastają ci kolejne gałańzie, kolejne listki i przychodzą ludzie, którzy mówią "Hey, teraz jest nowa metoda ataku".
+ Ta metoda, ataku działa taki tak.
+ I teraz każdy, który robi np. sprzęt, tak jak tam wiesz, lubisz Hardware do autopilota Tesla,
+ to powinni się już przygotować na metody, które są znane. Takie metody jak Ander Woltecz, jakieś tam strzelanie laserem,
+ żeby przerzucić ten jakiś bit, bo takie rzeczy, tak jak mówiliśmy wiec przekosmicznym w sensie.
+ Może magnetyczne. Tak, może magnetyczne, które mają się wydarzyć.
+ To mniej więcej jest zbliżony kawałek fizyki, że masz wpłynąć na jakiś układ.
+ Estalent tylko tam bardzo precyzyjnie, żeby uzyskać konkretne efekty.
+ I takie rzeczy się dzieją i można temu przeciwdziałać, ale jak tam będzie przeciwdziałą, to musisz podnieść koszt produkcji tego wszystkiego.
+ I tu dochodzimy do takiego gorszy pieniądz, wybiera lepsze, no bo zrobić tańszą produkcję, będzie pochodzić pewnie z jakiegoś schodu.
+ No i pewnie tych zabezpieczeń będzie tam mniej.
+ No to to jest, to by już mnie bardzo przerazająco i to nawet w kontekście tego GPS, o którym też widziałem, że nagrywałeś,
+ to jakby dochodzimy do takiego etapu, że jedno osoba może wyłączyć bardzo dużo, bo jeśli wyłączy z taką jedną funkcję GPS, to po prostu wszystko się sobie.
+ Samolot, nawigacja w telefonie, nawigacja w samochodach, wszystko się z sypy, to właściwie nie wiem czy to się tak dar,
+ ale mam wrażenie, że to jest właśnie za jednym kliknięciem.
+ Wiesz co, na chwilę obecne na szczęście jeszcze w samochodach nie, bo po kawałku, nie, od samolotów.
+ Samoloty mają jener, czyli system inercyjny, który działa tak, że on się tam w czasie dosyć chronizwu GPS.
+ No i było parę takich incidentów, no bo można próbować zagłuszać ten sygna albo wysyłać głośniejszy sygnał w sensie, wiesz,
+ jak szybsze głośnie to ja mam rację, który mogłoby takie samotry o to odbierać.
+ Jak taki samolot sobie leci, no to on ma ten inercyjny system, większe samoloty i droższe, tym ono lepiej działają.
+ No i czasami korzystają GPS-u, żeby zrobić jakąś tam korekte.
+ Ale wyobraźmy sobie, żeby bym złośliwy i teraz raz ci robi korekte, że jesteś w tym miejscu.
+ No dobra, to w korekte gdzieś tam poszła, potem że jesteś dalej, dalej, dalej i zbaczasz skursu coraz bardziej,
+ bo ja jestem z kimi złośliwym, który w ciebie konkretnie celuję.
+ Na chwilę obecną mamy do czynienia, wszystko na to wskazuje z takim jamerem GPS-u, który no w królewcu jest zainstalowany.
+ Wszystko na to wskazuje, że bierąc bunda uwagę analizy źródła i wpływa na samoloty, które latają między innymi nad polską.
+ To jest taka,
