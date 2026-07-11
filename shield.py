@@ -17,17 +17,16 @@ if len(sys.argv) != 2:
     raise SystemExit(1)
 
 target = sys.argv[1]
-
 scan_type = detect_type(target)
 
 result = run(scan_type, target)
 
-build(result)
-build_html(result)
+json_report = build(result)
+html_report = build_html(result)
 
 print("\n🛡 LUMIR SHIELD\n")
 pprint(result)
 
 print("\nRaport zapisano jako:")
-print(" • shield_report.json")
-print(" • shield_report.html")
+print(f" • {json_report}")
+print(f" • {html_report}")
