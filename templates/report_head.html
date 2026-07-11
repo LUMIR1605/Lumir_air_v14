@@ -2,76 +2,321 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>LUMIR SHIELD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumír SHIELD - Executive Security Report</title>
 
 <style>
-body{
-    font-family:Arial,sans-serif;
-    background:#f4f6f8;
-    color:#222;
-    margin:40px;
+:root {
+    --bg: #f5f7fb;
+    --surface: #ffffff;
+    --surface-soft: #eef3f8;
+    --ink: #17202c;
+    --muted: #667085;
+    --line: #d9e2ec;
+    --brand: #0f6c81;
+    --brand-dark: #08495c;
+    --accent: #c79a2b;
+    --low: #147a44;
+    --medium: #a15c00;
+    --high: #b42318;
+    --critical: #7a1f1f;
 }
 
-.container{
-    max-width:1100px;
-    margin:auto;
-    background:white;
-    padding:40px;
-    border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.1);
+* {
+    box-sizing: border-box;
 }
 
-.header{
-    border-bottom:3px solid #1976d2;
-    padding-bottom:20px;
-    margin-bottom:30px;
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
 }
 
-h1{
-    margin:0;
-    color:#1976d2;
+.report-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 24px 40px;
 }
 
-.subtitle{
-    color:#666;
-    margin-top:8px;
+.masthead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: end;
+    padding: 28px 0 24px;
+    border-bottom: 1px solid var(--line);
 }
 
-.card{
-    border:1px solid #ddd;
-    border-radius:10px;
-    padding:20px;
-    margin-top:20px;
+.brand-mark {
+    color: var(--brand);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
+h1, h2, h3 {
+    margin: 0;
+    letter-spacing: 0;
 }
 
-th,td{
-    padding:10px;
-    border-bottom:1px solid #ddd;
-    text-align:left;
+h1 {
+    margin-top: 8px;
+    font-size: 34px;
+    line-height: 1.12;
 }
 
-.low{color:green;font-weight:bold;}
-.medium{color:orange;font-weight:bold;}
-.high{color:red;font-weight:bold;}
+h2 {
+    font-size: 18px;
+}
+
+h3 {
+    font-size: 14px;
+}
+
+.subtitle {
+    max-width: 760px;
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.target-box {
+    min-width: 250px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.label {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.value {
+    display: block;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.score-panel {
+    align-self: start;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.score-number {
+    margin-top: 10px;
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.risk-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    margin-top: 14px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.risk-low { background: #e7f6ed; color: var(--low); }
+.risk-medium { background: #fff4df; color: var(--medium); }
+.risk-high { background: #fee9e7; color: var(--high); }
+.risk-critical { background: #f8d7da; color: var(--critical); }
+
+.content-stack {
+    display: grid;
+    gap: 18px;
+}
+
+.panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-soft);
+}
+
+.panel-body {
+    padding: 18px;
+}
+
+.summary-list, .action-list, .findings-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.summary-list li, .action-list li, .findings-list li {
+    margin: 7px 0;
+}
+
+.module-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.module-table th, .module-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.module-table th {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.module-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.module-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.kv-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.kv-table td {
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.kv-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.kv-key {
+    width: 220px;
+    padding-right: 18px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.nested-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.mono {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+}
+
+.empty {
+    color: var(--muted);
+}
+
+.footer {
+    margin-top: 26px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+}
+
+@media (max-width: 820px) {
+    .report-shell {
+        padding: 20px 14px 28px;
+    }
+
+    .masthead, .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .target-box {
+        min-width: 0;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    .kv-key {
+        width: 140px;
+    }
+}
+
+@media print {
+    body {
+        background: #ffffff;
+    }
+
+    .report-shell {
+        max-width: none;
+        padding: 0;
+    }
+
+    .panel, .score-panel, .target-box {
+        break-inside: avoid;
+    }
+}
 </style>
-
 </head>
 
 <body>
+{% set primary = report.modules[0] if report.modules else {} %}
+{% set score = primary.risk_score.score if primary.risk_score is defined else 0 %}
+{% set risk = primary.risk_score.risk if primary.risk_score is defined else 'UNKNOWN' %}
+{% set risk_class = risk|lower %}
 
-<div class="container">
+<main class="report-shell">
+<header class="masthead">
+    <div>
+        <div class="brand-mark">Lumír SHIELD</div>
+        <h1>Executive Security Report</h1>
+        <p class="subtitle">Czytelny raport ekspozycji cyfrowej, ryzyka i rekomendowanych działań dla badanego celu.</p>
+    </div>
+    <div class="target-box">
+        <span class="label">Cel audytu</span>
+        <span class="value">{{ report.target or 'Brak danych' }}</span>
+        <span class="label" style="margin-top:10px;">Typ skanu</span>
+        <span class="value">{{ report.scan_type|default('unknown')|upper }}</span>
+    </div>
+</header>
 
-<div class="header">
+<section class="dashboard">
+    <aside class="score-panel">
+        <span class="label">Security score</span>
+        <div class="score-number">{{ score }}</div>
+        <span class="risk-badge risk-{{ risk_class }}">{{ risk }}</span>
+        <p class="subtitle">Wynik 90-100 oznacza niski poziom ryzyka. Niższy wynik wymaga szybszych działań naprawczych.</p>
+    </aside>
 
-<h1>🛡 LUMIR SHIELD</h1>
-
-<div class="subtitle">
-Executive Security Report
-</div>
-
-</div>
+    <div class="content-stack">

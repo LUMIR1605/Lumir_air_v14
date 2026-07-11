@@ -1,27 +1,102 @@
+{% macro render_value(value) -%}
+    {%- if value is mapping -%}
+        <table class="kv-table">
+            {%- for key, nested in value.items() %}
+            <tr>
+                <td class="kv-key">{{ key|replace('_', ' ')|title }}</td>
+                <td>{{ render_value(nested) }}</td>
+            </tr>
+            {%- endfor %}
+        </table>
+    {%- elif value is sequence and value is not string -%}
+        {%- if value %}
+        <ul class="nested-list">
+            {%- for item in value %}
+            <li>{{ render_value(item) }}</li>
+            {%- endfor %}
+        </ul>
+        {%- else -%}
+        <span class="empty">Brak</span>
+        {%- endif %}
+    {%- elif value is sameas true -%}
+        Tak
+    {%- elif value is sameas false -%}
+        Nie
+    {%- elif value is none or value == '' -%}
+        <span class="empty">Brak</span>
+    {%- else -%}
+        <span class="mono">{{ value }}</span>
+    {%- endif -%}
+{%- endmacro %}
 
-{% for m in report.modules %}
+<section class="panel">
+    <div class="panel-header">
+        <h2>Wyniki techniczne</h2>
+    </div>
+    <div class="panel-body">
+        <table class="module-table">
+            <tr>
+                <th>Moduł</th>
+                <th>Ryzyko</th>
+                <th>Score</th>
+                <th>Ustalenia</th>
+            </tr>
+            {% for module in report.modules %}
+            {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('UNKNOWN') %}
+            <tr>
+                <td>{{ module.module|replace('_', ' ')|title }}</td>
+                <td><span class="risk-badge risk-{{ module_risk|lower }}">{{ module_risk }}</span></td>
+                <td>{{ module.risk_score.score if module.risk_score is defined else '-' }}</td>
+                <td>{{ module.findings|length if module.findings is defined else 0 }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</section>
 
-<div class="card">
+<section class="module-grid">
+    {% for module in report.modules %}
+    <article class="panel">
+        <div class="panel-header">
+            <h2>{{ module.module|replace('_', ' ')|title }}</h2>
+            {% if module.risk_score is defined %}
+            <span class="risk-badge risk-{{ module.risk_score.risk|lower }}">{{ module.risk_score.risk }} / {{ module.risk_score.score }}</span>
+            {% endif %}
+        </div>
+        <div class="panel-body">
+            <table class="kv-table">
+                {% for key, value in module.items() %}
+                {% if key not in ["module", "risk_score"] %}
+                <tr>
+                    <td class="kv-key">{{ key|replace('_', ' ')|title }}</td>
+                    <td>{{ render_value(value) }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+    </article>
+    {% endfor %}
+</section>
 
-<h2>{{ m.module|replace('_',' ')|title }}</h2>
-
-<table>
-
-{% for k,v in m.items() %}
-
-{% if k != "module" %}
-
-<tr>
-<td><strong>{{ k }}</strong></td>
-<td>{{ v }}</td>
-</tr>
-
+{% if report.fusion is defined %}
+<section class="panel">
+    <div class="panel-header">
+        <h2>Fusion Analysis</h2>
+    </div>
+    <div class="panel-body">
+        {{ render_value(report.fusion) }}
+    </div>
+</section>
 {% endif %}
 
-{% endfor %}
-
-</table>
-
-</div>
-
-{% endfor %}
+{% if report.coverage is defined %}
+<section class="panel">
+    <div class="panel-header">
+        <h2>Coverage</h2>
+    </div>
+    <div class="panel-body">
+        {{ render_value(report.coverage) }}
+    </div>
+</section>
+{% endif %}

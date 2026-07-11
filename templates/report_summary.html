@@ -1,53 +1,95 @@
-<div class="card">
+<section class="panel">
+    <div class="panel-header">
+        <h2>Podsumowanie zarządcze</h2>
+        <span class="label">{{ report.modules|length }} modułów</span>
+    </div>
+    <div class="panel-body">
+        {% if report.executive_summary %}
+        <ul class="summary-list">
+            {% for item in report.executive_summary %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Brak podsumowania dla tego skanu.</p>
+        {% endif %}
+    </div>
+</section>
 
-<h2>Executive Summary</h2>
+<section class="panel">
+    <div class="panel-header">
+        <h2>Powierzchnia ataku</h2>
+    </div>
+    <div class="panel-body">
+        {% if report.attack_surface %}
+        <ul class="findings-list">
+            {% for item in report.attack_surface %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Nie wykryto istotnych elementów powierzchni ataku.</p>
+        {% endif %}
+    </div>
+</section>
 
-{% if report.executive_summary %}
-<ul>
-{% for item in report.executive_summary %}
-<li>{{ item }}</li>
-{% endfor %}
-</ul>
-{% else %}
-<p>Brak danych.</p>
-{% endif %}
+<section class="panel">
+    <div class="panel-header">
+        <h2>Rekomendacje</h2>
+    </div>
+    <div class="panel-body">
+        {% if report.advice %}
+        <ul class="summary-list">
+            {% for item in report.advice %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Brak rekomendacji dla tego skanu.</p>
+        {% endif %}
+    </div>
+</section>
 
-</div>
+<section class="panel">
+    <div class="panel-header">
+        <h2>Plan działań</h2>
+    </div>
+    <div class="panel-body">
+        {% if report.action_plan %}
+        <h3>Teraz</h3>
+        {% if report.action_plan.now %}
+        <ul class="action-list">
+            {% for item in report.action_plan.now %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Brak działań natychmiastowych.</p>
+        {% endif %}
 
-<div class="card">
+        <h3 style="margin-top:16px;">Dzisiaj</h3>
+        {% if report.action_plan.today %}
+        <ul class="action-list">
+            {% for item in report.action_plan.today %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Brak działań zaplanowanych na dzisiaj.</p>
+        {% endif %}
 
-<h2>Overall Risk</h2>
-
-{% set ns = namespace(score=0) %}
-
-{% for m in report.modules %}
-{% if m.risk_score is defined and m.risk_score.score > ns.score %}
-{% set ns.score = m.risk_score.score %}
-{% endif %}
-{% endfor %}
-
-<p><strong>Score:</strong> {{ ns.score }}/100</p>
-
-{% if ns.score >= 90 %}
-<p class="low">LOW RISK</p>
-{% elif ns.score >= 70 %}
-<p class="medium">MEDIUM RISK</p>
-{% else %}
-<p class="high">HIGH RISK</p>
-{% endif %}
-
-</div>
-
-<div class="card">
-
-<h2>Recommendations</h2>
-
-{% if report.advice %}
-<ul>
-{% for item in report.advice %}
-<li>{{ item }}</li>
-{% endfor %}
-</ul>
-{% endif %}
-
-</div>
+        <h3 style="margin-top:16px;">Później</h3>
+        {% if report.action_plan.later %}
+        <ul class="action-list">
+            {% for item in report.action_plan.later %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Brak działań długoterminowych.</p>
+        {% endif %}
+        {% else %}
+        <p class="empty">Brak planu działań.</p>
+        {% endif %}
+    </div>
+</section>

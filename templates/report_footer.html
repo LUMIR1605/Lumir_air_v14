@@ -1,48 +1,9 @@
+    </div>
+</section>
 
-<div class="card">
-
-<h2>Action Plan</h2>
-
-{% if report.action_plan %}
-<h3>Dzisiaj</h3>
-<ul>
-{% for i in report.action_plan.today %}
-<li>{{ i }}</li>
-{% endfor %}
-</ul>
-
-<h3>Później</h3>
-<ul>
-{% for i in report.action_plan.later %}
-<li>{{ i }}</li>
-{% endfor %}
-</ul>
-{% endif %}
-
-</div>
-
-<div class="card">
-<h2>Technical Findings</h2>
-
-<table>
-<tr>
-<th>Module</th>
-<th>Risk</th>
-<th>Score</th>
-</tr>
-
-{% for m in report.modules %}
-<tr>
-<td>{{ m.module }}</td>
-<td>{{ m.risk }}</td>
-<td>{{ m.risk_score.score if m.risk_score is defined else "-" }}</td>
-</tr>
-{% endfor %}
-
-</table>
-
-</div>
-
-</div>
+<footer class="footer">
+    Lumír SHIELD - profesjonalny raport ekspozycji cyfrowej. Wyniki zależą od dostępności zewnętrznych źródeł danych w chwili skanu.
+</footer>
+</main>
 </body>
 </html>
