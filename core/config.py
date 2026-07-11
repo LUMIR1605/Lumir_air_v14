@@ -12,11 +12,20 @@ CACHE = ROOT / "cache"
 LOGS = ROOT / "logs"
 
 TIMEOUT = 20
+MAX_RETRIES = 3
+RETRY_BACKOFF = 2
 
 HEADERS = {
     "User-Agent": "LUMIR AIR 14",
     "Accept": "application/json"
 }
 
-for d in (DOWNLOADS, REPORTS, CACHE, LOGS):
-    d.mkdir(parents=True, exist_ok=True)
+def init_paths():
+    for directory in (DOWNLOADS, REPORTS, CACHE, LOGS):
+        directory.mkdir(parents=True, exist_ok=True)
+
+def get_reports():
+    init_paths()
+    return REPORTS
+
+init_paths()
