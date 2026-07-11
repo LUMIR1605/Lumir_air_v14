@@ -4,6 +4,7 @@ APP_NAME = "LUMIR AIR"
 VERSION = "14.1.0"
 
 ROOT = Path.home() / "lumir_air_v14"
+LOCAL_ROOT = Path.cwd() / ".lumir"
 
 DOWNLOADS = Path.home() / "storage" / "downloads" / "LUMIR"
 
@@ -29,17 +30,29 @@ HEADERS = {
     "Accept": "application/json"
 }
 
+def _ensure_writable(directory, fallback):
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        probe = directory / ".write_test"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return directory
+    except OSError:
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
 def init_paths():
     for directory in (DOWNLOADS, REPORTS, DATA, CACHE, LOGS):
-        directory.mkdir(parents=True, exist_ok=True)
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
 
 def get_reports():
-    init_paths()
-    return REPORTS
+    return _ensure_writable(REPORTS, LOCAL_ROOT / "reports")
 
 def get_data():
-    init_paths()
-    return DATA
+    return _ensure_writable(DATA, LOCAL_ROOT / "data")
 
 def calculate_backoff(attempt):
     return RETRY_DELAY * (RETRY_BACKOFF ** attempt)
