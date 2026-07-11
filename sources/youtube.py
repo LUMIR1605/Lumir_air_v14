@@ -1,4 +1,3 @@
-import json
 import requests
 from core import config
 from core.logger import info, ok, error

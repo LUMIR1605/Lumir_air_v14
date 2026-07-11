@@ -1,4 +1,3 @@
-from pathlib import Path
 import json
 from core import config
 from core.logger import error

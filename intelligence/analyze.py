@@ -7,7 +7,6 @@ def analyze(github, hackernews, huggingface):
     huggingface = huggingface or []
     
     repo = github[0]["full_name"] if github else "Brak"
-    stars = github[0].get("stargazers_count", github[0].get("stars", "?")) if github else "?"
     
     hn = hackernews[0]["title"] if hackernews else "Brak"
     
