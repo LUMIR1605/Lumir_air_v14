@@ -8,6 +8,7 @@ __pycache__/
 *.tmp
 
 # Reports
+.lumir/
 shield_report*.html
 shield_report*.json
 

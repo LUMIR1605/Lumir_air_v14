@@ -1,4 +1,7 @@
 from shield.core import analyze
+from core.compat import configure_stdio
+
+configure_stdio()
 
 tests = [
     ("test@gmail.com", "email"),
