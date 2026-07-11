@@ -3,10 +3,13 @@
 import sys
 from pprint import pprint
 
+from core.compat import configure_stdio
 from shield.core import detect_type
 from shield.multi_scan import run
 from shield.report_builder import build
 from shield.html_report import build as build_html
+
+configure_stdio()
 
 if len(sys.argv) != 2:
     print("Użycie:")
