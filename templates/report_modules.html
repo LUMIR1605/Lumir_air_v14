@@ -3,7 +3,7 @@
         <table class="kv-table">
             {%- for key, nested in value.items() %}
             <tr>
-                <td class="kv-key">{{ key|replace('_', ' ')|title }}</td>
+                <td class="kv-key">{{ render_label(key) }}</td>
                 <td>{{ render_value(nested) }}</td>
             </tr>
             {%- endfor %}
@@ -29,6 +29,30 @@
     {%- endif -%}
 {%- endmacro %}
 
+{% macro render_label(key) -%}
+    {%- set labels = {
+        "ip": "IP",
+        "url": "URL",
+        "dns": "DNS",
+        "mx": "MX",
+        "ns": "NS",
+        "aaaa": "AAAA",
+        "spf": "SPF",
+        "dkim": "DKIM",
+        "dmarc": "DMARC",
+        "https": "HTTPS",
+        "risk": "Ryzyko",
+        "risk_score": "Wynik ryzyka",
+        "scan_type": "Typ skanu",
+        "security_headers": "Nagłówki bezpieczeństwa",
+        "status_code": "Kod statusu",
+        "valid_format": "Poprawny format",
+        "mx_records": "Rekordy MX",
+        "breaches_found": "Liczba wycieków"
+    } -%}
+    {{ labels.get(key|lower, key|replace('_', ' ')|title) }}
+{%- endmacro %}
+
 <section class="panel">
     <div class="panel-header">
         <h2>Wyniki techniczne</h2>
@@ -44,7 +68,7 @@
             {% for module in report.modules %}
             {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('UNKNOWN') %}
             <tr>
-                <td>{{ module.module|replace('_', ' ')|title }}</td>
+                <td>{{ render_label(module.module) }}</td>
                 <td><span class="risk-badge risk-{{ module_risk|lower }}">{{ module_risk }}</span></td>
                 <td>{{ module.risk_score.score if module.risk_score is defined else '-' }}</td>
                 <td>{{ module.findings|length if module.findings is defined else 0 }}</td>
@@ -58,7 +82,7 @@
     {% for module in report.modules %}
     <article class="panel">
         <div class="panel-header">
-            <h2>{{ module.module|replace('_', ' ')|title }}</h2>
+            <h2>{{ render_label(module.module) }}</h2>
             {% if module.risk_score is defined %}
             <span class="risk-badge risk-{{ module.risk_score.risk|lower }}">{{ module.risk_score.risk }} / {{ module.risk_score.score }}</span>
             {% endif %}
@@ -68,7 +92,7 @@
                 {% for key, value in module.items() %}
                 {% if key not in ["module", "risk_score"] %}
                 <tr>
-                    <td class="kv-key">{{ key|replace('_', ' ')|title }}</td>
+                    <td class="kv-key">{{ render_label(key) }}</td>
                     <td>{{ render_value(value) }}</td>
                 </tr>
                 {% endif %}
