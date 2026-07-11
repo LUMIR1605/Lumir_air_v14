@@ -14,6 +14,7 @@ LOGS = ROOT / "logs"
 TIMEOUT = 20
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2
+RETRY_DELAY = 1
 
 HEADERS = {
     "User-Agent": "LUMIR AIR 14",
