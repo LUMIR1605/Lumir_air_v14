@@ -1,27 +1,169 @@
+{% macro render_label(key) -%}
+    {%- set labels = {
+        "email_scan": "Email Scan",
+        "domain_scan": "Domain Scan",
+        "phone_scan": "Phone Scan",
+        "username_scan": "Username Scan",
+        "breach_scan": "Breach Scan",
+        "ip": "IP",
+        "url": "URL",
+        "dns": "DNS",
+        "mx": "MX",
+        "ns": "NS",
+        "aaaa": "AAAA",
+        "spf": "SPF",
+        "dkim": "DKIM",
+        "dmarc": "DMARC",
+        "https": "HTTPS",
+        "risk": "Ryzyko",
+        "risk_score": "Wynik ryzyka",
+        "scan_type": "Typ skanu",
+        "security_headers": "Naglowki bezpieczenstwa",
+        "status_code": "Status",
+        "valid_format": "Format",
+        "mx_records": "Rekordy MX",
+        "breaches_found": "Liczba wyciekow"
+    } -%}
+    {{ labels.get(key|lower, key|replace('_', ' ')|title) }}
+{%- endmacro %}
 
-{% for m in report.modules %}
+{% macro render_value(value) -%}
+    {%- if value is mapping -%}
+        <table class="kv-table">
+            {%- for key, nested in value.items() %}
+            <tr>
+                <td class="kv-key">{{ render_label(key) }}</td>
+                <td>{{ render_value(nested) }}</td>
+            </tr>
+            {%- endfor %}
+        </table>
+    {%- elif value is sequence and value is not string -%}
+        {%- if value %}
+        <ul class="nested-list">
+            {%- for item in value %}
+            <li>{{ render_value(item) }}</li>
+            {%- endfor %}
+        </ul>
+        {%- else -%}
+        <span class="empty">Brak</span>
+        {%- endif %}
+    {%- elif value is sameas true -%}
+        Aktywny
+    {%- elif value is sameas false -%}
+        Nie
+    {%- elif value is none or value == '' -%}
+        <span class="empty">Brak</span>
+    {%- else -%}
+        <span class="mono">{{ value }}</span>
+    {%- endif -%}
+{%- endmacro %}
 
-<div class="card">
+{% macro module_card(title, module_name, icon, fallback) -%}
+    {%- set ns = namespace(item=none) -%}
+    {%- for module in report.modules -%}
+        {%- if module.module == module_name -%}
+            {%- set ns.item = module -%}
+        {%- endif -%}
+    {%- endfor -%}
+    <article class="security-card">
+        <div class="card-head">
+            <div class="card-icon">{{ icon }}</div>
+            <div>
+                <h3 class="card-title">{{ title }}</h3>
+                {%- if ns.item and ns.item.risk_score is defined %}
+                <span class="risk-pill risk-{{ ns.item.risk_score.risk|lower }}">{{ ns.item.risk_score.risk }}</span>
+                {%- else %}
+                <span class="risk-pill risk-unknown">Not scanned</span>
+                {%- endif %}
+            </div>
+        </div>
+        {%- if ns.item %}
+        <div class="card-score">{{ ns.item.risk_score.score if ns.item.risk_score is defined else '-' }} <small>/100</small></div>
+        <div class="card-list">
+            {%- if ns.item.findings is defined and ns.item.findings %}
+            <div class="card-row"><span>Ustalenia</span><span>{{ ns.item.findings|length }}</span></div>
+            {%- else %}
+            <div class="card-row"><span>Ustalenia</span><span>Brak</span></div>
+            {%- endif %}
+            <div class="card-row"><span>Status</span><span>{{ ns.item.risk|default('low')|title }}</span></div>
+            <div class="card-row"><span>Ostatnie sprawdzenie</span><span>{{ scan_short_date|default('dzisiaj') }}</span></div>
+        </div>
+        {%- else %}
+        <div class="card-score">- <small>/100</small></div>
+        <div class="card-list">
+            <div class="card-row"><span>Status</span><span>{{ fallback }}</span></div>
+            <div class="card-row"><span>Wynik</span><span>Brak danych</span></div>
+        </div>
+        {%- endif %}
+    </article>
+{%- endmacro %}
 
-<h2>{{ m.module|replace('_',' ')|title }}</h2>
+<section class="security-grid" aria-label="Security scan cards">
+    {{ module_card("Email Scan", "email_scan", "M", "Nie dotyczy") }}
+    {{ module_card("Domain Scan", "domain_scan", "G", "Nie dotyczy") }}
+    {{ module_card("Breach Scan", "breach_scan", "L", "Nie dotyczy") }}
+    {{ module_card("Username Scan", "username_scan", "U", "Nie dotyczy") }}
+    {{ module_card("Phone Scan", "phone_scan", "P", "Nie dotyczy") }}
+</section>
 
-<table>
+<section class="glass-panel timeline">
+    <h2 class="panel-title">Timeline skanowania</h2>
+    <div class="timeline-items">
+        <div class="timeline-item"><span class="timeline-dot">M</span><strong>Email Scan</strong><span>{{ scan_time|default('') }}</span><span>Zakonczone</span></div>
+        <div class="timeline-item"><span class="timeline-dot">G</span><strong>Domain Scan</strong><span>{{ scan_time|default('') }}</span><span>Zakonczone</span></div>
+        <div class="timeline-item"><span class="timeline-dot">L</span><strong>Breach Scan</strong><span>{{ scan_time|default('') }}</span><span>Zakonczone</span></div>
+        <div class="timeline-item"><span class="timeline-dot">U</span><strong>Username Scan</strong><span>{{ scan_time|default('') }}</span><span>Zakonczone</span></div>
+        <div class="timeline-item"><span class="timeline-dot">S</span><strong>Raport gotowy</strong><span>{{ scan_time|default('') }}</span><span>Zakonczone</span></div>
+    </div>
+</section>
 
-{% for k,v in m.items() %}
+<section class="glass-panel panel">
+    <h2 class="panel-title">Wyniki techniczne</h2>
+    <table class="module-table">
+        <tr>
+            <th>Modul</th>
+            <th>Ryzyko</th>
+            <th>Score</th>
+            <th>Ustalenia</th>
+        </tr>
+        {% for module in report.modules %}
+        {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('UNKNOWN') %}
+        <tr>
+            <td>{{ render_label(module.module) }}</td>
+            <td><span class="risk-pill risk-{{ module_risk|lower }}">{{ module_risk }}</span></td>
+            <td>{{ module.risk_score.score if module.risk_score is defined else '-' }}</td>
+            <td>{{ module.findings|length if module.findings is defined else 0 }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
 
-{% if k != "module" %}
+{% for module in report.modules %}
+<section class="glass-panel panel">
+    <h2 class="panel-title">{{ render_label(module.module) }}</h2>
+    <table class="kv-table">
+        {% for key, value in module.items() %}
+        {% if key not in ["module", "risk_score"] %}
+        <tr>
+            <td class="kv-key">{{ render_label(key) }}</td>
+            <td>{{ render_value(value) }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+</section>
+{% endfor %}
 
-<tr>
-<td><strong>{{ k }}</strong></td>
-<td>{{ v }}</td>
-</tr>
-
+{% if report.fusion is defined %}
+<section class="glass-panel panel">
+    <h2 class="panel-title">Fusion Analysis</h2>
+    {{ render_value(report.fusion) }}
+</section>
 {% endif %}
 
-{% endfor %}
-
-</table>
-
-</div>
-
-{% endfor %}
+{% if report.coverage is defined %}
+<section class="glass-panel panel">
+    <h2 class="panel-title">Coverage</h2>
+    {{ render_value(report.coverage) }}
+</section>
+{% endif %}

@@ -1,53 +1,60 @@
-<div class="card">
+{% macro render_action(items, fallback) -%}
+    {%- if items %}
+    <ul class="action-list">
+        {%- for item in items %}
+        <li>{{ item }}</li>
+        {%- endfor %}
+    </ul>
+    {%- else %}
+    <p class="muted">{{ fallback }}</p>
+    {%- endif %}
+{%- endmacro %}
 
-<h2>Executive Summary</h2>
+<section class="panel-grid">
+    <section class="glass-panel panel">
+        <h2 class="panel-title">Plan dzialan</h2>
+        <div class="action-columns">
+            <div class="action-column">
+                <h3>Dzisiaj</h3>
+                {% if report.action_plan %}
+                {{ render_action(report.action_plan.today, "Brak dzialan na dzisiaj.") }}
+                {% else %}
+                <p class="muted">Brak planu dzialan.</p>
+                {% endif %}
+            </div>
+            <div class="action-column">
+                <h3>Wkrotce</h3>
+                {% if report.action_plan %}
+                {{ render_action(report.action_plan.now, "Brak dzialan pilnych.") }}
+                {% else %}
+                <p class="muted">Brak planu dzialan.</p>
+                {% endif %}
+            </div>
+            <div class="action-column">
+                <h3>Zachowaj nawyki</h3>
+                {% if report.action_plan %}
+                {{ render_action(report.action_plan.later, "Zachowaj dobre praktyki bezpieczenstwa.") }}
+                {% else %}
+                <p class="muted">Zachowaj dobre praktyki bezpieczenstwa.</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
 
-{% if report.executive_summary %}
-<ul>
-{% for item in report.executive_summary %}
-<li>{{ item }}</li>
-{% endfor %}
-</ul>
-{% else %}
-<p>Brak danych.</p>
-{% endif %}
+    <section class="glass-panel panel">
+        <h2 class="panel-title">Przeglad ryzyka</h2>
+        <div class="risk-donut"></div>
+        <div class="legend">
+            <div class="legend-row"><span>LOW RISK</span><strong>100%</strong></div>
+            <div class="legend-row"><span>MEDIUM RISK</span><strong>0%</strong></div>
+            <div class="legend-row"><span>HIGH RISK</span><strong>0%</strong></div>
+            <div class="legend-row"><span>CRITICAL</span><strong>0%</strong></div>
+        </div>
+    </section>
 
-</div>
-
-<div class="card">
-
-<h2>Overall Risk</h2>
-
-{% set ns = namespace(score=0) %}
-
-{% for m in report.modules %}
-{% if m.risk_score is defined and m.risk_score.score > ns.score %}
-{% set ns.score = m.risk_score.score %}
-{% endif %}
-{% endfor %}
-
-<p><strong>Score:</strong> {{ ns.score }}/100</p>
-
-{% if ns.score >= 90 %}
-<p class="low">LOW RISK</p>
-{% elif ns.score >= 70 %}
-<p class="medium">MEDIUM RISK</p>
-{% else %}
-<p class="high">HIGH RISK</p>
-{% endif %}
-
-</div>
-
-<div class="card">
-
-<h2>Recommendations</h2>
-
-{% if report.advice %}
-<ul>
-{% for item in report.advice %}
-<li>{{ item }}</li>
-{% endfor %}
-</ul>
-{% endif %}
-
-</div>
+    <section class="glass-panel panel next-scan">
+        <h2 class="panel-title">Nastepne skanowanie</h2>
+        <p class="muted">Zalecamy wykonanie kolejnego skanowania za 30 dni.</p>
+        <a class="action-button" href="shield_report_v2.html">Ustaw przypomnienie</a>
+    </section>
+</section>

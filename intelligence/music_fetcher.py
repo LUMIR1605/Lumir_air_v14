@@ -1,5 +1,4 @@
 from intelligence.music_sources import enabled_sources
-from intelligence.music_collector import add
 
 def fetch():
     print("🎵 Music Collector")

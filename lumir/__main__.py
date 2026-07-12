@@ -1,3 +1,4 @@
+from core.compat import configure_stdio
 from core import config
 from engine.report import header, section
 from output.markdown import save
@@ -14,6 +15,8 @@ from intelligence.context_builder import build
 from intelligence.llm_engine import analyze as llm_analyze
 from intelligence.discovery_engine import discover
 from intelligence.memory_engine import compare
+
+configure_stdio()
 
 def main():
     # Initialize config and directories early

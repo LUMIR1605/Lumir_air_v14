@@ -6,8 +6,8 @@
 - [x] Phone Scan
 - [x] Domain Scan
 - [x] URL Scan
-- [ ] Report v2
-- [ ] RC1 Tests
+- [x] Report v2
+- [x] RC1 Tests
 - [ ] RC1 Release
 
 ## RC2
