@@ -1,95 +1,60 @@
-<section class="panel">
-    <div class="panel-header">
-        <h2>Executive Summary</h2>
-        <span class="label">{{ report.modules|length }} modules</span>
-    </div>
-    <div class="panel-body">
-        {% if report.executive_summary %}
-        <ul class="summary-list">
-            {% for item in report.executive_summary %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty">No executive summary available for this scan.</p>
-        {% endif %}
-    </div>
-</section>
+{% macro render_action(items, fallback) -%}
+    {%- if items %}
+    <ul class="action-list">
+        {%- for item in items %}
+        <li>{{ item }}</li>
+        {%- endfor %}
+    </ul>
+    {%- else %}
+    <p class="muted">{{ fallback }}</p>
+    {%- endif %}
+{%- endmacro %}
 
-<section class="panel">
-    <div class="panel-header">
-        <h2>Attack Surface</h2>
-    </div>
-    <div class="panel-body">
-        {% if report.attack_surface %}
-        <ul class="findings-list">
-            {% for item in report.attack_surface %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty">No significant exposure signals were detected.</p>
-        {% endif %}
-    </div>
-</section>
+<section class="panel-grid">
+    <section class="glass-panel panel">
+        <h2 class="panel-title">Plan dzialan</h2>
+        <div class="action-columns">
+            <div class="action-column">
+                <h3>Dzisiaj</h3>
+                {% if report.action_plan %}
+                {{ render_action(report.action_plan.today, "Brak dzialan na dzisiaj.") }}
+                {% else %}
+                <p class="muted">Brak planu dzialan.</p>
+                {% endif %}
+            </div>
+            <div class="action-column">
+                <h3>Wkrotce</h3>
+                {% if report.action_plan %}
+                {{ render_action(report.action_plan.now, "Brak dzialan pilnych.") }}
+                {% else %}
+                <p class="muted">Brak planu dzialan.</p>
+                {% endif %}
+            </div>
+            <div class="action-column">
+                <h3>Zachowaj nawyki</h3>
+                {% if report.action_plan %}
+                {{ render_action(report.action_plan.later, "Zachowaj dobre praktyki bezpieczenstwa.") }}
+                {% else %}
+                <p class="muted">Zachowaj dobre praktyki bezpieczenstwa.</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
 
-<section class="panel">
-    <div class="panel-header">
-        <h2>Recommendations</h2>
-    </div>
-    <div class="panel-body">
-        {% if report.advice %}
-        <ul class="summary-list">
-            {% for item in report.advice %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty">No recommendations available for this scan.</p>
-        {% endif %}
-    </div>
-</section>
+    <section class="glass-panel panel">
+        <h2 class="panel-title">Przeglad ryzyka</h2>
+        <div class="risk-donut"></div>
+        <div class="legend">
+            <div class="legend-row"><span>LOW RISK</span><strong>100%</strong></div>
+            <div class="legend-row"><span>MEDIUM RISK</span><strong>0%</strong></div>
+            <div class="legend-row"><span>HIGH RISK</span><strong>0%</strong></div>
+            <div class="legend-row"><span>CRITICAL</span><strong>0%</strong></div>
+        </div>
+    </section>
 
-<section class="panel">
-    <div class="panel-header">
-        <h2>Action Plan</h2>
-    </div>
-    <div class="panel-body">
-        {% if report.action_plan %}
-        <h3>Now</h3>
-        {% if report.action_plan.now %}
-        <ul class="action-list">
-            {% for item in report.action_plan.now %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty">No immediate actions required.</p>
-        {% endif %}
-
-        <h3 style="margin-top:16px;">Today</h3>
-        {% if report.action_plan.today %}
-        <ul class="action-list">
-            {% for item in report.action_plan.today %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty">No actions scheduled for today.</p>
-        {% endif %}
-
-        <h3 style="margin-top:16px;">Later</h3>
-        {% if report.action_plan.later %}
-        <ul class="action-list">
-            {% for item in report.action_plan.later %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="empty">No long-term actions required.</p>
-        {% endif %}
-        {% else %}
-        <p class="empty">No action plan available.</p>
-        {% endif %}
-    </div>
+    <section class="glass-panel panel next-scan">
+        <h2 class="panel-title">Nastepne skanowanie</h2>
+        <p class="muted">Zalecamy wykonanie kolejnego skanowania za 30 dni.</p>
+        <a class="action-button" href="shield_report_v2.html">Ustaw przypomnienie</a>
+    </section>
 </section>
