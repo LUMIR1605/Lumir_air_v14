@@ -1,7 +1,7 @@
 <section class="panel">
     <div class="panel-header">
-        <h2>Podsumowanie zarządcze</h2>
-        <span class="label">{{ report.modules|length }} modułów</span>
+        <h2>Executive Summary</h2>
+        <span class="label">{{ report.modules|length }} modules</span>
     </div>
     <div class="panel-body">
         {% if report.executive_summary %}
@@ -11,14 +11,14 @@
             {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Brak podsumowania dla tego skanu.</p>
+        <p class="empty">No executive summary available for this scan.</p>
         {% endif %}
     </div>
 </section>
 
 <section class="panel">
     <div class="panel-header">
-        <h2>Powierzchnia ataku</h2>
+        <h2>Attack Surface</h2>
     </div>
     <div class="panel-body">
         {% if report.attack_surface %}
@@ -28,14 +28,14 @@
             {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Nie wykryto istotnych elementów powierzchni ataku.</p>
+        <p class="empty">No significant exposure signals were detected.</p>
         {% endif %}
     </div>
 </section>
 
 <section class="panel">
     <div class="panel-header">
-        <h2>Rekomendacje</h2>
+        <h2>Recommendations</h2>
     </div>
     <div class="panel-body">
         {% if report.advice %}
@@ -45,18 +45,18 @@
             {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Brak rekomendacji dla tego skanu.</p>
+        <p class="empty">No recommendations available for this scan.</p>
         {% endif %}
     </div>
 </section>
 
 <section class="panel">
     <div class="panel-header">
-        <h2>Plan działań</h2>
+        <h2>Action Plan</h2>
     </div>
     <div class="panel-body">
         {% if report.action_plan %}
-        <h3>Teraz</h3>
+        <h3>Now</h3>
         {% if report.action_plan.now %}
         <ul class="action-list">
             {% for item in report.action_plan.now %}
@@ -64,10 +64,10 @@
             {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Brak działań natychmiastowych.</p>
+        <p class="empty">No immediate actions required.</p>
         {% endif %}
 
-        <h3 style="margin-top:16px;">Dzisiaj</h3>
+        <h3 style="margin-top:16px;">Today</h3>
         {% if report.action_plan.today %}
         <ul class="action-list">
             {% for item in report.action_plan.today %}
@@ -75,10 +75,10 @@
             {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Brak działań zaplanowanych na dzisiaj.</p>
+        <p class="empty">No actions scheduled for today.</p>
         {% endif %}
 
-        <h3 style="margin-top:16px;">Później</h3>
+        <h3 style="margin-top:16px;">Later</h3>
         {% if report.action_plan.later %}
         <ul class="action-list">
             {% for item in report.action_plan.later %}
@@ -86,10 +86,10 @@
             {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Brak działań długoterminowych.</p>
+        <p class="empty">No long-term actions required.</p>
         {% endif %}
         {% else %}
-        <p class="empty">Brak planu działań.</p>
+        <p class="empty">No action plan available.</p>
         {% endif %}
     </div>
 </section>

@@ -1,3 +1,32 @@
+{% macro render_label(key) -%}
+    {%- set labels = {
+        "email_scan": "Email",
+        "domain_scan": "Domain",
+        "phone_scan": "Phone",
+        "username_scan": "Username",
+        "breach_scan": "Breaches",
+        "ip": "IP",
+        "url": "URL",
+        "dns": "DNS",
+        "mx": "MX",
+        "ns": "NS",
+        "aaaa": "AAAA",
+        "spf": "SPF",
+        "dkim": "DKIM",
+        "dmarc": "DMARC",
+        "https": "HTTPS",
+        "risk": "Risk",
+        "risk_score": "Risk Score",
+        "scan_type": "Scan Type",
+        "security_headers": "Security Headers",
+        "status_code": "Status Code",
+        "valid_format": "Valid Format",
+        "mx_records": "MX Records",
+        "breaches_found": "Breaches Found"
+    } -%}
+    {{ labels.get(key|lower, key|replace('_', ' ')|title) }}
+{%- endmacro %}
+
 {% macro render_value(value) -%}
     {%- if value is mapping -%}
         <table class="kv-table">
@@ -16,60 +45,68 @@
             {%- endfor %}
         </ul>
         {%- else -%}
-        <span class="empty">Brak</span>
+        <span class="empty">None</span>
         {%- endif %}
     {%- elif value is sameas true -%}
-        Tak
+        Yes
     {%- elif value is sameas false -%}
-        Nie
+        No
     {%- elif value is none or value == '' -%}
-        <span class="empty">Brak</span>
+        <span class="empty">None</span>
     {%- else -%}
         <span class="mono">{{ value }}</span>
     {%- endif -%}
 {%- endmacro %}
 
-{% macro render_label(key) -%}
-    {%- set labels = {
-        "ip": "IP",
-        "url": "URL",
-        "dns": "DNS",
-        "mx": "MX",
-        "ns": "NS",
-        "aaaa": "AAAA",
-        "spf": "SPF",
-        "dkim": "DKIM",
-        "dmarc": "DMARC",
-        "https": "HTTPS",
-        "risk": "Ryzyko",
-        "risk_score": "Wynik ryzyka",
-        "scan_type": "Typ skanu",
-        "security_headers": "Nagłówki bezpieczeństwa",
-        "status_code": "Kod statusu",
-        "valid_format": "Poprawny format",
-        "mx_records": "Rekordy MX",
-        "breaches_found": "Liczba wycieków"
-    } -%}
-    {{ labels.get(key|lower, key|replace('_', ' ')|title) }}
+{% macro security_card(title, module_name, description) -%}
+    {%- set ns = namespace(item=none) -%}
+    {%- for module in report.modules -%}
+        {%- if module.module == module_name -%}
+            {%- set ns.item = module -%}
+        {%- endif -%}
+    {%- endfor -%}
+    <article class="security-card">
+        <span class="card-kicker">{{ title }}</span>
+        {%- if ns.item %}
+        {%- set card_risk = ns.item.risk_score.risk if ns.item.risk_score is defined else ns.item.risk|default('UNKNOWN') -%}
+        <h3>{{ render_label(ns.item.module) }}</h3>
+        <div class="card-score">{{ ns.item.risk_score.score if ns.item.risk_score is defined else '-' }}</div>
+        <span class="risk-pill risk-{{ card_risk|lower }}">{{ card_risk }}</span>
+        <div class="card-detail">{{ ns.item.findings|length if ns.item.findings is defined else 0 }} findings</div>
+        {%- else %}
+        <h3>{{ title }}</h3>
+        <div class="card-score">-</div>
+        <span class="risk-pill risk-unknown">Not scanned</span>
+        <div class="card-detail">{{ description }}</div>
+        {%- endif %}
+    </article>
 {%- endmacro %}
+
+<section class="security-grid" aria-label="Security Cards">
+    {{ security_card("Email", "email_scan", "Available for email targets.") }}
+    {{ security_card("Domain", "domain_scan", "Available for domains and email domains.") }}
+    {{ security_card("Phone", "phone_scan", "Available for phone targets.") }}
+    {{ security_card("Username", "username_scan", "Available for username targets.") }}
+    {{ security_card("Breaches", "breach_scan", "Available for email exposure scans.") }}
+</section>
 
 <section class="panel">
     <div class="panel-header">
-        <h2>Wyniki techniczne</h2>
+        <h2>Technical Results</h2>
     </div>
     <div class="panel-body">
         <table class="module-table">
             <tr>
-                <th>Moduł</th>
-                <th>Ryzyko</th>
+                <th>Module</th>
+                <th>Risk</th>
                 <th>Score</th>
-                <th>Ustalenia</th>
+                <th>Findings</th>
             </tr>
             {% for module in report.modules %}
             {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('UNKNOWN') %}
             <tr>
                 <td>{{ render_label(module.module) }}</td>
-                <td><span class="risk-badge risk-{{ module_risk|lower }}">{{ module_risk }}</span></td>
+                <td><span class="risk-pill risk-{{ module_risk|lower }}">{{ module_risk }}</span></td>
                 <td>{{ module.risk_score.score if module.risk_score is defined else '-' }}</td>
                 <td>{{ module.findings|length if module.findings is defined else 0 }}</td>
             </tr>
@@ -84,7 +121,7 @@
         <div class="panel-header">
             <h2>{{ render_label(module.module) }}</h2>
             {% if module.risk_score is defined %}
-            <span class="risk-badge risk-{{ module.risk_score.risk|lower }}">{{ module.risk_score.risk }} / {{ module.risk_score.score }}</span>
+            <span class="risk-pill risk-{{ module.risk_score.risk|lower }}">{{ module.risk_score.risk }} / {{ module.risk_score.score }}</span>
             {% endif %}
         </div>
         <div class="panel-body">

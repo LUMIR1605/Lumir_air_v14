@@ -12,7 +12,7 @@ from shield.html_report import build as build_html
 configure_stdio()
 
 if len(sys.argv) != 2:
-    print("Użycie:")
+    print("Uzycie:")
     print("python shield.py <email|telefon|url|domena|nick>")
     raise SystemExit(1)
 
@@ -24,9 +24,9 @@ result = run(scan_type, target)
 json_report = build(result)
 html_report = build_html(result)
 
-print("\n🛡 LUMIR SHIELD\n")
+print("\nLUMIR SHIELD\n")
 pprint(result)
 
 print("\nRaport zapisano jako:")
-print(f" • {json_report}")
-print(f" • {html_report}")
+print(f" - {json_report}")
+print(f" - {html_report}")

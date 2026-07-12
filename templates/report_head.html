@@ -3,159 +3,315 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lumír SHIELD - Executive Security Report</title>
+<title>Lumir SHIELD - Premium Security Report</title>
 
 <style>
 :root {
-    --bg: #f5f7fb;
-    --surface: #ffffff;
-    --surface-soft: #eef3f8;
-    --ink: #17202c;
-    --muted: #667085;
-    --line: #d9e2ec;
-    --brand: #0f6c81;
-    --brand-dark: #08495c;
-    --accent: #c79a2b;
-    --low: #147a44;
-    --medium: #a15c00;
-    --high: #b42318;
-    --critical: #7a1f1f;
+    --bg: #07111f;
+    --bg-soft: #0d1b2d;
+    --surface: rgba(255, 255, 255, 0.95);
+    --surface-dark: rgba(9, 22, 38, 0.92);
+    --ink: #102033;
+    --ink-invert: #f7fbff;
+    --muted: #6b7a90;
+    --muted-invert: #a9bdd3;
+    --line: rgba(125, 151, 179, 0.26);
+    --brand: #1f9bb4;
+    --brand-strong: #55d6f1;
+    --gold: #d7b56d;
+    --low: #19a66a;
+    --medium: #d88923;
+    --high: #dd4b4b;
+    --critical: #9f2f43;
 }
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    background: var(--bg);
+}
+
 body {
     margin: 0;
-    background: var(--bg);
     color: var(--ink);
+    background:
+        radial-gradient(circle at 15% 5%, rgba(85, 214, 241, 0.18), transparent 30%),
+        linear-gradient(180deg, #081320 0%, #101b2a 42%, #eef4f8 42%, #f6f9fc 100%);
     font-family: Arial, Helvetica, sans-serif;
     line-height: 1.5;
 }
 
 .report-shell {
-    max-width: 1180px;
+    width: min(1180px, calc(100% - 28px));
     margin: 0 auto;
-    padding: 32px 24px 40px;
+    padding: 18px 0 34px;
 }
 
-.masthead {
+.hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 560px;
+    padding: 24px;
+    border: 1px solid rgba(116, 204, 224, 0.28);
+    border-radius: 18px;
+    color: var(--ink-invert);
+    background:
+        linear-gradient(135deg, rgba(10, 28, 48, 0.97), rgba(12, 57, 78, 0.92)),
+        radial-gradient(circle at 75% 25%, rgba(85, 214, 241, 0.22), transparent 30%);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: auto -10% -120px -10%;
+    height: 260px;
+    background:
+        radial-gradient(ellipse at center, rgba(85, 214, 241, 0.26), transparent 62%),
+        linear-gradient(90deg, transparent, rgba(49, 159, 191, 0.44), transparent);
+    filter: blur(10px);
+    transform: rotate(-2deg);
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    left: -4%;
+    right: -4%;
+    bottom: 0;
+    height: 150px;
+    background:
+        radial-gradient(120% 90% at 50% 0%, rgba(85, 214, 241, 0.42), transparent 62%),
+        linear-gradient(180deg, transparent, rgba(14, 132, 168, 0.28));
+    clip-path: polygon(0 42%, 12% 34%, 24% 44%, 38% 24%, 53% 39%, 68% 20%, 84% 34%, 100% 16%, 100% 100%, 0 100%);
+}
+
+.hero-grid {
+    position: relative;
+    z-index: 1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
-    align-items: end;
-    padding: 28px 0 24px;
-    border-bottom: 1px solid var(--line);
+}
+
+.topline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.brand-lockup {
+    display: grid;
+    gap: 4px;
 }
 
 .brand-mark {
-    color: var(--brand);
+    color: var(--brand-strong);
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0;
     text-transform: uppercase;
 }
 
-h1, h2, h3 {
+.brand-subtitle {
+    color: var(--muted-invert);
+    font-size: 13px;
+}
+
+.export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.export-actions a,
+.export-actions button {
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid rgba(190, 223, 234, 0.28);
+    border-radius: 999px;
+    color: var(--ink-invert);
+    background: rgba(255, 255, 255, 0.08);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.hero-main {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 28px;
+    align-items: center;
+    padding: 18px 0 58px;
+}
+
+.score-orb {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 236px;
+    height: 236px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.98) 0 38%, transparent 39%),
+        conic-gradient(from -24deg, var(--brand-strong), var(--low), var(--gold), var(--brand-strong));
+    box-shadow:
+        0 0 34px rgba(85, 214, 241, 0.44),
+        0 0 80px rgba(31, 155, 180, 0.28),
+        inset 0 0 26px rgba(255, 255, 255, 0.5);
+}
+
+.score-orb::before {
+    content: "";
+    position: absolute;
+    inset: 17px;
+    border-radius: 50%;
+    border: 1px solid rgba(15, 108, 129, 0.16);
+    background: #ffffff;
+}
+
+.score-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: var(--ink);
+}
+
+.score-label {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.score-number {
+    display: block;
+    margin-top: 5px;
+    font-size: 58px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.risk-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    margin-top: 12px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.risk-low { background: rgba(25, 166, 106, 0.14); color: var(--low); }
+.risk-medium { background: rgba(216, 137, 35, 0.16); color: var(--medium); }
+.risk-high { background: rgba(221, 75, 75, 0.16); color: var(--high); }
+.risk-critical { background: rgba(159, 47, 67, 0.16); color: var(--critical); }
+.risk-unknown { background: rgba(107, 122, 144, 0.16); color: var(--muted); }
+
+.hero-copy h1 {
     margin: 0;
+    font-size: 38px;
+    line-height: 1.08;
     letter-spacing: 0;
 }
 
-h1 {
-    margin-top: 8px;
-    font-size: 34px;
-    line-height: 1.12;
-}
-
-h2 {
-    font-size: 18px;
-}
-
-h3 {
-    font-size: 14px;
-}
-
-.subtitle {
-    max-width: 760px;
-    margin: 10px 0 0;
-    color: var(--muted);
+.hero-copy p {
+    max-width: 720px;
+    margin: 12px 0 0;
+    color: var(--muted-invert);
     font-size: 15px;
 }
 
-.target-box {
-    min-width: 250px;
-    padding: 14px 16px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
+.hero-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.meta-card {
+    min-height: 86px;
+    padding: 13px;
+    border: 1px solid rgba(190, 223, 234, 0.2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .label {
     display: block;
     color: var(--muted);
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
+}
+
+.hero .label {
+    color: rgba(225, 241, 247, 0.72);
 }
 
 .value {
     display: block;
-    margin-top: 4px;
+    margin-top: 5px;
     overflow-wrap: anywhere;
-    font-size: 15px;
-    font-weight: 700;
+    font-weight: 800;
 }
 
-.dashboard {
+.wave-line {
+    position: relative;
+    z-index: 1;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    gap: 24px;
-    margin-top: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid rgba(190, 223, 234, 0.18);
+    border-radius: 14px;
+    background: rgba(7, 17, 31, 0.28);
 }
 
-.score-panel {
-    align-self: start;
-    padding: 22px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
+.wave-line svg {
+    width: 100%;
+    height: 72px;
 }
 
-.score-number {
-    margin-top: 10px;
-    font-size: 56px;
-    font-weight: 800;
-    line-height: 1;
+.wave-line path {
+    fill: none;
+    stroke: url(#waveGradient);
+    stroke-width: 4;
+    filter: drop-shadow(0 0 8px rgba(85, 214, 241, 0.52));
 }
 
-.risk-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    margin-top: 14px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-    text-transform: uppercase;
+.hero-summary {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--ink-invert);
 }
 
-.risk-low { background: #e7f6ed; color: var(--low); }
-.risk-medium { background: #fff4df; color: var(--medium); }
-.risk-high { background: #fee9e7; color: var(--high); }
-.risk-critical { background: #f8d7da; color: var(--critical); }
+.hero-summary li {
+    margin: 6px 0;
+}
 
 .content-stack {
     display: grid;
     gap: 18px;
+    margin-top: 18px;
 }
 
 .panel {
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
     overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 10px 32px rgba(20, 36, 56, 0.08);
 }
 
 .panel-header {
@@ -164,29 +320,77 @@ h3 {
     gap: 16px;
     padding: 16px 18px;
     border-bottom: 1px solid var(--line);
-    background: var(--surface-soft);
+    background: linear-gradient(180deg, #ffffff, #f2f7fb);
+}
+
+.panel-header h2,
+.security-card h3 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0;
 }
 
 .panel-body {
     padding: 18px;
 }
 
-.summary-list, .action-list, .findings-list {
+.summary-list,
+.action-list,
+.findings-list {
     margin: 0;
     padding-left: 20px;
 }
 
-.summary-list li, .action-list li, .findings-list li {
+.summary-list li,
+.action-list li,
+.findings-list li {
     margin: 7px 0;
 }
 
-.module-table {
+.security-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.security-card {
+    min-height: 172px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 247, 251, 0.95));
+}
+
+.card-kicker {
+    color: var(--brand);
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.card-score {
+    margin-top: 14px;
+    font-size: 28px;
+    font-weight: 900;
+}
+
+.card-detail {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.module-table,
+.kv-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.module-table th, .module-table td {
-    padding: 11px 12px;
+.module-table th,
+.module-table td,
+.kv-table td {
+    padding: 10px 11px;
     border-bottom: 1px solid var(--line);
     text-align: left;
     vertical-align: top;
@@ -194,11 +398,12 @@ h3 {
 
 .module-table th {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
 }
 
-.module-table tr:last-child td {
+.module-table tr:last-child td,
+.kv-table tr:last-child td {
     border-bottom: 0;
 }
 
@@ -207,26 +412,11 @@ h3 {
     gap: 14px;
 }
 
-.kv-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.kv-table td {
-    padding: 9px 0;
-    border-bottom: 1px solid var(--line);
-    vertical-align: top;
-}
-
-.kv-table tr:last-child td {
-    border-bottom: 0;
-}
-
 .kv-key {
-    width: 220px;
-    padding-right: 18px;
+    width: 210px;
+    padding-right: 16px;
     color: var(--muted);
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .nested-list {
@@ -244,28 +434,46 @@ h3 {
 }
 
 .footer {
-    margin-top: 26px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
+    margin-top: 22px;
+    padding: 16px 2px 0;
     color: var(--muted);
     font-size: 12px;
 }
 
+@media (max-width: 1040px) {
+    .security-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 820px) {
     .report-shell {
-        padding: 20px 14px 28px;
+        width: min(100% - 18px, 1180px);
+        padding-top: 9px;
     }
 
-    .masthead, .dashboard {
+    .hero {
+        min-height: auto;
+        padding: 18px;
+        border-radius: 14px;
+    }
+
+    .hero-main,
+    .hero-meta {
         grid-template-columns: 1fr;
     }
 
-    .target-box {
-        min-width: 0;
+    .hero-copy h1 {
+        font-size: 30px;
     }
 
-    h1 {
-        font-size: 28px;
+    .score-orb {
+        width: 210px;
+        height: 210px;
+    }
+
+    .security-grid {
+        grid-template-columns: 1fr;
     }
 
     .kv-key {
@@ -274,17 +482,42 @@ h3 {
 }
 
 @media print {
+    html,
     body {
         background: #ffffff;
     }
 
     .report-shell {
-        max-width: none;
+        width: 100%;
         padding: 0;
     }
 
-    .panel, .score-panel, .target-box {
+    .hero {
+        min-height: auto;
+        color: #102033;
+        background: #ffffff;
+        box-shadow: none;
+    }
+
+    .hero::before,
+    .hero::after,
+    .wave-line,
+    .export-actions {
+        display: none;
+    }
+
+    .hero .label,
+    .hero-copy p,
+    .brand-subtitle,
+    .hero-summary {
+        color: #102033;
+    }
+
+    .panel,
+    .security-card,
+    .meta-card {
         break-inside: avoid;
+        box-shadow: none;
     }
 }
 </style>
@@ -297,26 +530,70 @@ h3 {
 {% set risk_class = risk|lower %}
 
 <main class="report-shell">
-<header class="masthead">
-    <div>
-        <div class="brand-mark">Lumír SHIELD</div>
-        <h1>Executive Security Report</h1>
-        <p class="subtitle">Czytelny raport ekspozycji cyfrowej, ryzyka i rekomendowanych działań dla badanego celu.</p>
-    </div>
-    <div class="target-box">
-        <span class="label">Cel audytu</span>
-        <span class="value">{{ report.target or 'Brak danych' }}</span>
-        <span class="label" style="margin-top:10px;">Typ skanu</span>
-        <span class="value">{{ report.scan_type|default('unknown')|upper }}</span>
-    </div>
-</header>
+<section class="hero">
+    <div class="hero-grid">
+        <div class="topline">
+            <div class="brand-lockup">
+                <span class="brand-mark">Lumir SHIELD</span>
+                <span class="brand-subtitle">Premium Security Intelligence Report</span>
+            </div>
+            <div class="export-actions" aria-label="Export options">
+                <a href="shield_report_v2.html">Export HTML</a>
+                <button type="button" onclick="window.print()">Export PDF</button>
+                <a href="shield_report.json">Export JSON</a>
+            </div>
+        </div>
 
-<section class="dashboard">
-    <aside class="score-panel">
-        <span class="label">Security score</span>
-        <div class="score-number">{{ score }}</div>
-        <span class="risk-badge risk-{{ risk_class }}">{{ risk }}</span>
-        <p class="subtitle">Wynik 90-100 oznacza niski poziom ryzyka. Niższy wynik wymaga szybszych działań naprawczych.</p>
-    </aside>
+        <div class="hero-main">
+            <div class="score-orb">
+                <div class="score-content">
+                    <span class="score-label">Security Score</span>
+                    <span class="score-number">{{ score }}</span>
+                    <span class="risk-pill risk-{{ risk_class }}">{{ risk }}</span>
+                </div>
+            </div>
 
-    <div class="content-stack">
+            <div class="hero-copy">
+                <h1>Security posture for {{ report.target or 'unknown target' }}</h1>
+                <p>Executive dashboard for exposure, risk and recommended actions. Built for quick decisions, clear review and PDF export.</p>
+
+                <div class="hero-meta">
+                    <div class="meta-card">
+                        <span class="label">Scan Date</span>
+                        <span class="value">{{ scan_date|default('Not available') }}</span>
+                    </div>
+                    <div class="meta-card">
+                        <span class="label">Scan Type</span>
+                        <span class="value">{{ report.scan_type|default('unknown')|upper }}</span>
+                    </div>
+                    <div class="meta-card">
+                        <span class="label">Modules</span>
+                        <span class="value">{{ report.modules|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="wave-line" aria-label="Lumir Intelligence Wave">
+            <svg viewBox="0 0 900 90" role="img" aria-label="Lumir Intelligence Wave">
+                <defs>
+                    <linearGradient id="waveGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                        <stop offset="0%" stop-color="#55d6f1" stop-opacity="0.15"/>
+                        <stop offset="48%" stop-color="#55d6f1" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#1f9bb4" stop-opacity="0.2"/>
+                    </linearGradient>
+                </defs>
+                <path d="M0 54 C90 20 150 20 240 54 S390 88 480 54 630 20 720 54 840 80 900 42"/>
+            </svg>
+            {% if report.executive_summary %}
+            <ul class="hero-summary">
+                {% for item in report.executive_summary[:3] %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="content-stack">
