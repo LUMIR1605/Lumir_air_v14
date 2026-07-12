@@ -1,60 +1,7 @@
-{% macro render_action(items, fallback) -%}
-    {%- if items %}
-    <ul class="action-list">
-        {%- for item in items %}
-        <li>{{ item }}</li>
-        {%- endfor %}
-    </ul>
-    {%- else %}
-    <p class="muted">{{ fallback }}</p>
-    {%- endif %}
-{%- endmacro %}
-
-<section class="panel-grid">
-    <section class="glass-panel panel">
-        <h2 class="panel-title">Plan dzialan</h2>
-        <div class="action-columns">
-            <div class="action-column">
-                <h3>Dzisiaj</h3>
-                {% if report.action_plan %}
-                {{ render_action(report.action_plan.today, "Brak dzialan na dzisiaj.") }}
-                {% else %}
-                <p class="muted">Brak planu dzialan.</p>
-                {% endif %}
-            </div>
-            <div class="action-column">
-                <h3>Wkrotce</h3>
-                {% if report.action_plan %}
-                {{ render_action(report.action_plan.now, "Brak dzialan pilnych.") }}
-                {% else %}
-                <p class="muted">Brak planu dzialan.</p>
-                {% endif %}
-            </div>
-            <div class="action-column">
-                <h3>Zachowaj nawyki</h3>
-                {% if report.action_plan %}
-                {{ render_action(report.action_plan.later, "Zachowaj dobre praktyki bezpieczenstwa.") }}
-                {% else %}
-                <p class="muted">Zachowaj dobre praktyki bezpieczenstwa.</p>
-                {% endif %}
-            </div>
-        </div>
-    </section>
-
-    <section class="glass-panel panel">
-        <h2 class="panel-title">Przeglad ryzyka</h2>
-        <div class="risk-donut"></div>
-        <div class="legend">
-            <div class="legend-row"><span>LOW RISK</span><strong>100%</strong></div>
-            <div class="legend-row"><span>MEDIUM RISK</span><strong>0%</strong></div>
-            <div class="legend-row"><span>HIGH RISK</span><strong>0%</strong></div>
-            <div class="legend-row"><span>CRITICAL</span><strong>0%</strong></div>
-        </div>
-    </section>
-
-    <section class="glass-panel panel next-scan">
-        <h2 class="panel-title">Nastepne skanowanie</h2>
-        <p class="muted">Zalecamy wykonanie kolejnego skanowania za 30 dni.</p>
-        <a class="action-button" href="shield_report_v2.html">Ustaw przypomnienie</a>
-    </section>
+<section class="panel-grid" id="plan">
+    <section class="glass-panel panel"><h2 class="panel-title">Plan działań</h2><div class="action-columns"><div class="action-column"><h3>Dzisiaj</h3>{% if report.action_plan %}<ul class="action-list">{% for item in report.action_plan.today|default([]) %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Brak działań na dziś.</p>{% endif %}</div><div class="action-column"><h3>Wkrótce</h3>{% if report.action_plan %}<ul class="action-list">{% for item in report.action_plan.now|default([]) %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Brak działań pilnych.</p>{% endif %}</div><div class="action-column"><h3>Zachowaj nawyki</h3>{% if report.action_plan %}<ul class="action-list">{% for item in report.action_plan.later|default([]) %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Stosuj dobre praktyki bezpieczeństwa.</p>{% endif %}</div></div></section>
+    <section class="glass-panel panel"><h2 class="panel-title">Przegląd ryzyka</h2><div class="risk-overview"><div class="risk-donut" style="--low: {{ low_pct }}; --medium: {{ medium_pct }}; --high: {{ high_pct }};"></div><div class="legend"><div class="legend-row"><span>Niskie</span><strong>{{ low_pct }}%</strong></div><div class="legend-row"><span>Średnie</span><strong>{{ medium_pct }}%</strong></div><div class="legend-row"><span>Wysokie</span><strong>{{ high_pct }}%</strong></div><div class="legend-row"><span>Krytyczne</span><strong>{{ critical_pct }}%</strong></div></div></div></section>
+    <section class="glass-panel panel next-scan"><h2 class="panel-title">Następne skanowanie</h2><p class="muted">Zalecamy ponowne sprawdzenie po zmianie ustawień lub w ciągu 30 dni.</p><button class="action-button" type="button" onclick="window.print()">Zapisz jako PDF</button></section>
 </section>
+
+<details class="technical-section" id="techniczne"><summary>Dane techniczne</summary><div class="technical-content"><table class="module-table"><tr><th>Moduł</th><th>Ryzyko</th><th>Wynik</th><th>Ustalenia</th></tr>{% for module in report.modules %}{% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('unknown') %}<tr><td>{{ module.module|replace('_', ' ')|title }}</td><td><span class="risk-pill risk-{{ module_risk|lower }}">{{ module_risk }}</span></td><td>{{ module.risk_score.score if module.risk_score is defined else '—' }}</td><td>{{ module.findings|length if module.findings is defined else 0 }}</td></tr>{% endfor %}</table></div></details>
