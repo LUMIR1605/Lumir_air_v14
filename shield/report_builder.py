@@ -1,26 +1,11 @@
-from shield.ai_advisor import advise
 import json
-from datetime import datetime
+
+from shield.truth import validate_report
+
 
 def build(result, outfile="shield_report.json"):
-    report = {
-        "generated": datetime.now().isoformat(),
-        "engine": "Lumir SHIELD",
-        "version": "0.2",
-        "summary": {
-            "scan_type": result.get("scan_type"),
-            "risk": result.get("risk"),
-            "score": result.get("risk_score", {}).get("score", 0),
-            "module_statuses": [
-                {"module": module.get("module"), "status": module.get("scan_status", "completed")}
-                for module in result.get("modules", [])
-            ],
-        },
-        "advice": advise(result),
-        "result": result
-    }
-
-    with open(outfile, "w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2, ensure_ascii=False)
-
+    """Validate and persist the engine result; this JSON is the presentation source of truth."""
+    validate_report(result)
+    with open(outfile, "w", encoding="utf-8") as report_file:
+        json.dump(result, report_file, indent=2, ensure_ascii=False)
     return outfile

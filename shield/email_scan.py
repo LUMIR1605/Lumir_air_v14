@@ -1,6 +1,5 @@
 import re
 import dns.resolver
-from shield.holehe_scan import scan as holehe_scan
 
 EMAIL_RE = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
 
@@ -64,8 +63,10 @@ def scan(email):
         except:
             pass
 
-    result["exposure"] = holehe_scan(email)
+    result["exposure"] = {"status": "not_checked", "services": []}
 
     result["risk"] = "low" if result["mx_records"] else "high"
 
+    result["scan_status"] = "partial" if result["findings"] else "completed"
+    result["sources"] = []
     return result
