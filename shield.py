@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+import re
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 from core.compat import configure_stdio
@@ -36,6 +38,8 @@ android_download = Path("/storage/emulated/0/Download/LumirShield")
 android_reports = []
 storage_error = None
 android_storage = Path("/storage/emulated/0")
+safe_target = re.sub(r"[^A-Za-z0-9._-]+", "_", target).strip("_") or "scan"
+timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 if not android_storage.exists():
     storage_error = "Nie wykryto /storage/emulated/0. Na Androidzie uruchom w Termux: termux-setup-storage"
 else:
@@ -44,7 +48,8 @@ else:
         for source in (html_report, json_report, pdf_report):
             source_path = Path(source)
             if source_path.is_file():
-                destination = android_download / source_path.name
+                filename = f"Lumir_SHIELD_{safe_target}_{timestamp}.pdf" if source_path.suffix.lower() == ".pdf" else source_path.name
+                destination = android_download / filename
                 shutil.copy2(source_path, destination)
                 android_reports.append(str(destination))
     except PermissionError:

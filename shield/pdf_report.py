@@ -73,7 +73,7 @@ def _background(c, page_number, section):
     c.setFillColor(colors.HexColor("#082653")); c.circle(11 * mm, 20 * mm, 22 * mm, fill=1, stroke=0)
     c.setStrokeColor(colors.HexColor("#12527c")); c.setLineWidth(.45); c.line(MARGIN, 15 * mm, PAGE_W - MARGIN, 15 * mm)
     c.setFillColor(MUTED); c.setFont("LumirRegular", 7)
-    c.drawString(MARGIN, 9 * mm, "Lumir SHIELD  v1.0  |  SECURITY INTELLIGENCE")
+    c.drawString(MARGIN, 9 * mm, "Lum\u00edr SHIELD  v1.0  |  SECURITY INTELLIGENCE")
     c.drawRightString(PAGE_W - MARGIN, 9 * mm, f"{section.upper()}  |  {page_number}/6")
 
 
@@ -112,12 +112,12 @@ def _module(report, name):
 
 
 def _page_title(c, styles, number, title, subtitle):
-    _background(c, number, title); _paragraph(c, "LUMIR SHIELD", MARGIN, PAGE_H - 25 * mm, 100 * mm, styles["eyebrow"]); _paragraph(c, title, MARGIN, PAGE_H - 31 * mm, 150 * mm, styles["title"]); _paragraph(c, subtitle, MARGIN, PAGE_H - 45 * mm, 160 * mm, styles["subtitle"])
+    _background(c, number, title); _paragraph(c, "LUM\u00cdR SHIELD", MARGIN, PAGE_H - 25 * mm, 100 * mm, styles["eyebrow"]); _paragraph(c, title, MARGIN, PAGE_H - 31 * mm, 150 * mm, styles["title"]); _paragraph(c, subtitle, MARGIN, PAGE_H - 45 * mm, 160 * mm, styles["subtitle"])
 
 
 def _page_one(c, report, styles):
     _background(c, 1, "Wynik"); _logo(c, PAGE_W / 2, PAGE_H - 52 * mm, 20 * mm)
-    c.setFillColor(CYAN); c.setFont("LumirBold", 9); c.drawCentredString(PAGE_W / 2, PAGE_H - 82 * mm, "LUMIR SHIELD")
+    c.setFillColor(CYAN); c.setFont("LumirBold", 9); c.drawCentredString(PAGE_W / 2, PAGE_H - 82 * mm, "LUM\u00cdR SHIELD")
     c.setFillColor(TEXT); c.setFont("LumirBold", 21); c.drawCentredString(PAGE_W / 2, PAGE_H - 92 * mm, "RAPORT BEZPIECZE\u0143STWA")
     c.setFillColor(MUTED); c.setFont("LumirRegular", 10); c.drawCentredString(PAGE_W / 2, PAGE_H - 105 * mm, f"Cel skanowania: {report.get('target', 'Brak danych')}")
     score = report.get("risk_score", {}); value = score.get("score", 0); risk = str(score.get("risk", "unknown")).lower(); accent = RISK_COLORS.get(risk, MUTED); center_x, center_y = PAGE_W / 2, PAGE_H - 158 * mm
@@ -125,14 +125,14 @@ def _page_one(c, report, styles):
     label = "BARDZO DOBRY POZIOM BEZPIECZE\u0143STWA" if value >= 90 else ("DOBRY POZIOM BEZPIECZE\u0143STWA" if value >= 70 else ("UWAGA - WYMAGANE DZIA\u0141ANIE" if value >= 40 else "WYSOKIE RYZYKO"))
     _paragraph(c, label, MARGIN, PAGE_H - 204 * mm, PAGE_W - 2 * MARGIN, ParagraphStyle("score_label", parent=styles["card_title"], alignment=1, textColor=accent, fontSize=12))
     _card(c, MARGIN, 37 * mm, PAGE_W - 2 * MARGIN, 35 * mm, accent); c.setFillColor(CYAN); c.setFont("LumirBold", 8); c.drawString(MARGIN + 8 * mm, 65 * mm, "ANALIZA LUMIR AI")
-    analysis = report.get("executive_summary", []); _paragraph(c, analysis[0] if analysis else "Wynik jest oparty na dostepnych danych z wykonanych modulow bezpieczenstwa.", MARGIN + 8 * mm, 59 * mm, PAGE_W - 32 * mm, styles["body"])
+    analysis = report.get("executive_summary", []); _paragraph(c, analysis[0] if analysis else "Wynik jest oparty na dost\u0119pnych danych z wykonanych modu\u0142\u00f3w bezpiecze\u0144stwa.", MARGIN + 8 * mm, 59 * mm, PAGE_W - 32 * mm, styles["body"])
     c.setFillColor(MUTED); c.setFont("LumirRegular", 8); c.drawString(MARGIN + 8 * mm, 43 * mm, datetime.now().strftime("Wygenerowano: %d.%m.%Y, %H:%M")); c.showPage()
 
 
 def _page_two(c, report, styles):
     _page_title(c, styles, 2, "Co znale\u017ali\u015bmy", "Najwa\u017cniejsze informacje z dost\u0119pnych modu\u0142\u00f3w skanu.")
     email, domain, username = _module(report, "email_scan"), _module(report, "domain_scan"), _module(report, "username_scan"); exposure = email.get("exposure", {}) if isinstance(email.get("exposure"), dict) else {}; accounts = username.get("accounts", []) or exposure.get("services", []) or []
-    items = [("check", "Znalezione konta", f"{len(accounts)} znalezionych kont lub powiazanych uslug." if accounts else "Nie znaleziono kont w uruchomionych zrodlach.", GREEN if not accounts else AMBER), ("globe", "Domena", "Domena odpowiada poprawnie." if domain.get("exists") else "Brak potwierdzenia dostepnosci domeny.", GREEN if domain.get("exists") else MUTED), ("mail", "Bezpieczenstwo poczty", "Adres e-mail ma poprawny format." if email.get("valid_format") else "Brak pelnego potwierdzenia ustawien poczty.", GREEN if email.get("valid_format") else AMBER), ("lock", "HTTPS", "Polaczenie HTTPS jest aktywne." if domain.get("https") else "HTTPS nie zostal potwierdzony w tym skanie.", GREEN if domain.get("https") else AMBER)]
+    items = [("check", "Znalezione konta", f"{len(accounts)} znalezionych kont lub powi\u0105zanych us\u0142ug." if accounts else "Nie znaleziono kont w uruchomionych \u017ar\u00f3d\u0142ach.", GREEN if not accounts else AMBER), ("globe", "Domena", "Domena odpowiada poprawnie." if domain.get("exists") else "Brak potwierdzenia dost\u0119pno\u015bci domeny.", GREEN if domain.get("exists") else MUTED), ("mail", "Bezpiecze\u0144stwo poczty", "Adres e-mail ma poprawny format." if email.get("valid_format") else "Brak pe\u0142nego potwierdzenia ustawie\u0144 poczty.", GREEN if email.get("valid_format") else AMBER), ("lock", "HTTPS", "Po\u0142\u0105czenie HTTPS jest aktywne." if domain.get("https") else "HTTPS nie zosta\u0142 potwierdzony w tym skanie.", GREEN if domain.get("https") else AMBER)]
     card_w, card_h = 78 * mm, 53 * mm; positions = [(MARGIN, PAGE_H - 108 * mm), (PAGE_W - MARGIN - card_w, PAGE_H - 108 * mm), (MARGIN, PAGE_H - 168 * mm), (PAGE_W - MARGIN - card_w, PAGE_H - 168 * mm)]
     for (icon, title, detail, accent), (x, y) in zip(items, positions):
         _card(c, x, y, card_w, card_h, accent); _icon(c, icon, x + 12 * mm, y + card_h - 15 * mm, 10 * mm, accent); _paragraph(c, title, x + 20 * mm, y + card_h - 10 * mm, card_w - 26 * mm, styles["card_title"]); _paragraph(c, detail, x + 8 * mm, y + 20 * mm, card_w - 16 * mm, styles["card_text"])
@@ -141,9 +141,9 @@ def _page_two(c, report, styles):
 
 def _page_three(c, report, styles):
     _page_title(c, styles, 3, "Plan dzia\u0142ania", "Trzy najwa\u017cniejsze kroki na podstawie wyniku skanu.")
-    plan = report.get("action_plan", {}); actions = list(plan.get("now", [])) + list(plan.get("today", [])) + list(plan.get("later", [])); actions = actions or ["Utrzymuj aktualne hasla i wlacz uwierzytelnianie dwuskladnikowe, gdy jest dostepne."]
+    plan = report.get("action_plan", {}); actions = list(plan.get("now", [])) + list(plan.get("today", [])) + list(plan.get("later", [])); actions = actions or ["Utrzymuj aktualne has\u0142a i w\u0142\u0105cz uwierzytelnianie dwusk\u0142adnikowe, gdy jest dost\u0119pne."]
     for index in range(3):
-        y = PAGE_H - (88 + index * 49) * mm; accent = [RED, AMBER, GREEN][index]; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 39 * mm, accent); c.setFillColor(accent); c.circle(MARGIN + 15 * mm, y + 20 * mm, 8 * mm, fill=1, stroke=0); c.setFont("LumirBold", 14); c.setFillColor(NAVY); c.drawCentredString(MARGIN + 15 * mm, y + 16.5 * mm, str(index + 1)); _paragraph(c, ["Zrob teraz", "Zrob dzis", "Dobra praktyka"][index], MARGIN + 29 * mm, y + 31 * mm, 90 * mm, styles["card_title"]); _paragraph(c, actions[index] if index < len(actions) else "Brak dodatkowych dzialan wskazanych przez ten skan.", MARGIN + 29 * mm, y + 24 * mm, PAGE_W - MARGIN - (MARGIN + 29 * mm) - 8 * mm, styles["body_muted"])
+        y = PAGE_H - (88 + index * 49) * mm; accent = [RED, AMBER, GREEN][index]; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 39 * mm, accent); c.setFillColor(accent); c.circle(MARGIN + 15 * mm, y + 20 * mm, 8 * mm, fill=1, stroke=0); c.setFont("LumirBold", 14); c.setFillColor(NAVY); c.drawCentredString(MARGIN + 15 * mm, y + 16.5 * mm, str(index + 1)); _paragraph(c, ["Zr\u00f3b teraz", "Zr\u00f3b dzi\u015b", "Dobra praktyka"][index], MARGIN + 29 * mm, y + 31 * mm, 90 * mm, styles["card_title"]); _paragraph(c, actions[index] if index < len(actions) else "Brak dodatkowych dzia\u0142a\u0144 wskazanych przez ten skan.", MARGIN + 29 * mm, y + 24 * mm, PAGE_W - MARGIN - (MARGIN + 29 * mm) - 8 * mm, styles["body_muted"])
     c.showPage()
 
 
@@ -153,9 +153,9 @@ def _page_four(c, report, styles):
     for item in username.get("accounts", []) or []:
         found.append((item.get("site", "Konto"), item.get("url", "Potwierdzone konto")) if isinstance(item, dict) else (str(item), "Potwierdzone konto"))
     exposure = email.get("exposure", {}) if isinstance(email.get("exposure"), dict) else {}
-    found.extend((str(service), "Powiazana usluga") for service in exposure.get("services", []) or [])
+    found.extend((str(service), "Powi\u0105zana us\u0142uga") for service in exposure.get("services", []) or [])
     if not found:
-        _card(c, MARGIN, PAGE_H - 128 * mm, PAGE_W - 2 * MARGIN, 62 * mm, MUTED); _icon(c, "shield", PAGE_W / 2, PAGE_H - 96 * mm, 22 * mm, MUTED); _paragraph(c, "Brak znalezionych kont", MARGIN, PAGE_H - 118 * mm, PAGE_W - 2 * MARGIN, ParagraphStyle("none_title", parent=styles["card_title"], alignment=1)); _paragraph(c, "W tym skanie nie potwierdzono publicznych kont ani powiazanych uslug.", MARGIN + 12 * mm, PAGE_H - 130 * mm, PAGE_W - 24 * mm, ParagraphStyle("none_text", parent=styles["card_text"], alignment=1))
+        _card(c, MARGIN, PAGE_H - 128 * mm, PAGE_W - 2 * MARGIN, 62 * mm, MUTED); _icon(c, "shield", PAGE_W / 2, PAGE_H - 96 * mm, 22 * mm, MUTED); _paragraph(c, "Brak znalezionych kont", MARGIN, PAGE_H - 118 * mm, PAGE_W - 2 * MARGIN, ParagraphStyle("none_title", parent=styles["card_title"], alignment=1)); _paragraph(c, "W tym skanie nie potwierdzono publicznych kont ani powi\u0105zanych us\u0142ug.", MARGIN + 12 * mm, PAGE_H - 130 * mm, PAGE_W - 24 * mm, ParagraphStyle("none_text", parent=styles["card_text"], alignment=1))
     else:
         for index, (name, detail) in enumerate(found[:8]):
             col, row = index % 2, index // 2; card_w, card_h = 78 * mm, 27 * mm; x = MARGIN if col == 0 else PAGE_W - MARGIN - card_w; y = PAGE_H - (84 + row * 33) * mm; _card(c, x, y, card_w, card_h, CYAN); _icon(c, "check", x + 11 * mm, y + 14 * mm, 8 * mm, GREEN); _paragraph(c, name, x + 20 * mm, y + 20 * mm, card_w - 27 * mm, styles["card_title"]); _paragraph(c, detail, x + 20 * mm, y + 12 * mm, card_w - 27 * mm, styles["card_text"])
@@ -164,7 +164,7 @@ def _page_four(c, report, styles):
 
 def _page_five(c, styles):
     _page_title(c, styles, 5, "Plan rodzinnego bezpiecze\u0144stwa", "Dobra praktyka bezpiecze\u0144stwa w erze AI.")
-    guidance = [("Haslo bezpieczenstwa", "Ustal rodzinne haslo. Nie zapisuj go w telefonie ani w internecie."), ("Deepfake", "Nie ufaj tylko obrazowi lub nagraniu. Zawsze potwierdz pilna prosbe innym kanalem."), ("AI Voice", "Gdy rozmowca podaje sie za bliska osobe i nie zna hasla, przerwij rozmowe."), ("Phishing", "Nie klikaj linkow z pilnych wiadomosci. Weryfikuj nadawce i adres strony.")]
+    guidance = [("Has\u0142o bezpiecze\u0144stwa", "Ustal rodzinne has\u0142o. Nie zapisuj go w telefonie ani w internecie."), ("Deepfake", "Nie ufaj tylko obrazowi lub nagraniu. Zawsze potwierd\u017a piln\u0105 pro\u015bb\u0119 innym kana\u0142em."), ("AI Voice", "Gdy rozm\u00f3wca podaje si\u0119 za blisk\u0105 osob\u0119 i nie zna has\u0142a, przerwij rozmow\u0119."), ("Phishing", "Nie klikaj link\u00f3w z pilnych wiadomo\u015bci. Weryfikuj nadawc\u0119 i adres strony.")]
     for index, (title, detail) in enumerate(guidance):
         y = PAGE_H - (84 + index * 36) * mm; accent = [CYAN, BLUE, AMBER, RED][index]; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 28 * mm, accent); _icon(c, "family" if index == 0 else "shield", MARGIN + 15 * mm, y + 14 * mm, 13 * mm, accent); _paragraph(c, title, MARGIN + 29 * mm, y + 21 * mm, 120 * mm, styles["card_title"]); _paragraph(c, detail, MARGIN + 29 * mm, y + 13 * mm, PAGE_W - MARGIN - (MARGIN + 29 * mm) - 8 * mm, styles["card_text"])
     c.showPage()
@@ -172,7 +172,7 @@ def _page_five(c, styles):
 
 def _page_six(c, report, styles):
     _page_title(c, styles, 6, "Szczeg\u00f3\u0142y techniczne", "Dane diagnostyczne zebrane przez uruchomione modu\u0142y.")
-    email, domain = _module(report, "email_scan"), _module(report, "domain_scan"); details = [("DNS", domain.get("dns", "Brak danych DNS")), ("SPF", email.get("spf", "Brak danych")), ("DKIM", email.get("dkim", "Brak danych")), ("DMARC", email.get("dmarc", "Brak danych")), ("Naglowki", domain.get("security_headers", "Brak danych"))]
+    email, domain = _module(report, "email_scan"), _module(report, "domain_scan"); details = [("DNS", domain.get("dns", "Brak danych DNS")), ("SPF", email.get("spf", "Brak danych")), ("DKIM", email.get("dkim", "Brak danych")), ("DMARC", email.get("dmarc", "Brak danych")), ("Nag\u0142\u00f3wki", domain.get("security_headers", "Brak danych"))]
     for index, (label, value) in enumerate(details):
         y = PAGE_H - (78 + index * 31) * mm; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 24 * mm, BLUE); _paragraph(c, label, MARGIN + 8 * mm, y + 17 * mm, 32 * mm, styles["card_title"]); _paragraph(c, str(value).replace("{", "").replace("}", ""), MARGIN + 43 * mm, y + 17 * mm, PAGE_W - MARGIN - (MARGIN + 43 * mm) - 8 * mm, styles["card_text"])
     c.showPage()
@@ -180,6 +180,6 @@ def _page_six(c, report, styles):
 
 def build(report, outfile="shield_report.pdf"):
     """Create a six-page Lumir SHIELD presentation from existing scan results."""
-    _register_fonts(); c = canvas.Canvas(outfile, pagesize=A4, pageCompression=1); c.setTitle("Lumir SHIELD - Raport bezpieczenstwa"); styles = _styles()
+    _register_fonts(); c = canvas.Canvas(outfile, pagesize=A4, pageCompression=1); c.setTitle("Lum\u00edr SHIELD - Raport bezpiecze\u0144stwa"); styles = _styles()
     _page_one(c, report, styles); _page_two(c, report, styles); _page_three(c, report, styles); _page_four(c, report, styles); _page_five(c, styles); _page_six(c, report, styles); c.save()
     return str(Path(outfile))
