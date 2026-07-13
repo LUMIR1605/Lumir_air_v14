@@ -11,7 +11,7 @@ tests = [
     ("+48123456789", "phone"),
 ]
 
-print("\n🛡 LUMIR SHIELD TEST SUITE\n")
+print("\nLUMIR SHIELD INPUT DETECTION SMOKE TESTS\n")
 
 passed = 0
 
@@ -29,7 +29,7 @@ for value, expected in tests:
     except Exception as e:
         print(f"💥 {value}: {e}")
 
-print(f"\nWynik: {passed}/{len(tests)} testów zakończonych sukcesem.")
+print(f"\nInput detection smoke tests: {passed}/{len(tests)}")
 
 if passed == len(tests):
-    print("\n🏆 ALL TESTS PASSED")
+    print("\nSmoke tests passed. Run pytest for engine regression coverage.")

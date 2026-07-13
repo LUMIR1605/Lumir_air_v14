@@ -16,9 +16,9 @@ from shield.pdf_report import build as build_pdf
 
 configure_stdio()
 
-if len(sys.argv) != 2:
+if len(sys.argv) not in {2, 3} or (len(sys.argv) == 3 and sys.argv[2] != "--consent-owner"):
     print("Uzycie:")
-    print("python shield.py <email|telefon|url|domena|nick>")
+    print("python shield.py <email|telefon|url|domena|nick> [--consent-owner]")
     raise SystemExit(1)
 
 target = sys.argv[1].strip()
@@ -29,7 +29,7 @@ if not target:
 scan_type = detect_type(target)
 print(f"Lumír SHIELD: skanowanie typu {scan_type} dla: {target}")
 
-result = run(scan_type, target)
+result = run(scan_type, target, consent_declared="--consent-owner" in sys.argv)
 
 json_report = build(result)
 with open(json_report, encoding="utf-8") as report_file:
@@ -60,10 +60,18 @@ else:
     except OSError as error:
         storage_error = f"Nie mozna zapisac raportu w /storage/emulated/0/Download/LumirShield: {error}"
 
-failed = [module for module in result["modules"] if module.get("scan_status") in {"error", "timeout", "unavailable"}]
-print(f"Zakończono moduły: {len(result['modules'])}. Wynik: {result['risk_score']['score']}/100 ({result['risk_score']['risk']}).")
-if failed:
-    print(f"Uwaga: {len(failed)} moduł(y) zakończyły się częściowo lub były niedostępne.")
+assessment = result["security_assessment"]
+coverage = result["coverage"]
+print(f"Lumir SHIELD - zakonczono skan {scan_type}")
+print(f"Wynik techniczny: {assessment['score']}/100" if assessment["score"] is not None else "Wynik techniczny: niedostepny")
+print(f"Pokrycie modulow: {coverage['module_weighted_percent']}%")
+print(f"Pokrycie kontroli: {coverage['control_weighted_percent']}%")
+print(f"Wiarygodnosc oceny: {result['assessment_reliability']}")
+print(f"Werdykt: {assessment['public_verdict']}")
+if result["assessment_reliability"] == "insufficient":
+    print("Pelna ocena bezpieczenstwa: NIEDOSTEPNA")
+for module in result["modules"]:
+    print(f" - {module['module']}: {module['scan_status']}")
 
 print("\nRaport zapisano jako:")
 print(f" - {json_report}")

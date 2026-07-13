@@ -8,8 +8,8 @@ from shield.phone_scan import scan as phone_scan
 from shield.truth import PROFILES, assessment, base_report, module_placeholder, normalize_module, source_record
 
 
-def run(scan_type, value):
-    report = base_report(scan_type, value)
+def run(scan_type, value, consent_declared=False):
+    report = base_report(scan_type, value, consent_declared)
     profile = PROFILES[scan_type]
     modules = []
 
