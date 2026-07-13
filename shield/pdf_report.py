@@ -4,13 +4,22 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Spacer, Paragraph, Table, TableStyle
+from reportlab import rl_config
 
 
 def build(report, outfile="shield_report.pdf"):
     """Create an A4 PDF from the same scan object used for JSON and HTML."""
     document = SimpleDocTemplate(outfile, pagesize=A4, rightMargin=16 * mm, leftMargin=16 * mm, topMargin=16 * mm, bottomMargin=16 * mm)
     styles = getSampleStyleSheet()
+    fonts = Path(rl_config.TTFSearchPath[0])
+    pdfmetrics.registerFont(TTFont("LumirVera", str(fonts / "Vera.ttf")))
+    pdfmetrics.registerFont(TTFont("LumirVeraBold", str(fonts / "VeraBd.ttf")))
+    styles["Title"].fontName = "LumirVeraBold"
+    styles["Heading2"].fontName = "LumirVeraBold"
+    styles["BodyText"].fontName = "LumirVera"
     story = [Paragraph("Lumír SHIELD - Raport bezpieczeństwa", styles["Title"])]
     score = report.get("risk_score", {})
     story += [
@@ -33,7 +42,8 @@ def build(report, outfile="shield_report.pdf"):
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#9fb8d4")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 0), "LumirVeraBold"),
+        ("FONTNAME", (0, 1), (-1, -1), "LumirVera"),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("LEADING", (0, 0), (-1, -1), 10),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f4f8fc")]),
