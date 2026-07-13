@@ -10,7 +10,11 @@ def build(result, outfile="shield_report.json"):
         "summary": {
             "scan_type": result.get("scan_type"),
             "risk": result.get("risk"),
-            "score": result.get("risk_score", {}).get("score", 0)
+            "score": result.get("risk_score", {}).get("score", 0),
+            "module_statuses": [
+                {"module": module.get("module"), "status": module.get("scan_status", "completed")}
+                for module in result.get("modules", [])
+            ],
         },
         "advice": advise(result),
         "result": result

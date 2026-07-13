@@ -231,8 +231,8 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
 </head>
 <body>
 {% set primary = report.modules[0] if report.modules else {} %}
-{% set score = primary.risk_score.score if primary.risk_score is defined else 0 %}
-{% set risk = primary.risk_score.risk if primary.risk_score is defined else primary.risk|default('unknown') %}
+{% set score = report.risk_score.score if report.risk_score is defined else (primary.risk_score.score if primary.risk_score is defined else 0) %}
+{% set risk = report.risk_score.risk if report.risk_score is defined else (primary.risk_score.risk if primary.risk_score is defined else primary.risk|default('unknown')) %}
 {% set risk_class = risk|lower %}
 {% set counters = namespace(low=0, medium=0, high=0, critical=0, findings=0) %}
 {% for module in report.modules %}

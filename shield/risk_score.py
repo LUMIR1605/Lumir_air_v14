@@ -6,6 +6,8 @@ def calculate(results):
     findings = 0
 
     for r in results:
+        if r.get("scan_status") in {"unavailable", "timeout", "error"}:
+            continue
         findings += len(r.get("findings", []))
 
         risk = str(r.get("risk", "low")).lower()

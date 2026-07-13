@@ -1,5 +1,5 @@
 def build(report):
-    score = report["modules"][0]["risk_score"]["score"]
+    score = report.get("risk_score", {}).get("score", 0)
 
     now = []
     today = []

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-from pprint import pprint
 
 from core.compat import configure_stdio
 from shield.core import detect_type
@@ -16,16 +15,23 @@ if len(sys.argv) != 2:
     print("python shield.py <email|telefon|url|domena|nick>")
     raise SystemExit(1)
 
-target = sys.argv[1]
+target = sys.argv[1].strip()
+if not target:
+    print("Błąd: podaj cel skanowania.")
+    raise SystemExit(2)
+
 scan_type = detect_type(target)
+print(f"Lumír SHIELD: skanowanie typu {scan_type} dla: {target}")
 
 result = run(scan_type, target)
 
 json_report = build(result)
 html_report = build_html(result)
 
-print("\nLUMIR SHIELD\n")
-pprint(result)
+failed = [module for module in result["modules"] if module.get("scan_status") in {"error", "timeout", "unavailable"}]
+print(f"Zakończono moduły: {len(result['modules'])}. Wynik: {result['risk_score']['score']}/100 ({result['risk_score']['risk']}).")
+if failed:
+    print(f"Uwaga: {len(failed)} moduł(y) zakończyły się częściowo lub były niedostępne.")
 
 print("\nRaport zapisano jako:")
 print(f" - {json_report}")
