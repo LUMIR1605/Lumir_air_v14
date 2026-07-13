@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
+{% set risk_labels = {'low':'Niskie ryzyko', 'medium':'Średnie ryzyko', 'high':'Wysokie ryzyko', 'critical':'Ryzyko krytyczne', 'unknown':'Brak danych'} %}
 <title>Lumír SHIELD | Raport bezpieczeństwa</title>
 <style>
 :root {
@@ -72,14 +73,16 @@ button { cursor: pointer; }
 .report-title { margin: 4px 0 0; font-size: 26px; line-height: 1.15; letter-spacing: 0; text-transform: uppercase; }
 .target-line { margin-top: 7px; color: var(--cyan); font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
 .scan-date { margin-top: 5px; color: var(--muted); font-size: 14px; }
-.top-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.top-actions { display: grid; width: 100%; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
 .top-actions .action-button:last-child { grid-column: 1 / -1; }
+.top-actions .action-button { width: 100%; max-width: 100%; }
 .action-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 42px;
     flex: 1;
+    min-width: 0;
     padding: 0 12px;
     border: 1px solid rgba(96, 178, 255, .34);
     border-radius: 7px;
@@ -88,6 +91,9 @@ button { cursor: pointer; }
     font-size: 12px;
     font-weight: 800;
     text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     text-transform: uppercase;
 }
 .action-button.primary { border-color: #2d91ff; background: linear-gradient(180deg, #167bff, #095bca); box-shadow: 0 0 18px rgba(22, 123, 255, .34); }
@@ -105,6 +111,7 @@ button { cursor: pointer; }
     inset: 0;
     z-index: -2;
     background: radial-gradient(circle at 50% 39%, rgba(24, 149, 255, .34), transparent 32%), radial-gradient(circle at 50% 74%, rgba(53, 231, 255, .13), transparent 45%);
+    animation: hero-breathe 8s ease-in-out infinite;
 }
 .score-hero::after {
     content: "";
@@ -120,6 +127,8 @@ button { cursor: pointer; }
         radial-gradient(ellipse at center, rgba(22, 123, 255, .58), transparent 62%);
     clip-path: polygon(0 62%, 8% 49%, 16% 66%, 25% 38%, 36% 64%, 49% 32%, 61% 65%, 74% 40%, 85% 61%, 100% 34%, 100% 100%, 0 100%);
     filter: drop-shadow(0 0 12px rgba(53, 231, 255, .9));
+    transform-origin: center bottom;
+    animation: wave-drift 18s ease-in-out infinite alternate;
 }
 .score-orb {
     position: absolute;
@@ -133,8 +142,10 @@ button { cursor: pointer; }
     transform: translateX(-50%);
     background: radial-gradient(circle, #06172b 0 60%, transparent 60.7%), conic-gradient(from -28deg, #35e7ff, #167bff, #35e7ff, #35e7ff);
     box-shadow: 0 0 20px rgba(53, 231, 255, .85), 0 0 70px rgba(22, 123, 255, .7), inset 0 0 24px rgba(53, 231, 255, .28);
+    animation: orb-breathe 7s ease-in-out infinite;
 }
 .score-orb::before { content: ""; position: absolute; inset: 15px; border: 1px solid rgba(84, 223, 255, .45); border-radius: 50%; box-shadow: inset 0 0 28px rgba(22, 123, 255, .32); }
+.score-orb::after { content: ""; position: absolute; inset: -10px; border: 1px solid rgba(53, 231, 255, .36); border-radius: 50%; border-right-color: transparent; box-shadow: 0 0 18px rgba(53, 231, 255, .14); animation: ring-spin 22s linear infinite; }
 .score-content { position: relative; z-index: 1; text-align: center; }
 .score-number { display: block; font-size: clamp(76px, 20vw, 104px); font-weight: 900; letter-spacing: 0; line-height: .84; }
 .score-scale { color: var(--muted); font-size: 17px; }
@@ -174,13 +185,16 @@ button { cursor: pointer; }
 .security-card::after { content: ""; position: absolute; right: 16px; bottom: -4px; left: 16px; height: 2px; background: linear-gradient(90deg, transparent, var(--cyan), transparent); box-shadow: 0 0 12px var(--cyan); }
 .card-head { display: flex; align-items: center; gap: 12px; }.card-icon { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border: 1px solid rgba(53, 231, 255, .65); border-radius: 50%; color: var(--cyan); background: rgba(22, 123, 255, .13); box-shadow: 0 0 17px rgba(22, 123, 255, .38); font-size: 15px; font-weight: 900; }.card-title { margin: 0 0 5px; font-size: 15px; text-transform: uppercase; }.risk-pill { min-width: 70px; padding: 4px 8px; }.card-score { margin-top: 18px; font-size: 42px; font-weight: 900; line-height: 1; }.card-score small { color: var(--muted); font-size: 15px; font-weight: 500; }.card-list { display: grid; gap: 8px; margin: 15px 0 13px; color: #dce9f5; font-size: 13px; }.card-row { display: flex; justify-content: space-between; gap: 14px; }.card-row span:last-child { color: var(--green); text-align: right; }
 
-details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: flex; align-items: center; justify-content: space-between; min-height: 42px; color: #eaf4ff; font-size: 13px; font-weight: 800; list-style: none; } summary::-webkit-details-marker { display: none; } summary::after { content: "+"; color: var(--cyan); font-size: 20px; font-weight: 400; } details[open] summary::after { content: "−"; }.module-detail { padding: 2px 0 14px; }
+details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; color: #eaf4ff; font-size: 13px; font-weight: 800; list-style: none; } summary::-webkit-details-marker { display: none; } summary::after { content: "+"; color: var(--cyan); font-size: 20px; font-weight: 400; } details[open] summary::after { content: "−"; } summary:focus-visible, .action-button:focus-visible, a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }.module-detail { padding: 2px 0 14px; } details.module-details[open] .module-detail { animation: detail-reveal .24s ease-out both; }
 
+.insight-panel { margin-bottom: 12px; padding: 20px; }.insight-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }.insight-heading .eyebrow { margin-bottom: 4px; font-size: 10px; }.insight-heading .panel-title { margin-bottom: 0; }.insight-source { flex: 0 0 auto; padding: 4px 7px; border: 1px solid rgba(53, 231, 255, .25); border-radius: 4px; color: var(--cyan); font-size: 10px; font-weight: 800; text-align: right; }.insight-copy { margin-top: 14px; }.insight-copy p { margin: 8px 0; color: #e8f1fb; font-size: 16px; }.action-list.numbered { display: grid; gap: 9px; }.action-list.numbered li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; margin: 0; padding: 8px; border-left: 2px solid rgba(53, 231, 255, .32); background: rgba(7, 25, 46, .38); }.action-list.numbered li::before { display: none; }.action-list.numbered li.priority { border-left-color: var(--amber); }.action-step { color: var(--cyan); font-size: 11px; font-weight: 900; line-height: 1.7; }.priority .action-step { color: var(--amber); }
 .panel-grid { display: grid; gap: 12px; }.panel { padding: 19px; }.action-columns { display: grid; gap: 17px; }.action-column { padding-top: 2px; }.action-column h3 { margin: 0 0 8px; color: var(--cyan); font-size: 13px; text-transform: uppercase; }.risk-overview { display: grid; grid-template-columns: 124px minmax(0, 1fr); align-items: center; gap: 16px; }.risk-donut { display: grid; place-items: center; width: 124px; aspect-ratio: 1; border-radius: 50%; background: conic-gradient(var(--green) 0 calc(var(--low) * 1%), var(--amber) 0 calc((var(--low) + var(--medium)) * 1%), var(--red) 0 calc((var(--low) + var(--medium) + var(--high)) * 1%), var(--violet) 0); box-shadow: 0 0 20px rgba(53, 231, 255, .2); }.risk-donut::after { content: "RYZYKO"; display: grid; place-items: center; width: 66px; aspect-ratio: 1; border-radius: 50%; background: var(--surface-strong); color: var(--muted); font-size: 10px; font-weight: 900; }.legend { display: grid; gap: 8px; font-size: 12px; }.legend-row { display: flex; justify-content: space-between; gap: 10px; }.legend-row strong { font-weight: 800; }.next-scan { display: grid; align-content: center; min-height: 155px; }.next-scan .action-button { width: fit-content; min-width: 100%; margin-top: 6px; }
 
 .technical-section { padding: 20px; }.technical-section > summary { min-height: 28px; font-size: 16px; text-transform: uppercase; }.technical-section > summary::after { font-size: 24px; }.technical-content { padding-top: 15px; }.module-table, .kv-table { width: 100%; border-collapse: collapse; }.module-table th, .module-table td, .kv-table td { padding: 10px; border-bottom: 1px solid rgba(120, 159, 200, .18); text-align: left; vertical-align: top; }.module-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; }.kv-key { width: 43%; color: var(--muted); font-weight: 700; }.nested-list { margin: 0; padding-left: 17px; }.nested-list li { margin-bottom: 5px; }.mono { overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
 
 .footer { padding: 0 20px 26px; color: var(--muted); font-size: 12px; text-align: center; }
+
+@media (max-width: 639px) { .top-actions { grid-template-columns: minmax(0, 1fr); }.top-actions .action-button:last-child { grid-column: auto; } }
 
 @media (min-width: 640px) and (max-width: 1099px) {
     .hero-grid { grid-template-columns: minmax(0, 1fr); }
@@ -199,11 +213,19 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
 
 @media (min-width: 1180px) { .security-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }.panel-grid { grid-template-columns: 1.65fr .8fr .9fr; }.next-scan { grid-column: auto; }.next-scan .action-button { min-width: 0; width: 100%; } }
 
+@keyframes orb-breathe { 0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 20px rgba(53, 231, 255, .85), 0 0 70px rgba(22, 123, 255, .7), inset 0 0 24px rgba(53, 231, 255, .28); } 50% { transform: translateX(-50%) scale(1.018); box-shadow: 0 0 28px rgba(53, 231, 255, 1), 0 0 88px rgba(22, 123, 255, .8), inset 0 0 30px rgba(53, 231, 255, .35); } }
+@keyframes ring-spin { to { transform: rotate(360deg); } }
+@keyframes wave-drift { 0% { transform: translateX(-1.5%) scaleX(.98); opacity: .76; } 100% { transform: translateX(1.5%) scaleX(1.02); opacity: .96; } }
+@keyframes hero-breathe { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
+@keyframes detail-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
 @page { size: A4; margin: 12mm; }
 @media print {
     * { animation: none !important; transition: none !important; }
     body { color: #101827; background: #fff; font-size: 10pt; }
-    .report-shell { display: block; width: 100%; }.sidebar, .mobile-brand, .top-actions, .footer { display: none !important; }.main-stage { padding: 0; }.topbar { padding: 0 0 7mm; }.eyebrow, .target-line { color: #075bb9; }.report-title { font-size: 20pt; }.scan-date, .muted, .empty { color: #536274; }.hero-grid { grid-template-columns: 1.05fr .95fr; padding: 0 0 7mm; break-after: page; }.score-hero { min-height: 122mm; }.score-hero::before, .score-hero::after { opacity: .22; }.score-orb { top: 8mm; width: 86mm; box-shadow: none; }.score-number { color: #f7fbff; font-size: 48pt; }.score-scale { color: #c6d5e6; }.score-orb .risk-status.risk-low { color: #4aff84; }.glass-panel, .security-card, .technical-section { color: #101827; border-color: #a7bfd8; background: #fff; box-shadow: none; }.summary-list li, .action-list li, .findings-list li { color: #182536; }.security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.security-card, .panel, .technical-section { break-inside: avoid; }.card-row span:last-child, .action-column h3, .risk-low { color: #087434; }.content-stack { padding: 0; }.panel-grid { grid-template-columns: 1fr 1fr; }.next-scan { grid-column: span 2; }.technical-section { margin-top: 4mm; } details { border-top-color: #c8d4e2; } details:not([open]) .module-detail, details:not([open]) .technical-content { display: block; } summary::after { display: none; }.module-table, .kv-table { font-size: 8.5pt; }.module-table th, .module-table td, .kv-table td { border-bottom-color: #d7e1eb; }.risk-donut { box-shadow: none; }.risk-donut::after { background: #fff; }
+    .report-shell { display: block; width: 100%; }.sidebar, .mobile-brand, .top-actions, .footer { display: none !important; }.main-stage { padding: 0; }.topbar { padding: 0 0 7mm; }.eyebrow, .target-line { color: #075bb9; }.report-title { font-size: 20pt; }.scan-date, .muted, .empty { color: #536274; }.hero-grid { grid-template-columns: 1.05fr .95fr; min-height: 218mm; align-items: center; padding: 0 0 7mm; break-after: page; }.score-hero { min-height: 122mm; }.score-hero::before, .score-hero::after { opacity: .22; }.score-orb { top: 8mm; width: 86mm; box-shadow: none; }.score-number { color: #f7fbff; font-size: 48pt; }.score-scale { color: #c6d5e6; }.score-orb .risk-status.risk-low { color: #4aff84; }.glass-panel, .security-card, .technical-section { color: #101827; border-color: #a7bfd8; background: #fff; box-shadow: none; }.section-heading, .card-title, .panel-title, .technical-section > summary, .insight-copy p, summary { color: #101827; }.section-lead, .card-row span:first-child, .module-table th, .kv-key, .insight-source { color: #536274; }.summary-list li, .action-list li, .findings-list li { color: #182536; }.security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.security-card, .panel, .technical-section { break-inside: avoid; }.card-row span:last-child, .action-column h3, .risk-low { color: #087434; }.content-stack { padding: 0; }.panel-grid { grid-template-columns: 1fr 1fr; }.next-scan { grid-column: span 2; }.next-scan .action-button { display: none; }.insight-panel { break-before: page; }.technical-section { margin-top: 4mm; } details { border-top-color: #c8d4e2; } details:not([open]) .module-detail, details:not([open]) .technical-content { display: block; } summary::after { display: none; }.module-table, .kv-table { font-size: 8.5pt; }.module-table th, .module-table td, .kv-table td { border-bottom-color: #d7e1eb; }.risk-donut { box-shadow: none; }.risk-donut::after { background: #fff; }
 }
 </style>
 </head>
@@ -244,10 +266,10 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
         <div class="top-actions"><button class="action-button" type="button" onclick="window.print()">Eksport PDF</button><a class="action-button primary" href="shield_report_v2.html">Eksport HTML</a><a class="action-button" href="shield_report.json">JSON</a></div>
     </header>
     <section class="hero-grid" id="podsumowanie">
-        <div class="score-hero" aria-label="Wynik bezpieczeństwa"><div class="score-orb"><div class="score-content"><span class="score-number">{{ score }}</span><span class="score-scale">/100</span><span class="risk-status risk-{{ risk_class }}">{{ risk }} RISK</span></div></div><p class="score-caption">Security Score</p></div>
+        <div class="score-hero" aria-label="Wynik bezpieczeństwa"><div class="score-orb"><div class="score-content"><span class="score-number">{{ score }}</span><span class="score-scale">/100</span><span class="risk-status risk-{{ risk_class }}">{{ risk_labels.get(risk_class, 'Brak danych') }}</span></div></div><p class="score-caption">Wynik bezpieczeństwa</p></div>
         <div class="summary-panel">
             <section class="glass-panel executive-box"><h2 class="panel-title">Podsumowanie wykonawcze</h2>{% if report.executive_summary %}<ul class="summary-list">{% for item in report.executive_summary %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Brak podsumowania dla tego skanu.</p>{% endif %}</section>
-            <section class="glass-panel risk-strip"><div class="risk-strip-header"><span>Ogólne ryzyko</span><span class="risk-badge risk-{{ risk_class }}">{{ risk }}</span></div><div class="risk-metrics"><div class="metric"><span class="metric-value">{{ module_total }}</span><span class="metric-label">Moduły zeskanowane</span></div><div class="metric"><span class="metric-value">{{ counters.critical }}</span><span class="metric-label">Zagrożenia krytyczne</span></div><div class="metric"><span class="metric-value">{{ counters.high + counters.medium }}</span><span class="metric-label">Ostrzeżenia</span></div><div class="metric"><span class="metric-value">{{ counters.findings }}</span><span class="metric-label">Ustalenia</span></div></div></section>
+            <section class="glass-panel risk-strip"><div class="risk-strip-header"><span>Ogólne ryzyko</span><span class="risk-badge risk-{{ risk_class }}">{{ risk_labels.get(risk_class, 'Brak danych') }}</span></div><div class="risk-metrics"><div class="metric"><span class="metric-value">{{ module_total }}</span><span class="metric-label">Moduły zeskanowane</span></div><div class="metric"><span class="metric-value">{{ counters.critical }}</span><span class="metric-label">Zagrożenia krytyczne</span></div><div class="metric"><span class="metric-value">{{ counters.high + counters.medium }}</span><span class="metric-label">Ostrzeżenia</span></div><div class="metric"><span class="metric-value">{{ counters.findings }}</span><span class="metric-label">Ustalenia</span></div></div></section>
         </div>
     </section>
     <div class="content-stack">

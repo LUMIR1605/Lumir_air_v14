@@ -1,9 +1,17 @@
     </div>
 
     <footer class="footer">
-        Lumir SHIELD - Security Intelligence. Wyniki zaleza od dostepnosci zewnetrznych zrodel danych w chwili skanu.
+        Lumír SHIELD — Security Intelligence. Wyniki zależą od dostępności zewnętrznych źródeł danych w chwili skanu.
     </footer>
 </main>
 </div>
+<script>
+document.querySelectorAll('details > summary').forEach((summary) => {
+    const details = summary.parentElement;
+    const syncExpanded = () => summary.setAttribute('aria-expanded', String(details.open));
+    syncExpanded();
+    details.addEventListener('toggle', syncExpanded);
+});
+</script>
 </body>
 </html>
