@@ -8,13 +8,14 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Spacer, Paragraph, Table, TableStyle
 from reportlab import rl_config
+import reportlab
 
 
 def build(report, outfile="shield_report.pdf"):
     """Create an A4 PDF from the same scan object used for JSON and HTML."""
     document = SimpleDocTemplate(outfile, pagesize=A4, rightMargin=16 * mm, leftMargin=16 * mm, topMargin=16 * mm, bottomMargin=16 * mm)
     styles = getSampleStyleSheet()
-    fonts = Path(rl_config.TTFSearchPath[0])
+    fonts = Path(reportlab.__file__).resolve().parent / "fonts"
     pdfmetrics.registerFont(TTFont("LumirVera", str(fonts / "Vera.ttf")))
     pdfmetrics.registerFont(TTFont("LumirVeraBold", str(fonts / "VeraBd.ttf")))
     styles["Title"].fontName = "LumirVeraBold"
