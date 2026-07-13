@@ -1,60 +1,55 @@
-{% macro render_action(items, fallback) -%}
-    {%- if items %}
-    <ul class="action-list">
-        {%- for item in items %}
-        <li>{{ item }}</li>
-        {%- endfor %}
-    </ul>
-    {%- else %}
-    <p class="muted">{{ fallback }}</p>
-    {%- endif %}
-{%- endmacro %}
+{% set counters = namespace(low=0, medium=0, high=0, critical=0) %}
+{% for module in report.modules %}
+    {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('unknown') %}
+    {% if module_risk|lower == 'low' %}{% set counters.low = counters.low + 1 %}{% endif %}
+    {% if module_risk|lower == 'medium' %}{% set counters.medium = counters.medium + 1 %}{% endif %}
+    {% if module_risk|lower == 'high' %}{% set counters.high = counters.high + 1 %}{% endif %}
+    {% if module_risk|lower == 'critical' %}{% set counters.critical = counters.critical + 1 %}{% endif %}
+{% endfor %}
+{% set module_total = report.modules|length %}
+{% set low_pct = ((counters.low / module_total) * 100)|round(0) if module_total else 0 %}
+{% set medium_pct = ((counters.medium / module_total) * 100)|round(0) if module_total else 0 %}
+{% set high_pct = ((counters.high / module_total) * 100)|round(0) if module_total else 0 %}
+{% set critical_pct = ((counters.critical / module_total) * 100)|round(0) if module_total else 0 %}
+{% set module_labels = {'email_scan':'Skan e-mail', 'domain_scan':'Skan domeny', 'phone_scan':'Skan telefonu', 'username_scan':'Skan nazwy użytkownika', 'breach_scan':'Skan wycieków', 'url_scan':'Skan adresu URL'} %}
+{% set risk_labels = {'low':'Niskie ryzyko', 'medium':'Średnie ryzyko', 'high':'Wysokie ryzyko', 'critical':'Ryzyko krytyczne', 'unknown':'Brak danych'} %}
+{% set priority = namespace(module=none, risk='low') %}
+{% for module in report.modules %}
+    {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('unknown') %}
+    {% if priority.module is none or (module_risk|lower == 'critical') or (module_risk|lower == 'high' and priority.risk|lower not in ['critical', 'high']) or (module_risk|lower == 'medium' and priority.risk|lower in ['low', 'unknown']) %}
+        {% set priority.module = module %}{% set priority.risk = module_risk %}
+    {% endif %}
+{% endfor %}
 
-<section class="panel-grid">
-    <section class="glass-panel panel">
-        <h2 class="panel-title">Plan dzialan</h2>
-        <div class="action-columns">
-            <div class="action-column">
-                <h3>Dzisiaj</h3>
-                {% if report.action_plan %}
-                {{ render_action(report.action_plan.today, "Brak dzialan na dzisiaj.") }}
-                {% else %}
-                <p class="muted">Brak planu dzialan.</p>
-                {% endif %}
-            </div>
-            <div class="action-column">
-                <h3>Wkrotce</h3>
-                {% if report.action_plan %}
-                {{ render_action(report.action_plan.now, "Brak dzialan pilnych.") }}
-                {% else %}
-                <p class="muted">Brak planu dzialan.</p>
-                {% endif %}
-            </div>
-            <div class="action-column">
-                <h3>Zachowaj nawyki</h3>
-                {% if report.action_plan %}
-                {{ render_action(report.action_plan.later, "Zachowaj dobre praktyki bezpieczenstwa.") }}
-                {% else %}
-                <p class="muted">Zachowaj dobre praktyki bezpieczenstwa.</p>
-                {% endif %}
-            </div>
-        </div>
-    </section>
-
-    <section class="glass-panel panel">
-        <h2 class="panel-title">Przeglad ryzyka</h2>
-        <div class="risk-donut"></div>
-        <div class="legend">
-            <div class="legend-row"><span>LOW RISK</span><strong>100%</strong></div>
-            <div class="legend-row"><span>MEDIUM RISK</span><strong>0%</strong></div>
-            <div class="legend-row"><span>HIGH RISK</span><strong>0%</strong></div>
-            <div class="legend-row"><span>CRITICAL</span><strong>0%</strong></div>
-        </div>
-    </section>
-
-    <section class="glass-panel panel next-scan">
-        <h2 class="panel-title">Nastepne skanowanie</h2>
-        <p class="muted">Zalecamy wykonanie kolejnego skanowania za 30 dni.</p>
-        <a class="action-button" href="shield_report_v2.html">Ustaw przypomnienie</a>
-    </section>
+<section class="glass-panel insight-panel" aria-labelledby="insight-title">
+    <div class="insight-heading"><div><p class="eyebrow">Analiza wykonana przez Lumír Intelligence</p><h2 class="panel-title" id="insight-title">Analiza Lumír AI</h2></div><span class="insight-source">Na podstawie danych skanu</span></div>
+    <div class="insight-copy">
+        {% if not report.modules %}
+        <p>Raport nie zawiera wyników modułów, dlatego nie można określić poziomu ryzyka.</p>
+        {% elif counters.critical > 0 or counters.high > 0 %}
+        <p>Wyniki wskazują na podwyższone ryzyko wymagające priorytetowej reakcji.</p>
+        <p>Największej uwagi wymaga obszar: {{ priority.module.module|replace('_', ' ')|title }}.</p>
+        <p>Przejdź do szczegółów modułu i zastosuj zalecenia z planu działań.</p>
+        {% elif counters.medium > 0 %}
+        <p>Nie wykryto zagrożeń krytycznych, jednak część wyników wymaga uważnej weryfikacji.</p>
+        <p>Najwyższy bieżący poziom dotyczy obszaru: {{ priority.module.module|replace('_', ' ')|title }}.</p>
+        <p>Zaplanowane działania pomogą ograniczyć wykrytą ekspozycję.</p>
+        {% else %}
+        <p>Nie wykryto krytycznych ani wysokich zagrożeń w dostępnych wynikach skanu.</p>
+        {% if report.executive_summary %}<p>{{ report.executive_summary[0] }}</p>{% endif %}
+        {% if report.action_plan and report.action_plan.today|default([]) %}<p>Najważniejsze zalecenie na dziś: {{ report.action_plan.today[0] }}</p>{% elif report.action_plan and report.action_plan.later|default([]) %}<p>Warto utrzymać dobrą praktykę: {{ report.action_plan.later[0] }}</p>{% endif %}
+        {% endif %}
+    </div>
 </section>
+
+<section class="panel-grid" id="plan">
+    <section class="glass-panel panel"><h2 class="panel-title">Plan działań</h2><div class="action-columns">
+        <div class="action-column"><h3>Zrób teraz</h3>{% if report.action_plan and report.action_plan.now|default([]) %}<ol class="action-list numbered">{% for item in report.action_plan.now %}<li class="priority"><span class="action-step">{{ '%02d'|format(loop.index) }}</span>{{ item }}</li>{% endfor %}</ol>{% else %}<p class="muted">Brak pilnych działań w tym skanie.</p>{% endif %}</div>
+        <div class="action-column"><h3>Zrób dziś</h3>{% if report.action_plan and report.action_plan.today|default([]) %}<ol class="action-list numbered">{% for item in report.action_plan.today %}<li class="priority"><span class="action-step">{{ '%02d'|format(loop.index) }}</span>{{ item }}</li>{% endfor %}</ol>{% else %}<p class="muted">Brak działań zaplanowanych na dziś.</p>{% endif %}</div>
+        <div class="action-column"><h3>Dobre praktyki</h3>{% if report.action_plan and report.action_plan.later|default([]) %}<ol class="action-list numbered">{% for item in report.action_plan.later %}<li><span class="action-step">{{ '%02d'|format(loop.index) }}</span>{{ item }}</li>{% endfor %}</ol>{% else %}<p class="muted">Brak dodatkowych zaleceń.</p>{% endif %}</div>
+    </div></section>
+    <section class="glass-panel panel"><h2 class="panel-title">Przegląd ryzyka</h2><div class="risk-overview"><div class="risk-donut" style="--low: {{ low_pct }}; --medium: {{ medium_pct }}; --high: {{ high_pct }};"></div><div class="legend"><div class="legend-row"><span>Niskie</span><strong>{{ low_pct }}%</strong></div><div class="legend-row"><span>Średnie</span><strong>{{ medium_pct }}%</strong></div><div class="legend-row"><span>Wysokie</span><strong>{{ high_pct }}%</strong></div><div class="legend-row"><span>Krytyczne</span><strong>{{ critical_pct }}%</strong></div></div></div></section>
+    <section class="glass-panel panel next-scan"><h2 class="panel-title">Następne skanowanie</h2><p class="muted">Zalecamy ponowne sprawdzenie po zmianie ustawień lub w ciągu 30 dni.</p><button class="action-button" type="button" onclick="window.print()">Zapisz jako PDF</button></section>
+</section>
+
+<details class="technical-section" id="techniczne"><summary aria-expanded="false">Dane techniczne</summary><div class="technical-content"><table class="module-table"><tr><th>Moduł</th><th>Ryzyko</th><th>Wynik</th><th>Ustalenia</th></tr>{% for module in report.modules %}{% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('unknown') %}<tr><td>{{ module_labels.get(module.module, module.module|replace('_', ' ')|title) }}</td><td><span class="risk-pill risk-{{ module_risk|lower }}">{{ risk_labels.get(module_risk|lower, module_risk|title) }}</span></td><td>{{ module.risk_score.score if module.risk_score is defined else '—' }}</td><td>{{ module.findings|length if module.findings is defined else 0 }}</td></tr>{% endfor %}</table></div></details>
