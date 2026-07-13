@@ -12,7 +12,8 @@ def scan(number):
         "international": "",
         "risk": "high",
         "findings": [],
-        "sources": []
+        "sources": [],
+        "scan_status": "completed"
     }
 
     try:

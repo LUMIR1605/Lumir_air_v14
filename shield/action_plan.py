@@ -1,11 +1,14 @@
 def build(report):
-    score = report.get("risk_score", {}).get("score", 0)
+    score = report.get("risk_score", {}).get("score")
 
     now = []
     today = []
     later = []
 
-    if score >= 90:
+    if score is None:
+        today.append("Zakres wykonanej analizy nie wystarcza do pelnej oceny. Sprawdz dostepne moduly i zrodla.")
+
+    elif score >= 90:
         today.append("Włącz uwierzytelnianie dwuskładnikowe (2FA), jeśli jeszcze go nie używasz.")
         later.append("Sprawdzaj wycieki danych raz w miesiącu.")
         later.append("Używaj unikalnych haseł dla każdego serwisu.")

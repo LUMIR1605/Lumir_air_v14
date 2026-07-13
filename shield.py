@@ -3,6 +3,7 @@
 import sys
 import re
 import shutil
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -31,8 +32,10 @@ print(f"Lumír SHIELD: skanowanie typu {scan_type} dla: {target}")
 result = run(scan_type, target)
 
 json_report = build(result)
-html_report = build_html(result)
-pdf_report = build_pdf(result)
+with open(json_report, encoding="utf-8") as report_file:
+    presentation_report = json.load(report_file)
+html_report = build_html(presentation_report)
+pdf_report = build_pdf(presentation_report)
 
 android_download = Path("/storage/emulated/0/Download/LumirShield")
 android_reports = []
