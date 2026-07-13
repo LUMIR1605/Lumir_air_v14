@@ -234,6 +234,7 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
 {% set score = report.risk_score.score if report.risk_score is defined else (primary.risk_score.score if primary.risk_score is defined else 0) %}
 {% set risk = report.risk_score.risk if report.risk_score is defined else (primary.risk_score.risk if primary.risk_score is defined else primary.risk|default('unknown')) %}
 {% set risk_class = risk|lower %}
+{% set score_message = 'Bardzo dobrze' if score >= 90 else ('Dobrze' if score >= 70 else ('Uwaga' if score >= 40 else 'Wysokie ryzyko')) %}
 {% set counters = namespace(low=0, medium=0, high=0, critical=0, findings=0) %}
 {% for module in report.modules %}
     {% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('unknown') %}
@@ -266,9 +267,9 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
         <div class="top-actions"><a class="action-button" href="shield_report.pdf" download>Eksport PDF</a><a class="action-button primary" href="shield_report_v2.html" download>Eksport HTML</a><a class="action-button" href="shield_report.json" download>JSON</a><button class="action-button" type="button" id="share-report">Udostępnij</button></div>
     </header>
     <section class="hero-grid" id="podsumowanie">
-        <div class="score-hero" aria-label="Wynik bezpieczeństwa"><div class="score-orb"><div class="score-content"><span class="score-number">{{ score }}</span><span class="score-scale">/100</span><span class="risk-status risk-{{ risk_class }}">{{ risk_labels.get(risk_class, 'Brak danych') }}</span></div></div><p class="score-caption">Wynik bezpieczeństwa</p></div>
+        <div class="score-hero" aria-label="Wynik bezpieczeństwa"><div class="score-orb"><div class="score-content"><span class="score-number">{{ score }}</span><span class="score-scale">/100</span><span class="risk-status risk-{{ risk_class }}">{{ score_message }}</span></div></div><p class="score-caption">Wskaźnik bezpieczeństwa</p></div>
         <div class="summary-panel">
-            <section class="glass-panel executive-box"><h2 class="panel-title">Podsumowanie wykonawcze</h2>{% if report.executive_summary %}<ul class="summary-list">{% for item in report.executive_summary %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Brak podsumowania dla tego skanu.</p>{% endif %}</section>
+            <section class="glass-panel executive-box"><h2 class="panel-title">Co sprawdziliśmy</h2>{% if report.executive_summary %}<ul class="summary-list">{% for item in report.executive_summary %}<li>{{ item }}</li>{% endfor %}</ul><p class="muted">Poniżej znajdziesz tylko najważniejsze wyniki i proste kolejne kroki.</p>{% else %}<p class="muted">Brak podsumowania dla tego skanu.</p>{% endif %}</section>
             <section class="glass-panel risk-strip"><div class="risk-strip-header"><span>Ogólne ryzyko</span><span class="risk-badge risk-{{ risk_class }}">{{ risk_labels.get(risk_class, 'Brak danych') }}</span></div><div class="risk-metrics"><div class="metric"><span class="metric-value">{{ module_total }}</span><span class="metric-label">Moduły zeskanowane</span></div><div class="metric"><span class="metric-value">{{ counters.critical }}</span><span class="metric-label">Zagrożenia krytyczne</span></div><div class="metric"><span class="metric-value">{{ counters.high + counters.medium }}</span><span class="metric-label">Ostrzeżenia</span></div><div class="metric"><span class="metric-value">{{ counters.findings }}</span><span class="metric-label">Ustalenia</span></div></div></section>
         </div>
     </section>
