@@ -21,42 +21,45 @@ def run(scan_type, value):
         "modules": []
     }
 
+    def add(scanner, target):
+        try:
+            module = scanner(target)
+        except Exception as error:
+            module = {
+                "module": getattr(scanner, "__name__", "scanner"),
+                "risk": "unknown",
+                "scan_status": "error",
+                "source": "Lumir SHIELD",
+                "confidence": "brak",
+                "findings": [f"Błąd częściowy modułu: {error}"],
+            }
+        module["risk_score"] = calculate(module)
+        report["modules"].append(module)
+        return module
+
     if scan_type == "email":
-        email = email_scan(value)
-        email["risk_score"] = calculate(email)
-        report["modules"].append(email)
-
-        breach = breach_scan(value)
-        breach["risk_score"] = calculate(breach)
-        report["modules"].append(breach)
-
-        domain = domain_scan(value.split("@")[1])
-        domain["risk_score"] = calculate(domain)
-        report["modules"].append(domain)
+        add(email_scan, value)
+        add(breach_scan, value)
+        add(domain_scan, value.split("@", 1)[1])
 
     elif scan_type == "username":
-        user = username_scan(value)
-        user["risk_score"] = calculate(user)
-        report["modules"].append(user)
+        add(username_scan, value)
 
     elif scan_type == "phone":
-        phone = phone_scan(value)
-        phone["risk_score"] = calculate(phone)
-        report["modules"].append(phone)
+        phone = add(phone_scan, value)
 
         pf = parse_phoneinfoga(phoneinfoga_scan(value))
         report["fusion"] = fuse(phone, pf)
         report["coverage"] = coverage_calculate(phone, pf)
 
     elif scan_type == "domain":
-        domain = domain_scan(value)
-        domain["risk_score"] = calculate(domain)
-        report["modules"].append(domain)
+        add(domain_scan, value)
 
     elif scan_type == "url":
-        url = url_scan(value)
-        url["risk_score"] = calculate(url)
-        report["modules"].append(url)
+        add(url_scan, value)
+
+    report["risk_score"] = calculate(report["modules"])
+    report["risk"] = report["risk_score"]["risk"].lower()
 
     report["attack_surface"] = attack_surface(report)
 

@@ -1,5 +1,5 @@
 def build(report):
-    score = report["modules"][0]["risk_score"]["score"]
+    score = report.get("risk_score", {}).get("score", 0)
 
     summary = []
 
@@ -20,7 +20,9 @@ def build(report):
             summary.append("Domena obsługuje HTTPS.")
 
         if module["module"] == "breach_scan":
-            if module.get("breaches_found", 0) == 0:
+            if module.get("scan_status") == "completed" and module.get("breaches_found", 0) == 0:
                 summary.append("Nie wykryto znanych wycieków danych.")
+            elif module.get("scan_status") != "completed":
+                summary.append("Nie udało się sprawdzić publicznych źródeł wycieków.")
 
     return summary
