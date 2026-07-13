@@ -12,6 +12,22 @@ document.querySelectorAll('details > summary').forEach((summary) => {
     syncExpanded();
     details.addEventListener('toggle', syncExpanded);
 });
+document.getElementById('share-report')?.addEventListener('click', async () => {
+    const data = { title: 'Lumír SHIELD', text: 'Raport bezpieczeństwa Lumír SHIELD', url: window.location.href };
+    try {
+        if (navigator.share) {
+            await navigator.share(data);
+            alert('Raport został udostępniony.');
+        } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(window.location.href);
+            alert('Link do raportu został skopiowany.');
+        } else {
+            window.location.href = 'shield_report_v2.html';
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') alert('Nie udało się udostępnić raportu.');
+    }
+});
 </script>
 </body>
 </html>

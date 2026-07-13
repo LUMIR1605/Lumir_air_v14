@@ -7,6 +7,7 @@ from shield.core import detect_type
 from shield.multi_scan import run
 from shield.report_builder import build
 from shield.html_report import build as build_html
+from shield.pdf_report import build as build_pdf
 
 configure_stdio()
 
@@ -27,6 +28,7 @@ result = run(scan_type, target)
 
 json_report = build(result)
 html_report = build_html(result)
+pdf_report = build_pdf(result)
 
 failed = [module for module in result["modules"] if module.get("scan_status") in {"error", "timeout", "unavailable"}]
 print(f"Zakończono moduły: {len(result['modules'])}. Wynik: {result['risk_score']['score']}/100 ({result['risk_score']['risk']}).")
@@ -36,3 +38,4 @@ if failed:
 print("\nRaport zapisano jako:")
 print(f" - {json_report}")
 print(f" - {html_report}")
+print(f" - {pdf_report}")

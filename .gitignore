@@ -11,6 +11,7 @@ __pycache__/
 .lumir/
 shield_report*.html
 shield_report*.json
+shield_report*.pdf
 
 # OS
 .DS_Store
