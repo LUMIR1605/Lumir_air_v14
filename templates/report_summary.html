@@ -21,6 +21,27 @@
     {% endif %}
 {% endfor %}
 
+{% set email = namespace(item=none) %}{% set breach = namespace(item=none) %}
+{% for module in report.modules %}{% if module.module == 'email_scan' %}{% set email.item = module %}{% endif %}{% if module.module == 'breach_scan' %}{% set breach.item = module %}{% endif %}{% endfor %}
+<section class="glass-panel insight-panel" aria-labelledby="plain-title">
+    <div class="insight-heading"><div><p class="eyebrow">Najważniejsze ustalenia</p><h2 class="panel-title" id="plain-title">Co znaleźliśmy?</h2></div></div>
+    <div class="insight-copy">
+        {% if breach.item %}{% if breach.item.scan_status == 'completed' and breach.item.breaches_found == 0 %}<p>Nie znaleziono wpisów o wyciekach w sprawdzonym źródle.</p>{% elif breach.item.scan_status == 'completed' %}<p>Źródło wycieków zwróciło {{ breach.item.breaches_found }} wpisów. Sprawdź szczegóły modułu.</p>{% else %}<p>Pełne sprawdzenie wycieków wymaga aktywnego źródła HIBP. W tym skanie nie potwierdzono braku wycieków.</p>{% endif %}{% endif %}
+        {% if email.item and email.item.exposure is defined and email.item.exposure.found is defined and email.item.exposure.found %}<p><strong>Powiązane usługi:</strong> {{ email.item.exposure.services|join(', ') }}.</p><p>Znalezienie konta nie oznacza wycieku ani przejęcia.</p>{% endif %}
+        {% if priority.module %}<p>{% if counters.critical or counters.high %}Wykryto pilne ryzyko w obszarze {{ priority.module.module|replace('_', ' ')|title }}.{% else %}Nie wykryto pilnych zagrożeń.{% endif %} Pierwszy krok: {{ report.action_plan.now[0] if report.action_plan.now|default([]) else report.action_plan.today[0] if report.action_plan.today|default([]) else 'zachowaj ostrożność i sprawdź zalecenia.' }}</p>{% endif %}
+    </div>
+</section>
+
+<section class="glass-panel insight-panel" aria-labelledby="score-title">
+    <div class="insight-heading"><div><p class="eyebrow">Proste wyjaśnienie</p><h2 class="panel-title" id="score-title">Dlaczego taki wynik?</h2></div></div>
+    <div class="insight-copy"><ul class="summary-list">
+        <li>Wynik uwzględnia {{ module_total }} ukończone moduły skanu.</li>
+        <li>{% if counters.critical or counters.high %}Wykryto wyniki wymagające pilnej uwagi.{% else %}Nie wykryto wyników krytycznych ani wysokiego ryzyka.{% endif %}</li>
+        <li>{% if breach.item and breach.item.scan_status != 'completed' %}Wycieków nie można było w pełni sprawdzić bez aktywnego źródła HIBP.{% else %}Źródło wycieków zakończyło sprawdzenie.{% endif %}</li>
+        {% if email.item and email.item.exposure is defined and email.item.exposure.found is defined and email.item.exposure.found %}<li>Adres jest powiązany z {{ email.item.exposure.found }} usługami; to informacja, nie potwierdzenie wycieku.</li>{% endif %}
+    </ul></div>
+</section>
+
 <section class="glass-panel insight-panel" aria-labelledby="insight-title">
     <div class="insight-heading"><div><p class="eyebrow">Analiza wykonana przez Lumír Intelligence</p><h2 class="panel-title" id="insight-title">Analiza Lumír AI</h2></div><span class="insight-source">Na podstawie danych skanu</span></div>
     <div class="insight-copy">
@@ -49,7 +70,9 @@
         <div class="action-column"><h3>Dobre praktyki</h3>{% if report.action_plan and report.action_plan.later|default([]) %}<ol class="action-list numbered">{% for item in report.action_plan.later %}<li><span class="action-step">{{ '%02d'|format(loop.index) }}</span>{{ item }}</li>{% endfor %}</ol>{% else %}<p class="muted">Brak dodatkowych zaleceń.</p>{% endif %}</div>
     </div></section>
     <section class="glass-panel panel"><h2 class="panel-title">Przegląd ryzyka</h2><div class="risk-overview"><div class="risk-donut" style="--low: {{ low_pct }}; --medium: {{ medium_pct }}; --high: {{ high_pct }};"></div><div class="legend"><div class="legend-row"><span>Niskie</span><strong>{{ low_pct }}%</strong></div><div class="legend-row"><span>Średnie</span><strong>{{ medium_pct }}%</strong></div><div class="legend-row"><span>Wysokie</span><strong>{{ high_pct }}%</strong></div><div class="legend-row"><span>Krytyczne</span><strong>{{ critical_pct }}%</strong></div></div></div></section>
-    <section class="glass-panel panel next-scan"><h2 class="panel-title">Następne skanowanie</h2><p class="muted">Zalecamy ponowne sprawdzenie po zmianie ustawień lub w ciągu 30 dni.</p><button class="action-button" type="button" onclick="window.print()">Zapisz jako PDF</button></section>
+    <section class="glass-panel panel next-scan"><h2 class="panel-title">Następne skanowanie</h2><p class="muted">Zalecamy ponowne sprawdzenie po zmianie ustawień lub w ciągu 30 dni.</p><a class="action-button" href="shield_report.pdf" download>Pobierz PDF</a></section>
 </section>
+
+<section class="glass-panel insight-panel" aria-labelledby="family-title"><div class="insight-heading"><div><p class="eyebrow">Krótka wskazówka</p><h2 class="panel-title" id="family-title">Ochrona przed podszywaniem się przez AI</h2></div></div><div class="insight-copy"><ul class="summary-list"><li>Ustal z najbliższymi jedno rodzinne słowo bezpieczeństwa.</li><li>Nie zapisuj go w internecie ani nie wysyłaj w wiadomościach.</li><li>Użyj go przy pilnej prośbie o pieniądze lub pomoc.</li><li>Gdy rozmówca go nie zna, przerwij rozmowę i zadzwoń na znany numer tej osoby.</li></ul><p class="muted">Rodzinne słowo bezpieczeństwa nie zastępuje zdrowego rozsądku ani ponownej weryfikacji innym kanałem.</p></div></section>
 
 <details class="technical-section" id="techniczne"><summary aria-expanded="false">Dane techniczne</summary><div class="technical-content"><table class="module-table"><tr><th>Moduł</th><th>Ryzyko</th><th>Wynik</th><th>Ustalenia</th></tr>{% for module in report.modules %}{% set module_risk = module.risk_score.risk if module.risk_score is defined else module.risk|default('unknown') %}<tr><td>{{ module_labels.get(module.module, module.module|replace('_', ' ')|title) }}</td><td><span class="risk-pill risk-{{ module_risk|lower }}">{{ risk_labels.get(module_risk|lower, module_risk|title) }}</span></td><td>{{ module.risk_score.score if module.risk_score is defined else '—' }}</td><td>{{ module.findings|length if module.findings is defined else 0 }}</td></tr>{% endfor %}</table></div></details>

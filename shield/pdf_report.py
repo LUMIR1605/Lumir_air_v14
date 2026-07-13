@@ -7,7 +7,6 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Spacer, Paragraph, Table, TableStyle
-from reportlab import rl_config
 import reportlab
 
 

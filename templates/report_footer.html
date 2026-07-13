@@ -15,19 +15,37 @@ document.querySelectorAll('details > summary').forEach((summary) => {
 document.getElementById('share-report')?.addEventListener('click', async () => {
     const data = { title: 'Lumír SHIELD', text: 'Raport bezpieczeństwa Lumír SHIELD', url: window.location.href };
     try {
-        if (navigator.share) {
+        if (navigator.share && navigator.canShare) {
+            const pdf = await fetch('shield_report.pdf').then((response) => response.blob());
+            const file = new File([pdf], 'shield_report.pdf', { type: 'application/pdf' });
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ ...data, files: [file] });
+            } else {
+                await navigator.share(data);
+            }
+            alert('Raport został udostępniony.');
+        } else if (navigator.share) {
             await navigator.share(data);
             alert('Raport został udostępniony.');
         } else if (navigator.clipboard) {
             await navigator.clipboard.writeText(window.location.href);
             alert('Link do raportu został skopiowany.');
         } else {
-            window.location.href = 'shield_report_v2.html';
+            window.location.href = 'shield_report.pdf';
         }
     } catch (error) {
         if (error.name !== 'AbortError') alert('Nie udało się udostępnić raportu.');
     }
 });
+const sections = [...document.querySelectorAll('[id]')];
+const navItems = [...document.querySelectorAll('.nav-item[href^="#"]')];
+if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+        const current = entries.find((entry) => entry.isIntersecting);
+        if (current) navItems.forEach((item) => item.classList.toggle('active', item.getAttribute('href') === `#${current.target.id}`));
+    }, { rootMargin: '-20% 0px -65% 0px', threshold: 0.1 });
+    sections.forEach((section) => observer.observe(section));
+}
 </script>
 </body>
 </html>
