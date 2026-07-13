@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import re
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 from core.compat import configure_stdio
@@ -34,18 +32,25 @@ json_report = build(result)
 html_report = build_html(result)
 pdf_report = build_pdf(result)
 
-safe_target = re.sub(r"[^A-Za-z0-9._-]+", "_", target).strip("_") or "scan"
-timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 android_download = Path("/storage/emulated/0/Download/LumirShield")
-saved_reports = []
-try:
-    android_download.mkdir(parents=True, exist_ok=True)
-    for source, suffix in ((html_report, "html"), (pdf_report, "pdf"), (json_report, "json")):
-        destination = android_download / f"Lumir_SHIELD_{safe_target}_{timestamp}.{suffix}"
-        shutil.copy2(source, destination)
-        saved_reports.append(str(destination))
-except OSError:
-    saved_reports = [str(Path(path).resolve()) for path in (html_report, pdf_report, json_report)]
+android_reports = []
+storage_error = None
+android_storage = Path("/storage/emulated/0")
+if not android_storage.exists():
+    storage_error = "Nie wykryto /storage/emulated/0. Na Androidzie uruchom w Termux: termux-setup-storage"
+else:
+    try:
+        android_download.mkdir(parents=True, exist_ok=True)
+        for source in (html_report, json_report, pdf_report):
+            source_path = Path(source)
+            if source_path.is_file():
+                destination = android_download / source_path.name
+                shutil.copy2(source_path, destination)
+                android_reports.append(str(destination))
+    except PermissionError:
+        storage_error = "Brak dostepu do pamieci urzadzenia. W Termux uruchom: termux-setup-storage, zaakceptuj uprawnienie i uruchom skan ponownie."
+    except OSError as error:
+        storage_error = f"Nie mozna zapisac raportu w /storage/emulated/0/Download/LumirShield: {error}"
 
 failed = [module for module in result["modules"] if module.get("scan_status") in {"error", "timeout", "unavailable"}]
 print(f"Zakończono moduły: {len(result['modules'])}. Wynik: {result['risk_score']['score']}/100 ({result['risk_score']['risk']}).")
@@ -56,6 +61,10 @@ print("\nRaport zapisano jako:")
 print(f" - {json_report}")
 print(f" - {html_report}")
 print(f" - {pdf_report}")
-print("\nPliki do udostępnienia:")
-for path in saved_reports:
-    print(f" - {path}")
+if storage_error:
+    print(f"\n{storage_error}")
+else:
+    print("\nRaport zapisano również do:")
+    print("/storage/emulated/0/Download/LumirShield/")
+    for path in android_reports:
+        print(f" - {path}")
