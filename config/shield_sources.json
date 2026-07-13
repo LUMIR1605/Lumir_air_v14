@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "source_id": "local_dns",
+      "source_name": "Local DNS technical analysis",
+      "official_documentation_url": null,
+      "allowed_method": "local resolver lookup",
+      "tos_review_status": "approved",
+      "tos_reviewed_at": "2026-07-14",
+      "rate_limit": "resolver defaults",
+      "requires_api_key": false,
+      "enabled": true
+    },
+    {
+      "source_id": "hibp_v3",
+      "source_name": "Have I Been Pwned API v3",
+      "official_documentation_url": "https://haveibeenpwned.com/API/v3",
+      "allowed_method": "GET /breachedaccount/{masked_account}",
+      "tos_review_status": "approved",
+      "tos_reviewed_at": "2026-07-14",
+      "rate_limit": "API key plan limits; no automatic retries beyond configured request",
+      "requires_api_key": true,
+      "enabled": true
+    },
+    {
+      "source_id": "public_web_probe",
+      "source_name": "Direct public website probing",
+      "official_documentation_url": null,
+      "allowed_method": "none",
+      "tos_review_status": "pending",
+      "tos_reviewed_at": null,
+      "rate_limit": null,
+      "requires_api_key": false,
+      "enabled": false
+    }
+  ]
+}
