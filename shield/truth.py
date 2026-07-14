@@ -134,7 +134,7 @@ def validate_report(report):
         if status == "completed" and (not isinstance(module.get("score"), (int, float)) or not 0 <= module["score"] <= 100 or not module.get("score_basis")):
             raise ValueError(f"completed module without valid evidence score: {module.get('module')}")
         for check in module.get("score_basis", []):
-            if check.get("status") not in CONTROL_STATUSES or (check.get("points_awarded") is not None and check.get("points_awarded") > check.get("weight", 0)):
+            if check.get("status") not in CONTROL_STATUSES or (check.get("points_awarded") is not None and check.get("points_awarded") > check.get("weight", 0)) or (check.get("status") in {"failed", "unknown", "error"} and check.get("points_awarded") not in {None, 0}):
                 raise ValueError(f"invalid control: {check.get('check_id')}")
         if status != "completed" and module.get("confidence") is not None:
             raise ValueError(f"invalid module confidence: {module.get('module')}")

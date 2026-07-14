@@ -10,9 +10,12 @@ import requests
 from shield.truth import load_sources, mask_email, now_iso, source_record
 
 
-def _basis(count, status):
-    score = 100 if count == 0 else max(0, 70 - min(count, 7) * 10)
-    return score, [{"check_id": "hibp_breach_lookup", "status": status, "weight": 100, "points_awarded": score, "evidence": {"breaches_found": count}}]
+def _basis(count):
+    if count == 0:
+        return 100, [{"check_id": "hibp_breach_lookup", "status": "passed", "weight": 100, "points_awarded": 100, "evidence": {"breaches_found": 0}}], None
+    score = max(0, 70 - min(count, 7) * 10)
+    rule = {"rule_id": "hibp_breach_count_v1", "breaches_found": count, "formula": "max(0, 70 - min(breaches_found, 7) * 10)", "module_score": score}
+    return score, [{"check_id": "hibp_breach_lookup", "status": "failed", "weight": 100, "points_awarded": 0, "evidence": {"breaches_found": count}}], rule
 
 
 def scan(email: str):
@@ -27,17 +30,17 @@ def scan(email: str):
         response = requests.get(f"https://haveibeenpwned.com/api/v3/breachedaccount/{quote(email, safe='')}", headers={"hibp-api-key": api_key, "user-agent": "Lumir-SHIELD"}, timeout=15)
         log.update({"finished_at": now_iso(), "duration_ms": round((monotonic() - clock) * 1000), "http_status": response.status_code, "status": "completed"})
         if response.status_code == 404:
-            score, basis = _basis(0, "passed")
+            score, basis, severity_rule = _basis(0)
             basis[0]["evidence"]["http_status"] = 404
-            return {**base, "breaches_found": 0, "breaches": [], "risk": "low", "scan_status": "completed", "score": score, "score_basis": basis, "findings": [], "request_log": [log], "sources": [source_record("hibp_v3", "completed", confidence=.95, evidence={"http_status": 404}, request_log_ref=request_id)]}
+            return {**base, "breaches_found": 0, "breaches": [], "risk": "low", "scan_status": "completed", "score": score, "score_basis": basis, "severity_rule": severity_rule, "findings": [], "request_log": [log], "sources": [source_record("hibp_v3", "completed", confidence=.95, evidence={"http_status": 404}, request_log_ref=request_id)]}
         if response.status_code in {401, 403, 429}:
             reason = "HIBP_AUTH_ERROR" if response.status_code in {401, 403} else "HIBP_RATE_LIMITED"
             log["status"] = "error"
             return {**base, "breaches_found": None, "risk": "unknown", "scan_status": "error", "score": None, "score_basis": [], "error_reason": reason, "findings": [], "request_log": [log], "sources": [source_record("hibp_v3", "error", error_reason=reason, request_log_ref=request_id)]}
         response.raise_for_status()
         names = [item.get("Name", "Nieznane zrodlo") for item in response.json()]
-        score, basis = _basis(len(names), "failed" if names else "passed")
-        return {**base, "breaches_found": len(names), "breaches": names, "risk": "high" if names else "low", "scan_status": "completed", "score": score, "score_basis": basis, "findings": [f"Znaleziono {len(names)} wpisow w publicznym zrodle wyciekow."] if names else [], "request_log": [log], "sources": [source_record("hibp_v3", "completed", confidence=.95, evidence={"breach_count": len(names)}, request_log_ref=request_id)]}
+        score, basis, severity_rule = _basis(len(names))
+        return {**base, "breaches_found": len(names), "breaches": names, "risk": "high" if names else "low", "scan_status": "completed", "score": score, "score_basis": basis, "severity_rule": severity_rule, "findings": [f"Znaleziono {len(names)} wpisow w publicznym zrodle wyciekow."] if names else [], "request_log": [log], "sources": [source_record("hibp_v3", "completed", confidence=.95, evidence={"breach_count": len(names)}, request_log_ref=request_id)]}
     except requests.Timeout:
         log.update({"finished_at": now_iso(), "duration_ms": round((monotonic() - clock) * 1000), "http_status": None, "status": "timeout"})
         return {**base, "breaches_found": None, "risk": "unknown", "scan_status": "timeout", "score": None, "score_basis": [], "error_reason": "request timeout", "findings": [], "request_log": [log], "sources": [source_record("hibp_v3", "timeout", error_reason="request timeout", request_log_ref=request_id)]}
