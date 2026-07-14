@@ -32,12 +32,23 @@ def mask_email(value):
 
 def load_sources():
     path = Path(__file__).resolve().parents[1] / "config" / "shield_sources.json"
-    return {item["source_id"]: item for item in json.loads(path.read_text(encoding="utf-8"))["sources"]}
+    sources = json.loads(path.read_text(encoding="utf-8"))["sources"]
+    identifiers = [item.get("source_id") for item in sources]
+    if len(identifiers) != len(set(identifiers)):
+        raise ValueError("duplicate source_id in source allowlist")
+    for item in sources:
+        if item.get("enabled") and item.get("tos_review_status") != "approved":
+            raise ValueError(f"enabled source is not approved: {item.get('source_id')}")
+        if item.get("tos_review_status") == "approved" and not item.get("tos_reviewed_at"):
+            raise ValueError(f"approved source lacks review date: {item.get('source_id')}")
+        if item.get("requires_api_key") and not item.get("api_key_env"):
+            raise ValueError(f"key source lacks api_key_env: {item.get('source_id')}")
+    return {item["source_id"]: item for item in sources}
 
 
 def source_record(source_id, status, *, duration_ms=0, evidence=None, confidence=None, error_reason=None, request_log_ref=None, data_freshness=None):
     source = load_sources().get(source_id, {"source_id": source_id, "source_name": source_id, "tos_review_status": "rejected"})
-    if source.get("tos_review_status") != "approved":
+    if source.get("tos_review_status") != "approved" or not source.get("enabled"):
         status, confidence = "blocked", None
         error_reason = error_reason or "source is not approved by the project allowlist"
     if status not in {"completed", "partial"}:
@@ -127,4 +138,16 @@ def validate_report(report):
                 raise ValueError(f"invalid control: {check.get('check_id')}")
         if status != "completed" and module.get("confidence") is not None:
             raise ValueError(f"invalid module confidence: {module.get('module')}")
+    coverage = report["coverage"]
+    for key in ("module_weighted_percent", "control_weighted_percent"):
+        if key in coverage and not 0 <= coverage[key] <= 100:
+            raise ValueError(f"invalid coverage: {key}")
+    if report["assessment_reliability"] == "high" and (coverage.get("module_weighted_percent", 0) < 80 or coverage.get("control_weighted_percent", 0) < 80):
+        raise ValueError("high reliability without sufficient coverage")
+    request_ids = {entry.get("request_id") for entry in report.get("request_log", [])}
+    for module in report["modules"]:
+        for source in module.get("sources", []):
+            reference = source.get("request_log_ref")
+            if reference and reference not in request_ids:
+                raise ValueError(f"unknown request log reference: {reference}")
     return True

@@ -37,8 +37,12 @@ def run(scan_type, value, consent_declared=False):
         modules.extend([module_placeholder("url_scan", "blocked", "direct web probing is not allowlisted", profile["url_scan"]), module_placeholder("domain_scan", "not_applicable", "not independently executed for URL scan", profile["domain_scan"]), module_placeholder("web_security_scan", "blocked", "direct web probing is not allowlisted", profile["web_security_scan"])])
 
     report["modules"] = modules
+    report["request_log"] = [entry for module in modules for entry in module.get("request_log", [])]
+    report["requests"] = {"attempted_count": len(report["request_log"]), "completed_count": len([entry for entry in report["request_log"] if entry["status"] == "completed"]), "failed_count": len([entry for entry in report["request_log"] if entry["status"] != "completed"]), "log_entries": report["request_log"]}
+    if report["request_log"]:
+        report["scan_mode"] = "online"
     report.update(assessment(modules, scan_type))
-    report["risk_score"] = {"score": report["security_assessment"]["score"], "risk": (report["security_assessment"]["rating"] or "unknown").upper()}
+    report["risk_score"] = {"score": report["security_assessment"]["score"], "risk": (report["security_assessment"]["rating"] or "unknown").upper(), "deprecated": True}
     report["risk"] = report["risk_score"]["risk"].lower()
     report["attack_surface"] = attack_surface(report)
     report["advice"] = advise({"risk": report["risk"]})

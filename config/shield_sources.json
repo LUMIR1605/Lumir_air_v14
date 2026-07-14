@@ -20,6 +20,7 @@
       "tos_reviewed_at": "2026-07-14",
       "rate_limit": "API key plan limits; no automatic retries beyond configured request",
       "requires_api_key": true,
+      "api_key_env": "LUMIR_HIBP_API_KEY",
       "enabled": true
     },
     {
