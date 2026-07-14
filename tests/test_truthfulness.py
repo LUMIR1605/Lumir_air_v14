@@ -10,12 +10,24 @@ def test_hibp_without_key_is_unavailable(monkeypatch):
 
 
 def test_coverage_excludes_partial_and_not_applicable():
-    completed = normalize_module({"module": "ok", "scan_status": "completed", "risk": "low"}, 50)
+    completed = normalize_module({
+        "module": "ok",
+        "scan_status": "completed",
+        "score": 100,
+        "risk": "low",
+        "score_basis": [{
+            "check_id": "fixture_check",
+            "status": "passed",
+            "weight": 100,
+            "points_awarded": 100,
+            "evidence": {},
+        }],
+    }, 50)
     partial = normalize_module({"module": "partial", "scan_status": "partial", "risk": "high"}, 30)
     skipped = module_placeholder("skip", "not_applicable", "fixture", 20)
     result = assessment([completed, partial, skipped], "email")
     assert result["coverage"]["weighted_percent"] == 62.5
-    assert result["security_assessment"]["score"] == 95
+    assert result["security_assessment"]["score"] == 100
 
 
 def test_invalid_non_completed_score_is_rejected():
