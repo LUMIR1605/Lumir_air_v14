@@ -58,15 +58,21 @@ button { cursor: pointer; }
 .brand-chip {
     display: grid;
     place-items: center;
-    width: 31px;
-    height: 35px;
-    border: 1px solid var(--cyan);
-    clip-path: polygon(50% 0, 91% 17%, 84% 72%, 50% 100%, 16% 72%, 9% 17%);
-    color: #e6fbff;
-    background: linear-gradient(145deg, rgba(53, 231, 255, .35), rgba(22, 123, 255, .85));
-    box-shadow: 0 0 16px rgba(53, 231, 255, .75);
-    font-size: 15px;
+    width: 34px;
+    height: 39px;
 }
+.brand-logo { display: block; overflow: visible; filter: drop-shadow(0 0 5px rgba(83, 232, 255, .78)) drop-shadow(0 0 14px rgba(22, 123, 255, .42)); }
+.brand-logo .logo-shield-fill { fill: #061a35; }
+.brand-logo .logo-shield-inner { fill: rgba(10, 74, 139, .45); stroke: rgba(66, 206, 255, .7); stroke-width: 1.35; }
+.brand-logo .logo-shield-edge { fill: none; stroke: #d5f9ff; stroke-width: 1.75; stroke-linejoin: round; }
+.brand-logo .logo-shield-glow { fill: none; stroke: #21cfff; stroke-width: 2.6; stroke-linejoin: round; opacity: .76; }
+.brand-logo .logo-circuit { fill: none; stroke: #54e7ff; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; opacity: .94; }
+.brand-logo .logo-node { fill: #bffaff; stroke: #1598ed; stroke-width: .8; }
+.brand-logo .logo-lock-body { fill: #092e59; stroke: #d9faff; stroke-width: 1.35; }
+.brand-logo .logo-lock-shackle { fill: none; stroke: #63eaff; stroke-width: 2.25; stroke-linecap: round; }
+.brand-logo .logo-keyhole { fill: #bdf8ff; }
+.brand-logo--mobile { width: 33px; height: 39px; }
+.brand-logo--sidebar { width: 82px; height: 98px; }
 
 .topbar { padding: 12px 20px 0; }
 .eyebrow { margin: 0; color: var(--cyan); font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; }
@@ -113,25 +119,28 @@ button { cursor: pointer; }
     background: radial-gradient(circle at 50% 39%, rgba(24, 149, 255, .34), transparent 32%), radial-gradient(circle at 50% 74%, rgba(53, 231, 255, .13), transparent 45%);
     animation: hero-breathe 8s ease-in-out infinite;
 }
-.score-hero::after {
-    content: "";
+.score-waves {
     position: absolute;
-    z-index: -1;
-    left: -20%;
-    right: -20%;
-    bottom: 5px;
-    height: 188px;
-    opacity: .9;
-    background:
-        linear-gradient(90deg, transparent 0%, rgba(53, 231, 255, .9) 25%, rgba(22, 123, 255, .96) 52%, rgba(53, 231, 255, .9) 78%, transparent 100%),
-        radial-gradient(ellipse at center, rgba(22, 123, 255, .58), transparent 62%);
-    clip-path: polygon(0 62%, 8% 49%, 16% 66%, 25% 38%, 36% 64%, 49% 32%, 61% 65%, 74% 40%, 85% 61%, 100% 34%, 100% 100%, 0 100%);
-    filter: drop-shadow(0 0 12px rgba(53, 231, 255, .9));
-    transform-origin: center bottom;
-    animation: wave-drift 18s ease-in-out infinite alternate;
+    z-index: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: clamp(154px, 40vw, 222px);
+    overflow: visible;
+    pointer-events: none;
+    opacity: .94;
+    animation: score-waves-drift 16s ease-in-out infinite alternate;
 }
+.score-waves .wave-line { fill: none; stroke-linecap: round; }
+.score-waves .wave-deep { stroke: url(#wave-deep); stroke-width: 5; opacity: .42; filter: url(#wave-soft-glow); }
+.score-waves .wave-primary { stroke: url(#wave-primary); stroke-width: 2.3; filter: url(#wave-glow); }
+.score-waves .wave-cyan { stroke: url(#wave-cyan); stroke-width: 1.7; opacity: .92; filter: url(#wave-glow); }
+.score-waves .wave-dashed { stroke: #6eeeff; stroke-width: 1.15; stroke-dasharray: 2 11; opacity: .66; filter: url(#wave-glow); }
+.score-waves .wave-subtle { stroke: #166fca; stroke-width: 1.15; stroke-dasharray: 1 8; opacity: .8; }
 .score-orb {
     position: absolute;
+    z-index: 1;
     top: 40px;
     left: 50%;
     display: grid;
@@ -151,7 +160,7 @@ button { cursor: pointer; }
 .score-scale { color: var(--muted); font-size: 17px; }
 .risk-status { display: block; margin-top: 14px; font-size: 22px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
 .risk-low { color: var(--green); }.risk-medium { color: var(--amber); }.risk-high, .risk-critical { color: var(--red); }.risk-unknown { color: var(--muted); }
-.score-caption { position: absolute; right: 0; bottom: 4px; left: 0; color: #b8cae0; font-size: 13px; text-align: center; }
+.score-caption { position: absolute; z-index: 1; right: 0; bottom: 4px; left: 0; color: #b8cae0; font-size: 13px; text-align: center; }
 
 .glass-panel, .security-card, .technical-section {
     border: 1px solid var(--line);
@@ -207,7 +216,7 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
     .report-shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 22px; padding: 10px; }
     .mobile-brand { display: none; }
     .sidebar { position: sticky; top: 10px; display: block; align-self: start; min-height: calc(100vh - 20px); padding: 20px 13px; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(180deg, rgba(5, 19, 36, .98), rgba(2, 10, 20, .96)); box-shadow: inset 0 0 28px rgba(22, 123, 255, .08); }
-    .brand-block { display: grid; place-items: center; gap: 12px; padding: 8px 0 25px; text-align: center; }.shield-mark { display: grid; place-items: center; width: 76px; height: 88px; border: 1px solid var(--cyan); clip-path: polygon(50% 0, 90% 17%, 84% 70%, 50% 100%, 16% 70%, 10% 17%); color: #effdff; background: linear-gradient(145deg, rgba(53, 231, 255, .25), rgba(22, 123, 255, .8)); box-shadow: 0 0 22px rgba(53, 231, 255, .8); font-size: 35px; font-weight: 900; }.brand-title { font-size: 19px; font-weight: 900; letter-spacing: .8px; }.brand-subtitle { margin-top: 2px; color: var(--muted); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; }.nav-list { display: grid; gap: 6px; }.nav-item { display: flex; align-items: center; gap: 10px; min-height: 43px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: #d8e6f4; font-size: 11px; text-transform: uppercase; }.nav-item:hover, .nav-item.active { border-color: rgba(53, 231, 255, .28); background: linear-gradient(90deg, rgba(22, 123, 255, .45), rgba(22, 123, 255, .1)); }.nav-icon { display: grid; place-items: center; width: 21px; height: 21px; border: 1px solid rgba(140, 220, 255, .45); border-radius: 5px; color: var(--cyan); font-size: 11px; font-weight: 900; }.sidebar-footer { margin-top: 32px; padding: 15px 9px; border-top: 1px solid rgba(53, 231, 255, .16); color: var(--muted); font-size: 10px; text-align: center; }
+    .brand-block { display: grid; place-items: center; gap: 11px; padding: 8px 0 25px; text-align: center; }.shield-mark { display: grid; place-items: center; width: 86px; height: 100px; }.brand-title { color: #f4fbff; background: linear-gradient(180deg, #ffffff 0%, #dff6ff 48%, #83c8ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 7px rgba(58, 183, 255, .34)); font-size: 19px; font-weight: 900; letter-spacing: 1px; line-height: 1.05; }.brand-subtitle { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 5px; color: var(--cyan); font-size: 8px; font-weight: 700; letter-spacing: 1.75px; text-transform: uppercase; white-space: nowrap; }.brand-subtitle::before, .brand-subtitle::after { width: 16px; height: 1px; background: linear-gradient(90deg, transparent, var(--cyan)); box-shadow: 0 0 5px rgba(53, 231, 255, .75); content: ""; }.brand-subtitle::after { transform: scaleX(-1); }.nav-list { display: grid; gap: 6px; }.nav-item { display: flex; align-items: center; gap: 10px; min-height: 43px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: #d8e6f4; font-size: 11px; text-transform: uppercase; }.nav-item:hover, .nav-item.active { border-color: rgba(53, 231, 255, .28); background: linear-gradient(90deg, rgba(22, 123, 255, .45), rgba(22, 123, 255, .1)); }.nav-icon { display: grid; place-items: center; width: 21px; height: 21px; border: 1px solid rgba(140, 220, 255, .45); border-radius: 5px; color: var(--cyan); font-size: 11px; font-weight: 900; }.sidebar-footer { margin-top: 32px; padding: 15px 9px; border-top: 1px solid rgba(53, 231, 255, .16); color: var(--muted); font-size: 10px; text-align: center; }
     .main-stage { padding: 9px 8px 20px 0; }.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 0; }.top-actions { display: flex; flex: 0 0 auto; margin-top: 0; }.top-actions .action-button:last-child { grid-column: auto; }.action-button { flex: 0 0 auto; min-width: 112px; }.hero-grid { grid-template-columns: minmax(410px, 1fr) minmax(320px, .78fr); gap: 20px; padding: 22px 0 20px; }.score-hero { min-height: 370px; }.score-orb { top: 22px; }.score-caption { bottom: 0; }.content-stack { padding: 0; }.security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.panel-grid { grid-template-columns: 1.55fr .9fr; }.next-scan { grid-column: span 2; }.action-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }.risk-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }.risk-overview { grid-template-columns: 124px minmax(0, 1fr); }
 }
 
@@ -215,7 +224,7 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
 
 @keyframes orb-breathe { 0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 20px rgba(53, 231, 255, .85), 0 0 70px rgba(22, 123, 255, .7), inset 0 0 24px rgba(53, 231, 255, .28); } 50% { transform: translateX(-50%) scale(1.018); box-shadow: 0 0 28px rgba(53, 231, 255, 1), 0 0 88px rgba(22, 123, 255, .8), inset 0 0 30px rgba(53, 231, 255, .35); } }
 @keyframes ring-spin { to { transform: rotate(360deg); } }
-@keyframes wave-drift { 0% { transform: translateX(-1.5%) scaleX(.98); opacity: .76; } 100% { transform: translateX(1.5%) scaleX(1.02); opacity: .96; } }
+@keyframes score-waves-drift { 0% { transform: translateX(-1.2%) translateY(2px) scaleX(.99); } 100% { transform: translateX(1.2%) translateY(-2px) scaleX(1.01); } }
 @keyframes hero-breathe { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
 @keyframes detail-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -225,7 +234,7 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
 @media print {
     * { animation: none !important; transition: none !important; }
     body { color: #101827; background: #fff; font-size: 10pt; }
-    .report-shell { display: block; width: 100%; }.sidebar, .mobile-brand, .top-actions, .footer { display: none !important; }.main-stage { padding: 0; }.topbar { padding: 0 0 7mm; }.eyebrow, .target-line { color: #075bb9; }.report-title { font-size: 20pt; }.scan-date, .muted, .empty { color: #536274; }.hero-grid { grid-template-columns: 1.05fr .95fr; min-height: 218mm; align-items: center; padding: 0 0 7mm; break-after: page; }.score-hero { min-height: 122mm; }.score-hero::before, .score-hero::after { opacity: .22; }.score-orb { top: 8mm; width: 86mm; box-shadow: none; }.score-number { color: #f7fbff; font-size: 48pt; }.score-scale { color: #c6d5e6; }.score-orb .risk-status.risk-low { color: #4aff84; }.glass-panel, .security-card, .technical-section { color: #101827; border-color: #a7bfd8; background: #fff; box-shadow: none; }.section-heading, .card-title, .panel-title, .technical-section > summary, .insight-copy p, summary { color: #101827; }.section-lead, .card-row span:first-child, .module-table th, .kv-key, .insight-source { color: #536274; }.summary-list li, .action-list li, .findings-list li { color: #182536; }.security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.security-card, .panel, .technical-section { break-inside: avoid; }.card-row span:last-child, .action-column h3, .risk-low { color: #087434; }.content-stack { padding: 0; }.panel-grid { grid-template-columns: 1fr 1fr; }.next-scan { grid-column: span 2; }.next-scan .action-button { display: none; }.insight-panel { break-before: page; }.technical-section { margin-top: 4mm; } details { border-top-color: #c8d4e2; } details:not([open]) .module-detail, details:not([open]) .technical-content { display: block; } summary::after { display: none; }.module-table, .kv-table { font-size: 8.5pt; }.module-table th, .module-table td, .kv-table td { border-bottom-color: #d7e1eb; }.risk-donut { box-shadow: none; }.risk-donut::after { background: #fff; }
+    .report-shell { display: block; width: 100%; }.sidebar, .mobile-brand, .top-actions, .footer { display: none !important; }.main-stage { padding: 0; }.topbar { padding: 0 0 7mm; }.eyebrow, .target-line { color: #075bb9; }.report-title { font-size: 20pt; }.scan-date, .muted, .empty { color: #536274; }.hero-grid { grid-template-columns: 1.05fr .95fr; min-height: 218mm; align-items: center; padding: 0 0 7mm; break-after: page; }.score-hero { min-height: 122mm; }.score-hero::before, .score-waves { opacity: .22; }.score-orb { top: 8mm; width: 86mm; box-shadow: none; }.score-number { color: #f7fbff; font-size: 48pt; }.score-scale { color: #c6d5e6; }.score-orb .risk-status.risk-low { color: #4aff84; }.glass-panel, .security-card, .technical-section { color: #101827; border-color: #a7bfd8; background: #fff; box-shadow: none; }.section-heading, .card-title, .panel-title, .technical-section > summary, .insight-copy p, summary { color: #101827; }.section-lead, .card-row span:first-child, .module-table th, .kv-key, .insight-source { color: #536274; }.summary-list li, .action-list li, .findings-list li { color: #182536; }.security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.security-card, .panel, .technical-section { break-inside: avoid; }.card-row span:last-child, .action-column h3, .risk-low { color: #087434; }.content-stack { padding: 0; }.panel-grid { grid-template-columns: 1fr 1fr; }.next-scan { grid-column: span 2; }.next-scan .action-button { display: none; }.insight-panel { break-before: page; }.technical-section { margin-top: 4mm; } details { border-top-color: #c8d4e2; } details:not([open]) .module-detail, details:not([open]) .technical-content { display: block; } summary::after { display: none; }.module-table, .kv-table { font-size: 8.5pt; }.module-table th, .module-table td, .kv-table td { border-bottom-color: #d7e1eb; }.risk-donut { box-shadow: none; }.risk-donut::after { background: #fff; }
 }
 </style>
 </head>
@@ -249,9 +258,12 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
 {% set medium_pct = ((counters.medium / module_total) * 100)|round(0) if module_total else 0 %}
 {% set high_pct = ((counters.high / module_total) * 100)|round(0) if module_total else 0 %}
 {% set critical_pct = ((counters.critical / module_total) * 100)|round(0) if module_total else 0 %}
+{% macro shield_logo(size_class) -%}
+<svg class="brand-logo {{ size_class }}" viewBox="0 0 80 96" aria-hidden="true" focusable="false"><path class="logo-shield-fill" d="M40 4 70 16v29c0 21-12 37-30 47C22 82 10 66 10 45V16z"/><path class="logo-shield-glow" d="M40 6 68 17v28c0 20-11 35-28 45-17-10-28-25-28-45V17z"/><path class="logo-shield-edge" d="M40 4 70 16v29c0 21-12 37-30 47C22 82 10 66 10 45V16z"/><path class="logo-shield-inner" d="M40 13 61 22v22c0 15-8 28-21 36-13-8-21-21-21-36V22z"/><path class="logo-circuit" d="M17 39h9l4 4m-13 12h8l4-4m34-12h-9l-4 4m13 12h-8l-4-4"/><circle class="logo-node" cx="17" cy="39" r="2"/><circle class="logo-node" cx="17" cy="55" r="2"/><circle class="logo-node" cx="63" cy="39" r="2"/><circle class="logo-node" cx="63" cy="55" r="2"/><path class="logo-lock-shackle" d="M31 49v-6a9 9 0 0 1 18 0v6"/><rect class="logo-lock-body" x="26" y="49" width="28" height="23" rx="4"/><path class="logo-keyhole" d="M40 55a4 4 0 0 0-2 7.4V67h4v-4.6A4 4 0 0 0 40 55z"/></svg>
+{%- endmacro %}
 <div class="report-shell">
 <aside class="sidebar">
-    <div class="brand-block"><div class="shield-mark">L</div><div><div class="brand-title">LUMÍR SHIELD</div><div class="brand-subtitle">Security Intelligence</div></div></div>
+    <div class="brand-block"><div class="shield-mark">{{ shield_logo('brand-logo--sidebar') }}</div><div><div class="brand-title">LUMÍR SHIELD</div><div class="brand-subtitle">Security Intelligence</div></div></div>
     <nav class="nav-list" aria-label="Sekcje raportu">
         <a class="nav-item active" href="#podsumowanie"><span class="nav-icon">S</span>Podsumowanie</a>
         <a class="nav-item" href="#moduly"><span class="nav-icon">M</span>Moduły</a>
@@ -261,13 +273,13 @@ details { border-top: 1px solid rgba(120, 159, 200, .18); } summary { display: f
     <div class="sidebar-footer">Raport wykonany przez<br><strong>Lumír SHIELD v2.0</strong></div>
 </aside>
 <main class="main-stage">
-    <div class="mobile-brand"><span class="brand-chip">L</span>LUMÍR SHIELD</div>
+    <div class="mobile-brand"><span class="brand-chip">{{ shield_logo('brand-logo--mobile') }}</span>LUMÍR SHIELD</div>
     <header class="topbar">
         <div><p class="eyebrow">Security Intelligence</p><h1 class="report-title">Raport bezpieczeństwa</h1><div class="target-line">{{ report.target or 'Brak celu skanowania' }}</div><div class="scan-date">Data skanowania: {{ scan_date|default('Brak danych') }}</div></div>
         <div class="top-actions"><a class="action-button" href="shield_report.pdf" download>Eksport PDF</a><a class="action-button primary" href="shield_report_v2.html" download>Eksport HTML</a><a class="action-button" href="shield_report.json" download>JSON</a><button class="action-button" type="button" id="share-report">Udostępnij</button></div>
     </header>
     <section class="hero-grid" id="podsumowanie">
-        <div class="score-hero" aria-label="Wynik bezpieczeństwa"><div class="score-orb"><div class="score-content"><span class="score-number">{{ score }}</span><span class="score-scale">/100</span><span class="risk-status risk-{{ risk_class }}">{{ score_message }}</span></div></div><p class="score-caption">Wskaźnik bezpieczeństwa</p></div>
+        <div class="score-hero" aria-label="Wynik bezpieczeństwa"><svg class="score-waves" viewBox="0 0 1200 260" preserveAspectRatio="none" aria-hidden="true" focusable="false"><defs><linearGradient id="wave-deep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#061d4b" stop-opacity="0"/><stop offset=".26" stop-color="#166fca"/><stop offset=".52" stop-color="#071c4a"/><stop offset=".76" stop-color="#166fca"/><stop offset="1" stop-color="#061d4b" stop-opacity="0"/></linearGradient><linearGradient id="wave-primary" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#167bff" stop-opacity="0"/><stop offset=".2" stop-color="#35e7ff"/><stop offset=".5" stop-color="#168bff"/><stop offset=".8" stop-color="#35e7ff"/><stop offset="1" stop-color="#167bff" stop-opacity="0"/></linearGradient><linearGradient id="wave-cyan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0c458c" stop-opacity="0"/><stop offset=".32" stop-color="#65f3ff"/><stop offset=".56" stop-color="#1b94ff"/><stop offset=".82" stop-color="#65f3ff"/><stop offset="1" stop-color="#0c458c" stop-opacity="0"/></linearGradient><filter id="wave-glow" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="2.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="wave-soft-glow" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="6"/></filter></defs><path class="wave-line wave-deep" d="M-40 206 C118 128 229 238 380 190 S650 114 806 182 S1085 242 1240 148"/><path class="wave-line wave-primary" d="M-30 202 C110 154 224 218 372 172 S646 134 804 174 S1060 224 1230 164"/><path class="wave-line wave-cyan" d="M-20 184 C132 120 252 206 396 162 S645 106 798 156 S1062 209 1220 132"/><path class="wave-line wave-primary" d="M-26 224 C126 173 248 252 408 204 S662 151 820 204 S1084 250 1226 181"/><path class="wave-line wave-dashed" d="M-15 168 C125 111 242 184 382 150 S640 124 792 151 S1056 185 1215 118"/><path class="wave-line wave-dashed" d="M-12 239 C150 202 268 244 421 212 S672 177 824 219 S1084 239 1212 205"/><path class="wave-line wave-subtle" d="M-30 149 C135 95 257 161 402 137 S656 102 810 137 S1071 168 1235 100"/></svg><div class="score-orb"><div class="score-content"><span class="score-number">{{ score }}</span><span class="score-scale">/100</span><span class="risk-status risk-{{ risk_class }}">{{ score_message }}</span></div></div><p class="score-caption">Wskaźnik bezpieczeństwa</p></div>
         <div class="summary-panel">
             <section class="glass-panel executive-box"><h2 class="panel-title">Co sprawdziliśmy</h2>{% if report.executive_summary %}<ul class="summary-list">{% for item in report.executive_summary %}<li>{{ item }}</li>{% endfor %}</ul><p class="muted">Poniżej znajdziesz tylko najważniejsze wyniki i proste kolejne kroki.</p>{% else %}<p class="muted">Brak podsumowania dla tego skanu.</p>{% endif %}</section>
             <section class="glass-panel risk-strip"><div class="risk-strip-header"><span>Ogólne ryzyko</span><span class="risk-badge risk-{{ risk_class }}">{{ risk_labels.get(risk_class, 'Brak danych') }}</span></div><div class="risk-metrics"><div class="metric"><span class="metric-value">{{ module_total }}</span><span class="metric-label">Moduły zeskanowane</span></div><div class="metric"><span class="metric-value">{{ counters.critical }}</span><span class="metric-label">Zagrożenia krytyczne</span></div><div class="metric"><span class="metric-value">{{ counters.high + counters.medium }}</span><span class="metric-label">Ostrzeżenia</span></div><div class="metric"><span class="metric-value">{{ counters.findings }}</span><span class="metric-label">Ustalenia</span></div></div></section>
