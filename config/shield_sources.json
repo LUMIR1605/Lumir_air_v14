@@ -24,6 +24,18 @@
       "enabled": true
     },
     {
+      "source_id": "holehe_local",
+      "source_name": "Holehe local CLI",
+      "official_documentation_url": null,
+      "allowed_method": "local CLI subprocess",
+      "tos_review_status": "approved",
+      "tos_reviewed_at": "2026-07-15",
+      "usage_restriction": "Only for an address owned by the user after explicit consent.",
+      "rate_limit": "local tool and provider limits",
+      "requires_api_key": false,
+      "enabled": true
+    },
+    {
       "source_id": "public_web_probe",
       "source_name": "Direct public website probing",
       "official_documentation_url": null,
