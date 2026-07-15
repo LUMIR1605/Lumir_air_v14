@@ -1,7 +1,10 @@
+"""Client-facing Lumir SHIELD PDF report rendered from existing scan data."""
+
 from datetime import datetime
 from html import escape
 from pathlib import Path
 
+import reportlab
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -9,177 +12,458 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Paragraph
-import reportlab
+from reportlab.platypus import Paragraph, Table, TableStyle
 
 
 PAGE_W, PAGE_H = A4
-MARGIN = 16 * mm
-NAVY = colors.HexColor("#020b17")
-PANEL = colors.HexColor("#071a2d")
-CYAN = colors.HexColor("#35dfff")
-BLUE = colors.HexColor("#147cff")
-TEXT = colors.HexColor("#f2f8ff")
-MUTED = colors.HexColor("#a9c0d6")
-GREEN = colors.HexColor("#35e879")
-AMBER = colors.HexColor("#ffc52b")
-RED = colors.HexColor("#ff5d6c")
-MODULE_NAMES = {"email_scan": "E-mail", "domain_scan": "Domena", "breach_scan": "Wycieki danych", "username_scan": "Nazwa u\u017cytkownika", "phone_scan": "Telefon", "url_scan": "Adres URL"}
-RISK_NAMES = {"low": "Bardzo dobrze", "medium": "Uwaga", "high": "Wysokie ryzyko", "critical": "Wysokie ryzyko", "unknown": "Brak danych"}
-RISK_COLORS = {"low": GREEN, "medium": AMBER, "high": RED, "critical": RED, "unknown": MUTED}
+MARGIN = 14 * mm
+NAVY = colors.HexColor("#020B17")
+PANEL = colors.HexColor("#071A2D")
+PANEL_ALT = colors.HexColor("#0A2540")
+CYAN = colors.HexColor("#35DFFF")
+BLUE = colors.HexColor("#147CFF")
+TEXT = colors.HexColor("#F2F8FF")
+MUTED = colors.HexColor("#A9C0D6")
+GREEN = colors.HexColor("#35E879")
+AMBER = colors.HexColor("#FFC52B")
+RED = colors.HexColor("#FF5D6C")
+GRAY = colors.HexColor("#8EA2B8")
+
+MODULE_NAMES = {
+    "email_scan": "Bezpieczeństwo poczty",
+    "domain_scan": "Domena i DNS",
+    "breach_scan": "Wycieki danych",
+    "account_exposure_scan": "Konta i usługi",
+    "username_scan": "Nazwa użytkownika",
+    "phone_scan": "Telefon",
+    "url_scan": "Adres URL",
+    "dns_scan": "DNS",
+    "mail_security_scan": "Zabezpieczenia poczty",
+    "web_security_scan": "Bezpieczeństwo strony",
+}
+STATUS_NAMES = {
+    "completed": "Zakończono",
+    "partial": "Częściowo sprawdzono",
+    "unavailable": "Niedostępny",
+    "blocked": "Zablokowany",
+    "not_applicable": "Nie dotyczy",
+    "timeout": "Nie ukończono",
+    "error": "Nie ukończono",
+}
 
 
 def _register_fonts():
+    """Embed a Unicode font available on Windows, Termux, Linux or ReportLab."""
     bundled = Path(reportlab.__file__).resolve().parent / "fonts"
-    options = [(Path("/system/fonts/Roboto-Regular.ttf"), Path("/system/fonts/Roboto-Bold.ttf")), (Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")), (Path("C:/Windows/Fonts/segoeui.ttf"), Path("C:/Windows/Fonts/segoeuib.ttf")), (bundled / "Vera.ttf", bundled / "VeraBd.ttf")]
+    options = [
+        (Path("/system/fonts/Roboto-Regular.ttf"), Path("/system/fonts/Roboto-Bold.ttf")),
+        (Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")),
+        (Path("C:/Windows/Fonts/segoeui.ttf"), Path("C:/Windows/Fonts/segoeuib.ttf")),
+        (bundled / "Vera.ttf", bundled / "VeraBd.ttf"),
+    ]
     regular, bold = next((pair for pair in options if pair[0].is_file() and pair[1].is_file()), options[-1])
     pdfmetrics.registerFont(TTFont("LumirRegular", str(regular)))
     pdfmetrics.registerFont(TTFont("LumirBold", str(bold)))
 
 
 def _mix(start, end, amount):
-    return colors.Color(start.red + (end.red - start.red) * amount, start.green + (end.green - start.green) * amount, start.blue + (end.blue - start.blue) * amount)
+    return colors.Color(
+        start.red + (end.red - start.red) * amount,
+        start.green + (end.green - start.green) * amount,
+        start.blue + (end.blue - start.blue) * amount,
+    )
 
 
-def _gradient(c, x, y, width, height, start, end, steps=42):
+def _gradient(c, x, y, width, height, start, end, steps=36):
     step = height / steps
     for index in range(steps):
         c.setFillColor(_mix(start, end, index / max(steps - 1, 1)))
-        c.rect(x, y + index * step, width, step + .5, fill=1, stroke=0)
-
-
-def _paragraph(c, value, x, y, width, style):
-    paragraph = Paragraph(escape(str(value)).replace("\n", "<br/>"), style)
-    _, height = paragraph.wrap(width, PAGE_H)
-    paragraph.drawOn(c, x, y - height)
-    return height
+        c.rect(x, y + index * step, width, step + 0.5, fill=1, stroke=0)
 
 
 def _styles():
     return {
-        "eyebrow": ParagraphStyle("eyebrow", fontName="LumirBold", fontSize=7.5, leading=10, textColor=CYAN),
-        "title": ParagraphStyle("title", fontName="LumirBold", fontSize=24, leading=28, textColor=TEXT),
-        "subtitle": ParagraphStyle("subtitle", fontName="LumirRegular", fontSize=10, leading=14, textColor=MUTED),
-        "card_title": ParagraphStyle("card_title", fontName="LumirBold", fontSize=11, leading=14, textColor=TEXT),
-        "card_text": ParagraphStyle("card_text", fontName="LumirRegular", fontSize=8.7, leading=12, textColor=MUTED),
-        "body": ParagraphStyle("body", fontName="LumirRegular", fontSize=10, leading=15, textColor=TEXT),
-        "body_muted": ParagraphStyle("body_muted", fontName="LumirRegular", fontSize=9, leading=13, textColor=MUTED),
+        "eyebrow": ParagraphStyle("eyebrow", fontName="LumirBold", fontSize=7.4, leading=9, textColor=CYAN),
+        "title": ParagraphStyle("title", fontName="LumirBold", fontSize=20, leading=24, textColor=TEXT),
+        "subtitle": ParagraphStyle("subtitle", fontName="LumirRegular", fontSize=9, leading=12, textColor=MUTED),
+        "card_title": ParagraphStyle("card_title", fontName="LumirBold", fontSize=9.5, leading=12, textColor=TEXT),
+        "body": ParagraphStyle("body", fontName="LumirRegular", fontSize=8.7, leading=12, textColor=TEXT),
+        "muted": ParagraphStyle("muted", fontName="LumirRegular", fontSize=8.2, leading=11, textColor=MUTED),
+        "small": ParagraphStyle("small", fontName="LumirRegular", fontSize=7.4, leading=9.3, textColor=MUTED),
+        "table": ParagraphStyle("table", fontName="LumirRegular", fontSize=7.5, leading=9.5, textColor=TEXT),
     }
 
 
-def _background(c, page_number, section):
-    _gradient(c, 0, 0, PAGE_W, PAGE_H, NAVY, colors.HexColor("#03182c"))
-    c.setFillColor(colors.HexColor("#06345a")); c.circle(PAGE_W - 18 * mm, PAGE_H - 22 * mm, 29 * mm, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor("#082653")); c.circle(11 * mm, 20 * mm, 22 * mm, fill=1, stroke=0)
-    c.setStrokeColor(colors.HexColor("#12527c")); c.setLineWidth(.45); c.line(MARGIN, 15 * mm, PAGE_W - MARGIN, 15 * mm)
-    c.setFillColor(MUTED); c.setFont("LumirRegular", 7)
-    c.drawString(MARGIN, 9 * mm, "Lum\u00edr SHIELD  v1.0  |  SECURITY INTELLIGENCE")
-    c.drawRightString(PAGE_W - MARGIN, 9 * mm, f"{section.upper()}  |  {page_number}/6")
+def _paragraph(c, value, x, top, width, style):
+    text = escape(str(value or "Brak danych")).replace("\n", "<br/>")
+    paragraph = Paragraph(text, style)
+    _, height = paragraph.wrap(width, PAGE_H)
+    paragraph.drawOn(c, x, top - height)
+    return height
 
 
-def _logo(c, x, y, size):
-    c.saveState(); c.setLineWidth(1.4); c.setStrokeColor(CYAN); c.setFillColor(colors.HexColor("#0c3f75"))
-    path = c.beginPath(); path.moveTo(x, y + size); path.lineTo(x + size * .78, y + size * .72); path.lineTo(x + size * .68, y + size * .2); path.lineTo(x, y); path.lineTo(x - size * .68, y + size * .2); path.lineTo(x - size * .78, y + size * .72); path.close()
-    c.drawPath(path, fill=1, stroke=1); c.setFont("LumirBold", size * .65); c.setFillColor(TEXT); c.drawCentredString(x, y + size * .28, "L"); c.restoreState()
+def _background(c, number, section):
+    _gradient(c, 0, 0, PAGE_W, PAGE_H, NAVY, colors.HexColor("#031D34"))
+    c.setFillColor(colors.HexColor("#073A61"))
+    c.circle(PAGE_W - 16 * mm, PAGE_H - 18 * mm, 27 * mm, fill=1, stroke=0)
+    c.setFillColor(colors.HexColor("#082A4C"))
+    c.circle(8 * mm, 16 * mm, 19 * mm, fill=1, stroke=0)
+    c.setStrokeColor(colors.HexColor("#15577E"))
+    c.setLineWidth(0.45)
+    c.line(MARGIN, 14 * mm, PAGE_W - MARGIN, 14 * mm)
+    c.setFillColor(MUTED)
+    c.setFont("LumirRegular", 7)
+    c.drawString(MARGIN, 8.5 * mm, "Lumír SHIELD v2.0  |  SECURITY INTELLIGENCE")
+    c.drawRightString(PAGE_W - MARGIN, 8.5 * mm, f"{section.upper()}  |  STRONA {number}")
 
 
 def _card(c, x, y, width, height, accent=CYAN):
-    c.saveState(); c.setFillColor(PANEL); c.setStrokeColor(accent); c.setLineWidth(.65); c.roundRect(x, y, width, height, 4 * mm, fill=1, stroke=1)
-    c.setFillColor(colors.HexColor("#0a2b49")); c.roundRect(x, y + height - 7 * mm, width, 7 * mm, 4 * mm, fill=1, stroke=0); c.restoreState()
+    c.saveState()
+    c.setFillColor(PANEL)
+    c.setStrokeColor(accent)
+    c.setLineWidth(0.55)
+    c.roundRect(x, y, width, height, 3.5 * mm, fill=1, stroke=1)
+    c.setFillColor(PANEL_ALT)
+    c.roundRect(x, y + height - 5 * mm, width, 5 * mm, 3.5 * mm, fill=1, stroke=0)
+    c.restoreState()
 
 
-def _icon(c, name, x, y, size, color=CYAN):
-    c.saveState(); c.setStrokeColor(color); c.setFillColor(color); c.setLineWidth(1.5)
-    if name == "check":
-        c.circle(x, y, size / 2, fill=0, stroke=1); c.line(x - size * .23, y, x - size * .05, y - size * .2); c.line(x - size * .05, y - size * .2, x + size * .27, y + size * .23)
-    elif name == "mail":
-        c.roundRect(x - size / 2, y - size * .34, size, size * .68, 2, fill=0, stroke=1); c.line(x - size / 2, y + size * .28, x, y - size * .03); c.line(x, y - size * .03, x + size / 2, y + size * .28)
-    elif name == "globe":
-        c.circle(x, y, size / 2, fill=0, stroke=1); c.line(x - size / 2, y, x + size / 2, y); c.ellipse(x - size * .2, y - size / 2, x + size * .2, y + size / 2, fill=0, stroke=1)
-    elif name == "lock":
-        c.roundRect(x - size * .3, y - size * .32, size * .6, size * .55, 2, fill=0, stroke=1); c.arc(x - size * .22, y, x + size * .22, y + size * .45, 0, 180)
-    elif name == "shield":
-        _logo(c, x, y - size * .48, size * .6)
-    elif name == "family":
-        c.circle(x, y + size * .18, size * .16, fill=0, stroke=1); c.circle(x - size * .27, y, size * .12, fill=0, stroke=1); c.circle(x + size * .27, y, size * .12, fill=0, stroke=1); c.line(x - size * .42, y - size * .34, x + size * .42, y - size * .34)
-    else:
-        c.circle(x, y, size / 2, fill=0, stroke=1)
+def _draw_logo(c, x, y, size):
+    """Draw the shield, lock and circuit mark without external assets."""
+    c.saveState()
+    c.setLineJoin(1)
+    c.setFillColor(colors.HexColor("#061B36"))
+    c.setStrokeColor(colors.HexColor("#D5F9FF"))
+    c.setLineWidth(1.25)
+    shield = c.beginPath()
+    shield.moveTo(x, y + size)
+    shield.lineTo(x + size * 0.72, y + size * 0.75)
+    shield.lineTo(x + size * 0.62, y + size * 0.25)
+    shield.lineTo(x, y)
+    shield.lineTo(x - size * 0.62, y + size * 0.25)
+    shield.lineTo(x - size * 0.72, y + size * 0.75)
+    shield.close()
+    c.drawPath(shield, fill=1, stroke=1)
+    c.setStrokeColor(CYAN)
+    c.setLineWidth(2.1)
+    c.drawPath(shield, fill=0, stroke=1)
+    c.setStrokeColor(CYAN)
+    c.setLineWidth(0.85)
+    for direction in (-1, 1):
+        c.line(x + direction * size * 0.54, y + size * 0.55, x + direction * size * 0.29, y + size * 0.55)
+        c.line(x + direction * size * 0.29, y + size * 0.55, x + direction * size * 0.2, y + size * 0.47)
+        c.circle(x + direction * size * 0.54, y + size * 0.55, 1.3, fill=1, stroke=0)
+    c.setStrokeColor(colors.HexColor("#75F0FF"))
+    c.setLineWidth(2)
+    c.arc(x - size * 0.2, y + size * 0.38, x + size * 0.2, y + size * 0.75, 0, 180)
+    c.setFillColor(colors.HexColor("#0A2E59"))
+    c.setStrokeColor(colors.HexColor("#D9FAFF"))
+    c.roundRect(x - size * 0.29, y + size * 0.27, size * 0.58, size * 0.35, 3, fill=1, stroke=1)
+    c.setFillColor(colors.HexColor("#BDF8FF"))
+    c.circle(x, y + size * 0.46, size * 0.045, fill=1, stroke=0)
+    c.rect(x - size * 0.025, y + size * 0.34, size * 0.05, size * 0.1, fill=1, stroke=0)
     c.restoreState()
 
 
 def _module(report, name):
-    return next((item for item in report.get("modules", []) if item.get("module") == name), {})
+    return next((item for item in report.get("modules", []) if isinstance(item, dict) and item.get("module") == name), {})
 
 
-def _page_title(c, styles, number, title, subtitle):
-    _background(c, number, title); _paragraph(c, "LUM\u00cdR SHIELD", MARGIN, PAGE_H - 25 * mm, 100 * mm, styles["eyebrow"]); _paragraph(c, title, MARGIN, PAGE_H - 31 * mm, 150 * mm, styles["title"]); _paragraph(c, subtitle, MARGIN, PAGE_H - 45 * mm, 160 * mm, styles["subtitle"])
+def _safe_list(value):
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if item not in (None, "", "none", "None")]
+    return []
+
+
+def _technical_value(value, unavailable="Brak danych"):
+    if value is None:
+        return unavailable
+    if isinstance(value, str) and value.strip().lower() in {"", "none", "not_checked"}:
+        return unavailable
+    if isinstance(value, bool):
+        return "Tak" if value else "Nie"
+    if isinstance(value, (list, tuple)):
+        values = _safe_list(value)
+        return ", ".join(values) if values else unavailable
+    if isinstance(value, dict):
+        status = value.get("status")
+        if status in {"not_checked", "not_applicable"}:
+            return "Nie sprawdzono"
+        pairs = []
+        for key, item in value.items():
+            if key == "status":
+                continue
+            rendered = _technical_value(item, "Brak danych")
+            pairs.append(f"{key}: {rendered}")
+        return "; ".join(pairs) if pairs else unavailable
+    return str(value)
+
+
+def _status(module):
+    status = str(module.get("scan_status", "not_started")).lower()
+    if status == "completed":
+        if module.get("module") == "breach_scan" and isinstance(module.get("breaches_found"), int) and module.get("breaches_found", 0) > 0:
+            return STATUS_NAMES[status], RED
+        risk = str(module.get("risk", "unknown")).lower()
+        if risk == "medium":
+            return STATUS_NAMES[status], AMBER
+        if risk in {"high", "critical"}:
+            return STATUS_NAMES[status], AMBER
+        return STATUS_NAMES[status], GREEN
+    if status == "partial":
+        return STATUS_NAMES[status], AMBER
+    if status in {"unavailable", "blocked", "not_applicable", "timeout", "error"}:
+        return STATUS_NAMES.get(status, "Nie uruchomiono"), GRAY
+    return "Nie uruchomiono", GRAY
+
+
+def _coverage(report, key):
+    coverage = report.get("coverage")
+    value = coverage.get(key) if isinstance(coverage, dict) else None
+    return f"{value:.0f}%" if isinstance(value, (int, float)) else "Brak danych"
+
+
+def _date(report):
+    value = report.get("generated_at")
+    if not isinstance(value, str):
+        return datetime.now().strftime("%d.%m.%Y, %H:%M")
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone().strftime("%d.%m.%Y, %H:%M")
+    except ValueError:
+        return value.replace("T", " ")[:16]
+
+
+def _reliability(report):
+    value = str(report.get("assessment_reliability", "insufficient")).lower()
+    return {
+        "high": "Wysoka",
+        "medium": "Ograniczona",
+        "insufficient": "Niewystarczająca",
+    }.get(value, "Brak danych")
+
+
+def _check(module, check_id):
+    for item in module.get("score_basis", []):
+        if isinstance(item, dict) and item.get("check_id") == check_id:
+            return item
+    return {}
+
+
+def _summary_text(report):
+    coverage = report.get("coverage") if isinstance(report.get("coverage"), dict) else {}
+    missing = coverage.get("missing_modules", []) if isinstance(coverage.get("missing_modules"), list) else []
+    if missing:
+        labels = ", ".join(MODULE_NAMES.get(name, str(name)) for name in missing)
+        return f"Wynik pokazuje stan w sprawdzonym zakresie. Pełna ocena nie była możliwa, ponieważ nie wykonano: {labels}."
+    return "Wynik pokazuje stan w sprawdzonym zakresie wykonanych modułów. Nie zastępuje pełnego audytu bezpieczeństwa."
+
+
+def _page_header(c, styles, number, title, subtitle):
+    _background(c, number, title)
+    _paragraph(c, "LUMÍR SHIELD v2.0", MARGIN, PAGE_H - 20 * mm, 80 * mm, styles["eyebrow"])
+    _paragraph(c, title, MARGIN, PAGE_H - 26 * mm, 150 * mm, styles["title"])
+    _paragraph(c, subtitle, MARGIN, PAGE_H - 39 * mm, PAGE_W - 2 * MARGIN, styles["subtitle"])
 
 
 def _page_one(c, report, styles):
-    _background(c, 1, "Wynik"); _logo(c, PAGE_W / 2, PAGE_H - 52 * mm, 20 * mm)
-    c.setFillColor(CYAN); c.setFont("LumirBold", 9); c.drawCentredString(PAGE_W / 2, PAGE_H - 82 * mm, "LUM\u00cdR SHIELD")
-    c.setFillColor(TEXT); c.setFont("LumirBold", 21); c.drawCentredString(PAGE_W / 2, PAGE_H - 92 * mm, "RAPORT BEZPIECZE\u0143STWA")
-    c.setFillColor(MUTED); c.setFont("LumirRegular", 10); c.drawCentredString(PAGE_W / 2, PAGE_H - 105 * mm, f"Cel skanowania: {report.get('target', 'Brak danych')}")
-    score = report.get("risk_score", {}); value = score.get("score", 0); risk = str(score.get("risk", "unknown")).lower(); accent = RISK_COLORS.get(risk, MUTED); center_x, center_y = PAGE_W / 2, PAGE_H - 158 * mm
-    c.saveState(); c.setFillColor(colors.HexColor("#0a3151")); c.circle(center_x, center_y, 42 * mm, fill=1, stroke=0); c.setStrokeColor(accent); c.setLineWidth(3); c.circle(center_x, center_y, 35 * mm, fill=0, stroke=1); c.setStrokeColor(CYAN); c.setLineWidth(.7); c.circle(center_x, center_y, 30 * mm, fill=0, stroke=1); c.setFillColor(TEXT); c.setFont("LumirBold", 41); c.drawCentredString(center_x, center_y + 3 * mm, str(value)); c.setFont("LumirRegular", 12); c.setFillColor(MUTED); c.drawCentredString(center_x, center_y - 6 * mm, "/ 100"); c.restoreState()
-    label = "BARDZO DOBRY POZIOM BEZPIECZE\u0143STWA" if value >= 90 else ("DOBRY POZIOM BEZPIECZE\u0143STWA" if value >= 70 else ("UWAGA - WYMAGANE DZIA\u0141ANIE" if value >= 40 else "WYSOKIE RYZYKO"))
-    _paragraph(c, label, MARGIN, PAGE_H - 204 * mm, PAGE_W - 2 * MARGIN, ParagraphStyle("score_label", parent=styles["card_title"], alignment=1, textColor=accent, fontSize=12))
-    _card(c, MARGIN, 37 * mm, PAGE_W - 2 * MARGIN, 35 * mm, accent); c.setFillColor(CYAN); c.setFont("LumirBold", 8); c.drawString(MARGIN + 8 * mm, 65 * mm, "ANALIZA LUMIR AI")
-    analysis = report.get("executive_summary", []); _paragraph(c, analysis[0] if analysis else "Wynik jest oparty na dost\u0119pnych danych z wykonanych modu\u0142\u00f3w bezpiecze\u0144stwa.", MARGIN + 8 * mm, 59 * mm, PAGE_W - 32 * mm, styles["body"])
-    c.setFillColor(MUTED); c.setFont("LumirRegular", 8); c.drawString(MARGIN + 8 * mm, 43 * mm, datetime.now().strftime("Wygenerowano: %d.%m.%Y, %H:%M")); c.showPage()
+    _background(c, 1, "Podsumowanie")
+    _draw_logo(c, MARGIN + 12 * mm, PAGE_H - 39 * mm, 17 * mm)
+    _paragraph(c, "LUMÍR SHIELD v2.0", MARGIN + 27 * mm, PAGE_H - 20 * mm, 100 * mm, styles["eyebrow"])
+    _paragraph(c, "Raport bezpieczeństwa", MARGIN + 27 * mm, PAGE_H - 26 * mm, 120 * mm, styles["title"])
+    target = _technical_value(report.get("target"), "Brak celu skanowania")
+    _paragraph(c, f"Cel skanowania: {target}", MARGIN + 27 * mm, PAGE_H - 42 * mm, 125 * mm, styles["subtitle"])
+    _paragraph(c, f"Data: {_date(report)}", MARGIN + 27 * mm, PAGE_H - 48 * mm, 125 * mm, styles["subtitle"])
+
+    score_data = report.get("risk_score") if isinstance(report.get("risk_score"), dict) else {}
+    score = score_data.get("score")
+    score_text = str(round(score)) if isinstance(score, (int, float)) else "-"
+    center_x, center_y = 65 * mm, PAGE_H - 111 * mm
+    c.saveState()
+    c.setFillColor(colors.HexColor("#0A3151"))
+    c.circle(center_x, center_y, 38 * mm, fill=1, stroke=0)
+    c.setStrokeColor(CYAN)
+    c.setLineWidth(2.7)
+    c.circle(center_x, center_y, 32 * mm, fill=0, stroke=1)
+    c.setStrokeColor(colors.HexColor("#8FF5FF"))
+    c.setLineWidth(0.6)
+    c.circle(center_x, center_y, 27 * mm, fill=0, stroke=1)
+    c.setFillColor(TEXT)
+    c.setFont("LumirBold", 36)
+    c.drawCentredString(center_x, center_y + 3 * mm, score_text)
+    c.setFillColor(MUTED)
+    c.setFont("LumirRegular", 10)
+    c.drawCentredString(center_x, center_y - 5 * mm, "/ 100")
+    c.restoreState()
+    _paragraph(c, "Wynik techniczny w sprawdzonym zakresie", MARGIN, center_y - 43 * mm, 102 * mm, ParagraphStyle("score", parent=styles["card_title"], alignment=1, textColor=CYAN))
+
+    metrics = [
+        ("Pokrycie modułów", _coverage(report, "module_weighted_percent")),
+        ("Pokrycie kontroli", _coverage(report, "control_weighted_percent")),
+        ("Wiarygodność oceny", _reliability(report)),
+    ]
+    metric_x, metric_y = 111 * mm, PAGE_H - 68 * mm
+    for index, (label, value) in enumerate(metrics):
+        y = metric_y - index * 30 * mm
+        _card(c, metric_x, y, 82 * mm, 23 * mm, CYAN if index < 2 else AMBER)
+        _paragraph(c, label, metric_x + 7 * mm, y + 17 * mm, 68 * mm, styles["small"])
+        _paragraph(c, value, metric_x + 7 * mm, y + 11 * mm, 68 * mm, styles["card_title"])
+
+    _card(c, MARGIN, 66 * mm, PAGE_W - 2 * MARGIN, 30 * mm, AMBER)
+    _paragraph(c, "Ważne ograniczenie", MARGIN + 7 * mm, 89 * mm, 50 * mm, ParagraphStyle("warning", parent=styles["card_title"], textColor=AMBER))
+    _paragraph(c, "Wynik nie oznacza pełnego audytu, ponieważ część modułów była niedostępna lub zablokowana.", MARGIN + 7 * mm, 82 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["body"])
+    _card(c, MARGIN, 27 * mm, PAGE_W - 2 * MARGIN, 31 * mm, CYAN)
+    _paragraph(c, "Podsumowanie dla Ciebie", MARGIN + 7 * mm, 51 * mm, 70 * mm, styles["card_title"])
+    _paragraph(c, _summary_text(report), MARGIN + 7 * mm, 44 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["muted"])
+    c.showPage()
+
+
+def _module_detail(module):
+    name = module.get("module")
+    if name == "email_scan":
+        if module.get("valid_format") is False:
+            return "Adres e-mail ma niepoprawny format."
+        score = module.get("score")
+        return f"Sprawdzono ustawienia poczty{f'; wynik techniczny: {round(score)}/100' if isinstance(score, (int, float)) else ''}."
+    if name == "domain_scan":
+        return "Potwierdzono dostępność domeny i podstawowe rekordy DNS." if module.get("exists") else "Nie potwierdzono dostępności domeny."
+    if name == "breach_scan":
+        count = module.get("breaches_found")
+        if isinstance(count, int):
+            return "Nie potwierdzono wycieku w dostępnym źródle." if count == 0 else f"Potwierdzono wpisy w wyciekach: {count}."
+        return "Nie sprawdzono pełnej bazy wycieków: źródło było niedostępne."
+    if name in {"account_exposure_scan", "username_scan"}:
+        return "Nie potwierdzono kont w dostępnych źródłach. Nie oznacza to, że konta nie istnieją."
+    reason = module.get("error_reason")
+    return _technical_value(reason, "Moduł nie przekazał dodatkowych danych.")
 
 
 def _page_two(c, report, styles):
-    _page_title(c, styles, 2, "Co znale\u017ali\u015bmy", "Najwa\u017cniejsze informacje z dost\u0119pnych modu\u0142\u00f3w skanu.")
-    email, domain, username = _module(report, "email_scan"), _module(report, "domain_scan"), _module(report, "username_scan"); exposure = email.get("exposure", {}) if isinstance(email.get("exposure"), dict) else {}; accounts = username.get("accounts", []) or exposure.get("services", []) or []
-    items = [("check", "Znalezione konta", f"{len(accounts)} znalezionych kont lub powi\u0105zanych us\u0142ug." if accounts else "Nie znaleziono kont w uruchomionych \u017ar\u00f3d\u0142ach.", GREEN if not accounts else AMBER), ("globe", "Domena", "Domena odpowiada poprawnie." if domain.get("exists") else "Brak potwierdzenia dost\u0119pno\u015bci domeny.", GREEN if domain.get("exists") else MUTED), ("mail", "Bezpiecze\u0144stwo poczty", "Adres e-mail ma poprawny format." if email.get("valid_format") else "Brak pe\u0142nego potwierdzenia ustawie\u0144 poczty.", GREEN if email.get("valid_format") else AMBER), ("lock", "HTTPS", "Po\u0142\u0105czenie HTTPS jest aktywne." if domain.get("https") else "HTTPS nie zosta\u0142 potwierdzony w tym skanie.", GREEN if domain.get("https") else AMBER)]
-    card_w, card_h = 78 * mm, 53 * mm; positions = [(MARGIN, PAGE_H - 108 * mm), (PAGE_W - MARGIN - card_w, PAGE_H - 108 * mm), (MARGIN, PAGE_H - 168 * mm), (PAGE_W - MARGIN - card_w, PAGE_H - 168 * mm)]
-    for (icon, title, detail, accent), (x, y) in zip(items, positions):
-        _card(c, x, y, card_w, card_h, accent); _icon(c, icon, x + 12 * mm, y + card_h - 15 * mm, 10 * mm, accent); _paragraph(c, title, x + 20 * mm, y + card_h - 10 * mm, card_w - 26 * mm, styles["card_title"]); _paragraph(c, detail, x + 8 * mm, y + 20 * mm, card_w - 16 * mm, styles["card_text"])
+    _page_header(c, styles, 2, "Co sprawdziliśmy", "Statusy pokazują rzeczywisty zakres wykonanej analizy.")
+    modules = [item for item in report.get("modules", []) if isinstance(item, dict)]
+    top = PAGE_H - 54 * mm
+    card_h = min(29 * mm, max(20 * mm, 110 * mm / max(len(modules), 1)))
+    for index, module in enumerate(modules):
+        y = top - (index + 1) * card_h
+        label, accent = _status(module)
+        _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, card_h - 3 * mm, accent)
+        _paragraph(c, MODULE_NAMES.get(module.get("module"), str(module.get("module", "Moduł"))), MARGIN + 7 * mm, y + card_h - 8 * mm, 68 * mm, styles["card_title"])
+        _paragraph(c, label, PAGE_W - MARGIN - 45 * mm, y + card_h - 8 * mm, 38 * mm, ParagraphStyle(f"module_status_{index}", parent=styles["small"], alignment=2, textColor=accent))
+        _paragraph(c, _module_detail(module), MARGIN + 7 * mm, y + card_h - 15 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["muted"])
+
+    email, domain = _module(report, "email_scan"), _module(report, "domain_scan")
+    card_w = (PAGE_W - 2 * MARGIN - 7 * mm) / 2
+    email_text = "Format adresu został potwierdzony." if email.get("valid_format") else "Nie potwierdzono poprawnego formatu adresu."
+    if _check(email, "spf_record").get("status") == "passed":
+        email_text += " Rekord SPF został wykryty."
+    if _check(email, "dmarc_record").get("status") == "failed":
+        email_text += " DMARC wymaga poprawy."
+    domain_text = "Domena odpowiada poprawnie." if domain.get("exists") else "Domena nie została potwierdzona."
+    if domain.get("https") is None:
+        domain_text += " HTTPS nie był sprawdzany w tym zakresie."
+    for x, title, detail, accent in ((MARGIN, "Poczta", email_text, AMBER if email.get("risk") == "medium" else GREEN), (MARGIN + card_w + 7 * mm, "Domena", domain_text, GREEN if domain.get("exists") else GRAY)):
+        _card(c, x, 80 * mm, card_w, 45 * mm, accent)
+        _paragraph(c, title, x + 7 * mm, 118 * mm, card_w - 14 * mm, styles["card_title"])
+        _paragraph(c, detail, x + 7 * mm, 109 * mm, card_w - 14 * mm, styles["muted"])
     c.showPage()
+
+
+def _actions(report):
+    email, breach = _module(report, "email_scan"), _module(report, "breach_scan")
+    actions = []
+    if breach.get("scan_status") == "completed" and isinstance(breach.get("breaches_found"), int) and breach.get("breaches_found", 0) > 0:
+        actions.append("Zmień hasła do kont wskazanych przez potwierdzony wyciek i włącz 2FA.")
+    if _check(email, "dmarc_record").get("status") == "failed":
+        actions.append("Skonfiguruj rekord DMARC dla domeny, aby ograniczyć podszywanie się pod adres e-mail.")
+    if _check(email, "spf_record").get("status") == "failed":
+        actions.append("Dodaj lub popraw rekord SPF dla domeny pocztowej.")
+    if email.get("scan_status") == "partial":
+        actions.append("Uzupełnij weryfikację ustawień SPF, DKIM i DMARC dla adresu pocztowego.")
+    actions.append("Włącz uwierzytelnianie dwuskładnikowe (2FA) wszędzie, gdzie jest dostępne.")
+    if breach.get("scan_status") != "completed":
+        actions.append("Po skonfigurowaniu uprawnionego źródła ponów sprawdzenie wycieków danych.")
+    unique = []
+    for action in actions:
+        if action not in unique:
+            unique.append(action)
+    return unique[:3]
+
+
+def _unavailable(report):
+    entries = []
+    for module in report.get("modules", []):
+        if not isinstance(module, dict) or module.get("scan_status") == "completed":
+            continue
+        name = MODULE_NAMES.get(module.get("module"), str(module.get("module", "Moduł")))
+        status, _ = _status(module)
+        entries.append(f"{name}: {status.lower()}.")
+    return entries or ["Wszystkie zaplanowane moduły zakończyły się w dostępnym zakresie."]
+
+
+def _technical_rows(report):
+    email, domain = _module(report, "email_scan"), _module(report, "domain_scan")
+    dns = domain.get("dns") if isinstance(domain.get("dns"), dict) else {}
+    dmarc = email.get("dmarc")
+    if isinstance(dmarc, str) and dmarc.strip().lower() == "none":
+        dmarc = "Rekord wykryty: polityka monitorująca"
+    return [
+        ("DNS", _technical_value(dns, "Brak danych DNS")),
+        ("MX", _technical_value(email.get("mx_records") or dns.get("MX"), "Nie wykryto rekordu")),
+        ("SPF", _technical_value(email.get("spf"), "Nie wykryto rekordu")),
+        ("DKIM", _technical_value(email.get("dkim"), "Nie potwierdzono rekordu")),
+        ("DMARC", _technical_value(dmarc, "Nie wykryto rekordu")),
+        ("HTTPS", _technical_value(domain.get("https"), "Nie sprawdzono")),
+        ("Nagłówki", _technical_value(domain.get("security_headers"), "Nie sprawdzono")),
+    ]
 
 
 def _page_three(c, report, styles):
-    _page_title(c, styles, 3, "Plan dzia\u0142ania", "Trzy najwa\u017cniejsze kroki na podstawie wyniku skanu.")
-    plan = report.get("action_plan", {}); actions = list(plan.get("now", [])) + list(plan.get("today", [])) + list(plan.get("later", [])); actions = actions or ["Utrzymuj aktualne has\u0142a i w\u0142\u0105cz uwierzytelnianie dwusk\u0142adnikowe, gdy jest dost\u0119pne."]
-    for index in range(3):
-        y = PAGE_H - (88 + index * 49) * mm; accent = [RED, AMBER, GREEN][index]; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 39 * mm, accent); c.setFillColor(accent); c.circle(MARGIN + 15 * mm, y + 20 * mm, 8 * mm, fill=1, stroke=0); c.setFont("LumirBold", 14); c.setFillColor(NAVY); c.drawCentredString(MARGIN + 15 * mm, y + 16.5 * mm, str(index + 1)); _paragraph(c, ["Zr\u00f3b teraz", "Zr\u00f3b dzi\u015b", "Dobra praktyka"][index], MARGIN + 29 * mm, y + 31 * mm, 90 * mm, styles["card_title"]); _paragraph(c, actions[index] if index < len(actions) else "Brak dodatkowych dzia\u0142a\u0144 wskazanych przez ten skan.", MARGIN + 29 * mm, y + 24 * mm, PAGE_W - MARGIN - (MARGIN + 29 * mm) - 8 * mm, styles["body_muted"])
-    c.showPage()
+    _page_header(c, styles, 3, "Plan działania i dane techniczne", "Kroki wynikają wyłącznie z danych dostępnych w tym raporcie.")
+    actions = _actions(report)
+    action_top = PAGE_H - 54 * mm
+    for index, action in enumerate(actions):
+        y = action_top - (index + 1) * 20 * mm
+        _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 16 * mm, CYAN if index == 0 else AMBER)
+        c.setFillColor(CYAN if index == 0 else AMBER)
+        c.circle(MARGIN + 8 * mm, y + 8 * mm, 3.7 * mm, fill=1, stroke=0)
+        c.setFillColor(NAVY)
+        c.setFont("LumirBold", 8)
+        c.drawCentredString(MARGIN + 8 * mm, y + 6.2 * mm, str(index + 1))
+        _paragraph(c, action, MARGIN + 16 * mm, y + 12 * mm, PAGE_W - 2 * MARGIN - 22 * mm, styles["muted"])
 
+    unavailable = " ".join(_unavailable(report))
+    _card(c, MARGIN, 138 * mm, PAGE_W - 2 * MARGIN, 28 * mm, GRAY)
+    _paragraph(c, "Czego nie udało się sprawdzić", MARGIN + 7 * mm, 159 * mm, 100 * mm, styles["card_title"])
+    _paragraph(c, unavailable, MARGIN + 7 * mm, 151 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["muted"])
 
-def _page_four(c, report, styles):
-    _page_title(c, styles, 4, "Cyfrowy \u015blad", "Konta i us\u0142ugi potwierdzone przez wykonane sprawdzenia.")
-    username, email = _module(report, "username_scan"), _module(report, "email_scan"); found = []
-    for item in username.get("accounts", []) or []:
-        found.append((item.get("site", "Konto"), item.get("url", "Potwierdzone konto")) if isinstance(item, dict) else (str(item), "Potwierdzone konto"))
-    exposure = email.get("exposure", {}) if isinstance(email.get("exposure"), dict) else {}
-    found.extend((str(service), "Powi\u0105zana us\u0142uga") for service in exposure.get("services", []) or [])
-    if not found:
-        _card(c, MARGIN, PAGE_H - 128 * mm, PAGE_W - 2 * MARGIN, 62 * mm, MUTED); _icon(c, "shield", PAGE_W / 2, PAGE_H - 96 * mm, 22 * mm, MUTED); _paragraph(c, "Brak znalezionych kont", MARGIN, PAGE_H - 118 * mm, PAGE_W - 2 * MARGIN, ParagraphStyle("none_title", parent=styles["card_title"], alignment=1)); _paragraph(c, "W tym skanie nie potwierdzono publicznych kont ani powi\u0105zanych us\u0142ug.", MARGIN + 12 * mm, PAGE_H - 130 * mm, PAGE_W - 24 * mm, ParagraphStyle("none_text", parent=styles["card_text"], alignment=1))
-    else:
-        for index, (name, detail) in enumerate(found[:8]):
-            col, row = index % 2, index // 2; card_w, card_h = 78 * mm, 27 * mm; x = MARGIN if col == 0 else PAGE_W - MARGIN - card_w; y = PAGE_H - (84 + row * 33) * mm; _card(c, x, y, card_w, card_h, CYAN); _icon(c, "check", x + 11 * mm, y + 14 * mm, 8 * mm, GREEN); _paragraph(c, name, x + 20 * mm, y + 20 * mm, card_w - 27 * mm, styles["card_title"]); _paragraph(c, detail, x + 20 * mm, y + 12 * mm, card_w - 27 * mm, styles["card_text"])
-    c.showPage()
-
-
-def _page_five(c, styles):
-    _page_title(c, styles, 5, "Plan rodzinnego bezpiecze\u0144stwa", "Dobra praktyka bezpiecze\u0144stwa w erze AI.")
-    guidance = [("Has\u0142o bezpiecze\u0144stwa", "Ustal rodzinne has\u0142o. Nie zapisuj go w telefonie ani w internecie."), ("Deepfake", "Nie ufaj tylko obrazowi lub nagraniu. Zawsze potwierd\u017a piln\u0105 pro\u015bb\u0119 innym kana\u0142em."), ("AI Voice", "Gdy rozm\u00f3wca podaje si\u0119 za blisk\u0105 osob\u0119 i nie zna has\u0142a, przerwij rozmow\u0119."), ("Phishing", "Nie klikaj link\u00f3w z pilnych wiadomo\u015bci. Weryfikuj nadawc\u0119 i adres strony.")]
-    for index, (title, detail) in enumerate(guidance):
-        y = PAGE_H - (84 + index * 36) * mm; accent = [CYAN, BLUE, AMBER, RED][index]; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 28 * mm, accent); _icon(c, "family" if index == 0 else "shield", MARGIN + 15 * mm, y + 14 * mm, 13 * mm, accent); _paragraph(c, title, MARGIN + 29 * mm, y + 21 * mm, 120 * mm, styles["card_title"]); _paragraph(c, detail, MARGIN + 29 * mm, y + 13 * mm, PAGE_W - MARGIN - (MARGIN + 29 * mm) - 8 * mm, styles["card_text"])
-    c.showPage()
-
-
-def _page_six(c, report, styles):
-    _page_title(c, styles, 6, "Szczeg\u00f3\u0142y techniczne", "Dane diagnostyczne zebrane przez uruchomione modu\u0142y.")
-    email, domain = _module(report, "email_scan"), _module(report, "domain_scan"); details = [("DNS", domain.get("dns", "Brak danych DNS")), ("SPF", email.get("spf", "Brak danych")), ("DKIM", email.get("dkim", "Brak danych")), ("DMARC", email.get("dmarc", "Brak danych")), ("Nag\u0142\u00f3wki", domain.get("security_headers", "Brak danych"))]
-    for index, (label, value) in enumerate(details):
-        y = PAGE_H - (78 + index * 31) * mm; _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, 24 * mm, BLUE); _paragraph(c, label, MARGIN + 8 * mm, y + 17 * mm, 32 * mm, styles["card_title"]); _paragraph(c, str(value).replace("{", "").replace("}", ""), MARGIN + 43 * mm, y + 17 * mm, PAGE_W - MARGIN - (MARGIN + 43 * mm) - 8 * mm, styles["card_text"])
+    rows = [[Paragraph("<b>Obszar</b>", styles["table"]), Paragraph("<b>Wartość</b>", styles["table"])]]
+    for label, value in _technical_rows(report):
+        rows.append([Paragraph(escape(label), styles["table"]), Paragraph(escape(value), styles["table"])])
+    table = Table(rows, colWidths=[35 * mm, PAGE_W - 2 * MARGIN - 35 * mm], repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0A3151")),
+        ("BACKGROUND", (0, 1), (-1, -1), PANEL),
+        ("TEXTCOLOR", (0, 0), (-1, -1), TEXT),
+        ("FONTNAME", (0, 0), (-1, -1), "LumirRegular"),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#1A5479")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    _, height = table.wrap(PAGE_W - 2 * MARGIN, 100 * mm)
+    table.drawOn(c, MARGIN, 55 * mm)
     c.showPage()
 
 
 def build(report, outfile="shield_report.pdf"):
-    """Create a six-page Lumir SHIELD presentation from existing scan results."""
-    _register_fonts(); c = canvas.Canvas(outfile, pagesize=A4, pageCompression=1); c.setTitle("Lum\u00edr SHIELD - Raport bezpiecze\u0144stwa"); styles = _styles()
-    _page_one(c, report, styles); _page_two(c, report, styles); _page_three(c, report, styles); _page_four(c, report, styles); _page_five(c, styles); _page_six(c, report, styles); c.save()
+    """Create a compact three-page Lumir SHIELD client report from scan results."""
+    _register_fonts()
+    document = canvas.Canvas(outfile, pagesize=A4, pageCompression=1)
+    document.setTitle("Lumír SHIELD v2.0 - Raport bezpieczeństwa")
+    styles = _styles()
+    _page_one(document, report, styles)
+    _page_two(document, report, styles)
+    _page_three(document, report, styles)
+    document.save()
     return str(Path(outfile))
