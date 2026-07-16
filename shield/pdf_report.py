@@ -416,6 +416,50 @@ def _technical_rows(report):
     ]
 
 
+def _account_services(report):
+    services = report.get("services")
+    return services if isinstance(services, dict) else {}
+
+
+def _account_results(services):
+    results = services.get("results") if isinstance(services, dict) else []
+    return [item for item in results if isinstance(item, dict) and isinstance(item.get("service_name"), str) and item["service_name"].strip()]
+
+
+def _page_four_account_discovery(c, report, styles):
+    title = "Sprawd\u017a, co internet nadal pami\u0119ta o Tobie"
+    subtitle = "Wykryte us\u0142ugi s\u0105 sygna\u0142em technicznym, a nie potwierdzeniem istnienia konta."
+    _page_header(c, styles, 4, title, subtitle)
+    services = _account_services(report)
+    results = _account_results(services)
+    checked = services.get("checked_count") if isinstance(services.get("checked_count"), int) else 0
+
+    if results:
+        _card(c, MARGIN, PAGE_H - 87 * mm, PAGE_W - 2 * MARGIN, 27 * mm, CYAN)
+        _paragraph(c, "Wykryte us\u0142ugi", MARGIN + 7 * mm, PAGE_H - 67 * mm, 80 * mm, styles["card_title"])
+        _paragraph(c, "Ka\u017cdy wpis poni\u017cej jest sygna\u0142em technicznym, a nie potwierdzeniem istnienia konta.", MARGIN + 7 * mm, PAGE_H - 75 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["muted"])
+        card_height = 35 * mm
+        top = PAGE_H - 96 * mm
+        for index, service in enumerate(results):
+            y = top - (index + 1) * (card_height + 3 * mm)
+            _card(c, MARGIN, y, PAGE_W - 2 * MARGIN, card_height, CYAN)
+            _paragraph(c, service["service_name"].strip(), MARGIN + 7 * mm, y + card_height - 8 * mm, 85 * mm, styles["card_title"])
+            _paragraph(c, "Prawdopodobne powi\u0105zanie", PAGE_W - MARGIN - 57 * mm, y + card_height - 8 * mm, 50 * mm, ParagraphStyle(f"account_status_{index}", parent=styles["small"], alignment=2, textColor=CYAN))
+            _paragraph(c, "Istnieje techniczny sygna\u0142, \u017ce ten adres e-mail m\u00f3g\u0142 by\u0107 u\u017cywany w tej us\u0142udze.", MARGIN + 7 * mm, y + card_height - 15 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["muted"])
+            _paragraph(c, "Sprawd\u017a, czy nadal u\u017cywasz tego konta. Je\u017celi nie - rozwa\u017c jego usuni\u0119cie. Je\u017celi tak - sprawd\u017a has\u0142o i zabezpieczenia konta.", MARGIN + 7 * mm, y + card_height - 23 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["small"])
+            _paragraph(c, "To nie jest potwierdzenie istnienia konta.", MARGIN + 7 * mm, y + 6 * mm, PAGE_W - 2 * MARGIN - 14 * mm, ParagraphStyle(f"account_note_{index}", parent=styles["small"], textColor=GRAY))
+    else:
+        message = "W tym sprawdzeniu nie wykryto prawdopodobnych us\u0142ug. Nie oznacza to, \u017ce \u017cadne konta nie istniej\u0105." if checked > 0 else "Nie uda\u0142o si\u0119 sprawdzi\u0107 powi\u0105zanych us\u0142ug w tym skanie."
+        _card(c, MARGIN, PAGE_H - 118 * mm, PAGE_W - 2 * MARGIN, 52 * mm, AMBER if checked > 0 else GRAY)
+        _paragraph(c, "Wynik sprawdzenia", MARGIN + 7 * mm, PAGE_H - 76 * mm, 80 * mm, styles["card_title"])
+        _paragraph(c, message, MARGIN + 7 * mm, PAGE_H - 86 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["body"])
+
+    _card(c, MARGIN, 26 * mm, PAGE_W - 2 * MARGIN, 42 * mm, AMBER)
+    _paragraph(c, "Co warto zrobi\u0107 teraz", MARGIN + 7 * mm, 60 * mm, 80 * mm, styles["card_title"])
+    _paragraph(c, "1. Przejrzyj znalezione us\u0142ugi.  2. Przypomnij sobie, czy nadal ich u\u017cywasz.  3. Usu\u0144 niepotrzebne konta.  4. Dla u\u017cywanych kont sprawd\u017a unikalne has\u0142o i 2FA.", MARGIN + 7 * mm, 51 * mm, PAGE_W - 2 * MARGIN - 14 * mm, styles["muted"])
+    c.showPage()
+
+
 def _page_three(c, report, styles):
     _page_header(c, styles, 3, "Plan działania i dane techniczne", "Kroki wynikają wyłącznie z danych dostępnych w tym raporcie.")
     actions = _actions(report)
@@ -465,5 +509,7 @@ def build(report, outfile="shield_report.pdf"):
     _page_one(document, report, styles)
     _page_two(document, report, styles)
     _page_three(document, report, styles)
+    if _module(report, "account_exposure_scan"):
+        _page_four_account_discovery(document, report, styles)
     document.save()
     return str(Path(outfile))

@@ -47,6 +47,31 @@
     <section class="glass-panel panel"><h2 class="panel-title">Najważniejsze zagrożenia</h2>{% set threats = namespace(items=[]) %}{% for module in report.modules %}{% if module.findings is defined and module.risk|lower in ['high', 'critical'] %}{% for finding in module.findings %}{% set threats.items = threats.items + [finding] %}{% endfor %}{% endif %}{% endfor %}{% if threats.items %}<ul class="summary-list">{% for item in threats.items[:3] %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Nie wykryto istotnych zagrożeń.</p>{% endif %}</section>
 </section>
 
+{% set services = report.services|default({}) %}
+{% if services.planned_count|default(0) > 0 %}
+<section class="glass-panel discovery-panel" id="account-discovery" aria-labelledby="discovery-title">
+    <div class="insight-heading"><div><p class="eyebrow">Account Discovery</p><h2 class="panel-title" id="discovery-title">Sprawdź, co internet nadal pamięta o Tobie</h2></div></div>
+    <p class="discovery-subtitle">Wykryte usługi są sygnałem technicznym, a nie potwierdzeniem istnienia konta.</p>
+    {% if services.probable_count|default(0) > 0 %}
+    <div class="discovery-grid">
+        {% for service in services.results|default([]) %}
+        <article class="discovery-card">
+            <div class="discovery-card-head"><h3>{{ service.service_name|default('Nieznana usługa') }}</h3><span>Prawdopodobne powiązanie</span></div>
+            <p>Istnieje techniczny sygnał, że ten adres e-mail mógł być używany w tej usłudze.</p>
+            <p class="discovery-action">Sprawdź, czy nadal używasz tego konta. Jeżeli nie — rozważ jego usunięcie. Jeżeli tak — sprawdź hasło i zabezpieczenia konta.</p>
+            <p class="discovery-disclaimer">To nie jest potwierdzenie istnienia konta.</p>
+        </article>
+        {% endfor %}
+    </div>
+    {% elif services.checked_count|default(0) > 0 %}
+    <p class="discovery-state">W tym sprawdzeniu nie wykryto prawdopodobnych usług. Nie oznacza to, że żadne konta nie istnieją.</p>
+    {% else %}
+    <p class="discovery-state">Nie udało się sprawdzić powiązanych usług w tym skanie.</p>
+    {% endif %}
+    <div class="discovery-next"><h3>Co warto zrobić teraz</h3><ul class="summary-list"><li>Przejrzyj znalezione usługi.</li><li>Przypomnij sobie, czy nadal ich używasz.</li><li>Usuń niepotrzebne konta.</li><li>Dla używanych kont sprawdź unikalne hasło i 2FA.</li></ul></div>
+</section>
+{% endif %}
+
 <section class="glass-panel insight-panel" aria-labelledby="insight-title">
     <div class="insight-heading"><div><p class="eyebrow">Analiza wykonana przez Lumír Intelligence</p><h2 class="panel-title" id="insight-title">Analiza Lumír AI</h2></div><span class="insight-source">Na podstawie danych skanu</span></div>
     <div class="insight-copy">
