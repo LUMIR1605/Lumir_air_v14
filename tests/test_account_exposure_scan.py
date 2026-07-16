@@ -63,6 +63,16 @@ def test_account_exposure_requires_consent():
     assert result["scan_status"] == "blocked"
     assert result["error_reason"] == "CONSENT_REQUIRED"
     assert result["score"] is None
+    assert result["services"] == {
+        "planned_count": 1,
+        "attempted_count": 0,
+        "checked_count": 0,
+        "confirmed_count": 0,
+        "probable_count": 0,
+        "not_found_count": 0,
+        "not_checked_count": 1,
+        "results": [],
+    }
 
 
 def test_account_exposure_maps_services_as_probable_only():
@@ -72,6 +82,9 @@ def test_account_exposure_maps_services_as_probable_only():
 
     assert result["scan_status"] == "partial"
     assert result["score"] is None
+    assert result["services"]["planned_count"] == 1
+    assert result["services"]["attempted_count"] == 1
+    assert result["services"]["checked_count"] == 1
     assert result["services"]["confirmed_count"] == 0
     assert result["services"]["probable_count"] == 2
     assert all(item["status"] == "probable" for item in result["services"]["results"])
@@ -86,3 +99,31 @@ def test_account_exposure_partial_module_is_valid_v3():
     report["modules"] = [module]
     report.update(assessment(report["modules"], "email"))
     assert validate_report(report)
+    assert module["services"]["attempted_count"] == 1
+    assert module["services"]["checked_count"] == 1
+    assert module["services"]["not_found_count"] == 1
+
+
+def test_account_exposure_counts_unavailable_source_as_not_checked():
+    with patch("shield.account_exposure_scan.holehe_scan", return_value={"scan_status": "unavailable", "error_reason": "HOLEHE_NOT_INSTALLED"}):
+        result = account_exposure_scan("test@example.com", consent_declared=True)
+
+    assert result["services"] == {
+        "planned_count": 1,
+        "attempted_count": 1,
+        "checked_count": 0,
+        "confirmed_count": 0,
+        "probable_count": 0,
+        "not_found_count": 0,
+        "not_checked_count": 1,
+        "results": [],
+    }
+
+
+def test_account_exposure_counts_timeout_as_not_checked():
+    with patch("shield.account_exposure_scan.holehe_scan", return_value={"scan_status": "timeout", "error_reason": "HOLEHE_TIMEOUT"}):
+        result = account_exposure_scan("test@example.com", consent_declared=True)
+
+    assert result["services"]["attempted_count"] == 1
+    assert result["services"]["checked_count"] == 0
+    assert result["services"]["not_checked_count"] == 1
