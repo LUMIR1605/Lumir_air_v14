@@ -5,6 +5,8 @@ from shield.breach_scan import scan as breach_scan
 from shield.domain_scan import scan as domain_scan
 from shield.email_scan import scan as email_scan
 from shield.phone_scan import scan as phone_scan
+from shield.username_scan import scan as username_scan
+from shield.account_exposure_scan import scan as account_exposure_scan
 from shield.truth import PROFILES, assessment, base_report, module_placeholder, normalize_module, source_record
 
 
@@ -12,6 +14,17 @@ def run(scan_type, value, consent_declared=False):
     report = base_report(scan_type, value, consent_declared)
     profile = PROFILES[scan_type]
     modules = []
+
+    if scan_type in {"email", "phone", "username"} and not consent_declared:
+        report["modules"] = [module_placeholder(name, "blocked", "CONSENT_REQUIRED", weight) for name, weight in profile.items()]
+        report.update(assessment(report["modules"], scan_type))
+        report["risk_score"] = {"score": None, "risk": "UNKNOWN", "deprecated": True}
+        report["risk"] = "unknown"
+        report["attack_surface"] = attack_surface(report)
+        report["advice"] = advise({"risk": "unknown"})
+        report["action_plan"] = build_action_plan(report)
+        report["executive_summary"] = ["Analiza nie została uruchomiona: wymagane jest potwierdzenie skanowania własnych danych."]
+        return report
 
     def add(scanner, target, name):
         try:
@@ -24,7 +37,7 @@ def run(scan_type, value, consent_declared=False):
     if scan_type == "email":
         add(email_scan, value, "email_scan")
         add(breach_scan, value, "breach_scan")
-        modules.append(module_placeholder("account_exposure_scan", "blocked", "no approved account exposure source is configured", profile["account_exposure_scan"]))
+        modules.append(normalize_module(account_exposure_scan(value, consent_declared=consent_declared), profile["account_exposure_scan"]))
         add(domain_scan, value.split("@", 1)[1], "domain_scan")
     elif scan_type == "domain":
         add(domain_scan, value, "domain_scan")
@@ -32,7 +45,7 @@ def run(scan_type, value, consent_declared=False):
     elif scan_type == "phone":
         add(phone_scan, value, "phone_scan")
     elif scan_type == "username":
-        modules.append(module_placeholder("username_scan", "blocked", "no approved official account API is configured", profile["username_scan"]))
+        add(username_scan, value, "username_scan")
     elif scan_type == "url":
         modules.extend([module_placeholder("url_scan", "blocked", "direct web probing is not allowlisted", profile["url_scan"]), module_placeholder("domain_scan", "not_applicable", "not independently executed for URL scan", profile["domain_scan"]), module_placeholder("web_security_scan", "blocked", "direct web probing is not allowlisted", profile["web_security_scan"])])
 

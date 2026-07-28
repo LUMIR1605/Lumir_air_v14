@@ -1,86 +1,48 @@
 #!/usr/bin/env python3
+"""Command-line entry point for consent-based Lumir SHIELD self-scans."""
 
-import sys
-import re
-import shutil
 import json
-from datetime import datetime
-from pathlib import Path
+import sys
 
 from core.compat import configure_stdio
-from shield.core import detect_type
-from shield.multi_scan import run
-from shield.report_builder import build
 from shield.html_report import build as build_html
+from shield.input_validation import InputValidationError, normalize
+from shield.multi_scan import run
 from shield.pdf_report import build as build_pdf
+from shield.report_builder import build
+from shield.report_paths import report_paths
+
 
 configure_stdio()
 
 if len(sys.argv) not in {2, 3} or (len(sys.argv) == 3 and sys.argv[2] != "--consent-owner"):
-    print("Uzycie:")
-    print("python shield.py <email|telefon|url|domena|nick> [--consent-owner]")
+    print("Użycie: python shield.py <email|telefon|nick> --consent-owner")
     raise SystemExit(1)
 
-target = sys.argv[1].strip()
-if not target:
-    print("Błąd: podaj cel skanowania.")
+try:
+    normalized = normalize(sys.argv[1])
+except InputValidationError as error:
+    print(f"Błąd: {error}")
     raise SystemExit(2)
 
-scan_type = detect_type(target)
-print(f"Lumír SHIELD: skanowanie typu {scan_type} dla: {target}")
-
-result = run(scan_type, target, consent_declared="--consent-owner" in sys.argv)
-
-json_report = build(result)
+scan_type, target = normalized.scan_type, normalized.value
+consent = "--consent-owner" in sys.argv
+print(f"Lumir SHIELD: skanowanie typu {scan_type} dla: {target}")
+result = run(scan_type, target, consent_declared=consent)
+paths = report_paths(scan_type, target)
+json_report = build(result, str(paths["json"]))
 with open(json_report, encoding="utf-8") as report_file:
     presentation_report = json.load(report_file)
-html_report = build_html(presentation_report)
-pdf_report = build_pdf(presentation_report)
+html_report = build_html(presentation_report, str(paths["html"]))
+pdf_report = build_pdf(presentation_report, str(paths["pdf"]))
 
-android_download = Path("/storage/emulated/0/Download/LumirShield")
-android_reports = []
-storage_error = None
-android_storage = Path("/storage/emulated/0")
-safe_target = re.sub(r"[^A-Za-z0-9._-]+", "_", target).strip("_") or "scan"
-timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-if not android_storage.exists():
-    storage_error = "Nie wykryto /storage/emulated/0. Na Androidzie uruchom w Termux: termux-setup-storage"
-else:
-    try:
-        android_download.mkdir(parents=True, exist_ok=True)
-        for source in (html_report, json_report, pdf_report):
-            source_path = Path(source)
-            if source_path.is_file():
-                filename = f"Lumir_SHIELD_{safe_target}_{timestamp}.pdf" if source_path.suffix.lower() == ".pdf" else source_path.name
-                destination = android_download / filename
-                shutil.copy2(source_path, destination)
-                android_reports.append(str(destination))
-    except PermissionError:
-        storage_error = "Brak dostepu do pamieci urzadzenia. W Termux uruchom: termux-setup-storage, zaakceptuj uprawnienie i uruchom skan ponownie."
-    except OSError as error:
-        storage_error = f"Nie mozna zapisac raportu w /storage/emulated/0/Download/LumirShield: {error}"
-
-assessment = result["security_assessment"]
-coverage = result["coverage"]
-print(f"Lumir SHIELD - zakonczono skan {scan_type}")
-print(f"Wynik techniczny: {assessment['score']}/100" if assessment["score"] is not None else "Wynik techniczny: niedostepny")
-print(f"Pokrycie modulow: {coverage['module_weighted_percent']}%")
+assessment, coverage = result["security_assessment"], result["coverage"]
+print(f"Lumir SHIELD — zakończono skan {scan_type}")
+print(f"Wynik techniczny: {assessment['score']}/100" if assessment["score"] is not None else "Wynik techniczny: niedostępny")
+print(f"Pokrycie modułów: {coverage['module_weighted_percent']}%")
 print(f"Pokrycie kontroli: {coverage['control_weighted_percent']}%")
-print(f"Wiarygodnosc oceny: {result['assessment_reliability']}")
+print(f"Wiarygodność oceny: {result['assessment_reliability']}")
 print(f"Werdykt: {assessment['public_verdict']}")
-if result["assessment_reliability"] == "insufficient":
-    print("Pelna ocena bezpieczenstwa: NIEDOSTEPNA")
-for module in result["modules"]:
-    print(f" - {module['module']}: {module['scan_status']}")
-
-print("\nRaport zapisano jako:")
-print(f" - {json_report}")
-print(f" - {html_report}")
-print(f" - {pdf_report}")
-if storage_error:
-    print(f"\n{storage_error}")
-else:
-    print("\nRaport zapisano również do:")
-    print("/storage/emulated/0/Download/LumirShield/")
-    for path in android_reports:
-        print(f" - {path}")
+print("\nRaporty zapisano lokalnie:")
+for path in (json_report, html_report, pdf_report):
+    print(f" - {path}")

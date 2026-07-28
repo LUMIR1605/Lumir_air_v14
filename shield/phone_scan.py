@@ -1,6 +1,10 @@
+"""Local phone-number metadata validation; no reverse lookup or person identification."""
+
 import phonenumbers
 from phonenumbers import carrier, geocoder
-from shield.phone_sources.engine import run as run_sources
+
+from shield.truth import source_record
+
 
 def scan(number):
     result = {
@@ -10,31 +14,28 @@ def scan(number):
         "country": "",
         "operator": "",
         "international": "",
-        "risk": "high",
+        "risk": "unknown",
+        "score": None,
+        "score_basis": [],
+        "confidence": None,
         "findings": [],
-        "sources": [],
-        "scan_status": "completed"
+        "scan_status": "partial",
     }
-
     try:
         parsed = phonenumbers.parse(number, "PL")
-
         result["valid"] = phonenumbers.is_valid_number(parsed)
-        result["international"] = phonenumbers.format_number(
-            parsed,
-            phonenumbers.PhoneNumberFormat.INTERNATIONAL
-        )
+        result["international"] = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
         result["country"] = geocoder.description_for_number(parsed, "pl")
         result["operator"] = carrier.name_for_number(parsed, "pl")
-
         if result["valid"]:
-            result["risk"] = "low"
+            result["findings"].append("Format numeru potwierdzony przez lokalną bibliotekę metadanych.")
         else:
-            result["findings"].append("Nieprawidłowy numer telefonu")
+            result["findings"].append("Niepotwierdzony poprawny numer telefonu.")
+    except phonenumbers.NumberParseException:
+        result["findings"].append("Niepoprawny format numeru telefonu.")
 
-    except Exception as e:
-        result["findings"].append(str(e))
-
-    result["sources"] = run_sources(number)
-
+    result["sources"] = [source_record(
+        "local_phone_metadata", "completed", confidence=0.9,
+        evidence={"method": "local metadata validation", "ownership": "unconfirmed"},
+    )]
     return result

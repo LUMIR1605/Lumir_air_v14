@@ -1,6 +1,13 @@
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+.tools/
+.pytest-*/
+build/
+dist/
+release/
+config/music_api.json
 
 # Backup
 *.bak
