@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from osint_lab.agents.base import Agent, Observation
+from osint_lab.agents.base import Collector, FindingCandidate, RawObservation
 from osint_lab.policies import SourceClass, SourcePolicy
 from osint_lab.schemas import Finding, FindingStatus, initial_status
 
@@ -54,24 +54,44 @@ def test_found_is_never_automatically_confirmed():
         finding(normalized_status=FindingStatus.CONFIRMED)
 
 
-def test_agent_contract_requires_name_class_and_collect():
-    class FixtureAgent(Agent):
-        name = "fixture"
+def test_collector_contract_requires_orchestrator_context():
+    class FixtureCollector(Collector):
+        agent_name = "fixture"
+        agent_type = "FixtureCollector"
         source_class = SourceClass.LOCAL
+        version = "1.0"
 
-        def collect(self, seed: str) -> list[Observation]:
-            return [Observation("FOUND")]
+        def validate_input(self, seed_reference: str) -> None:
+            if not seed_reference:
+                raise ValueError("seed required")
 
-    assert FixtureAgent().collect("synthetic")[0].raw_status == "FOUND"
+        def _run(self, context, seed_reference: str) -> tuple[RawObservation, ...]:
+            return (RawObservation(raw_status="FOUND", value_reference=seed_reference),)
 
-    class MissingCollect(Agent):
-        name = "fixture"
+        def normalize(self, observation: RawObservation) -> FindingCandidate:
+            return FindingCandidate(
+                raw_status=observation.raw_status,
+                normalized_status=FindingStatus.POSSIBLE,
+                value_reference=observation.value_reference,
+            )
+
+        def describe_capabilities(self):
+            return {"network": False}
+
+    collector = FixtureCollector()
+    with pytest.raises(PermissionError, match="orchestrator-issued"):
+        collector.run(object(), "seed-ref")
+
+    class MissingRun(Collector):
+        agent_name = "fixture"
+        agent_type = "MissingRun"
         source_class = SourceClass.LOCAL
+        version = "1.0"
 
     with pytest.raises(TypeError):
-        MissingCollect()
+        MissingRun()
 
-    class MissingClass(FixtureAgent):
+    class MissingClass(FixtureCollector):
         source_class = "LOCAL"
 
     with pytest.raises(ValueError):
