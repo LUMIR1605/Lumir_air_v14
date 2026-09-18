@@ -18,3 +18,15 @@ shield_report*.pdf
 
 # Logs
 *.log
+
+# Private configuration and OSINT case artifacts (case storage belongs outside Git)
+.env
+.env.*
+!.env.example
+osint_lab/cases/
+osint_lab/case_data/
+case_data/
+cases/
+evidence_vault/
+*.sqlite
+*.sqlite3
