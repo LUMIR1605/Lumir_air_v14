@@ -1,34 +1,34 @@
 # LUMIR OSINT LAB — work handoff
 
 ## Current Status
-Foundation v1 is applied on `feature/osint-lab-v1` and verified on the user's Windows checkout. SHIELD RC6 code was not changed.
+Foundation v2 is implemented on `feature/osint-lab-v1`: validated case manifests, fail-closed PolicyGate, local Evidence Vault, relation graph, and deterministic contradiction checks. SHIELD RC6 code was not changed.
 
 ## Last Verified Commit
-`f30ed64` (complete applied patch series; full suite verified before this Windows handoff update). Branch baseline `main`: `d881757`. Use `git log -1` for the latest handoff-only commit.
+Implementation and tests through `4456cce`; full suite and RC6 smoke verified before this documentation update. Branch baseline `main`: `d881757`. Use `git log -1` for the latest documentation commit.
 
 ## Environment
 Microsoft Windows `10.0.26200.9457`; Python `3.14.6` (`C:\Python314\python.exe`), pip `26.1.2`, pytest `8.4.2`. The repository uses minimum dependency bounds rather than a locked release environment.
 
 ## Tests
-Windows verification after applying the patch: `python -m pytest -q` PASS (`15 passed in 13.36s`); `python test_shield.py` reports `5/5` input-detection smoke checks and exits `0`; `git diff --check main...HEAD` PASS. Tests use fixtures/mocks for OSINT LAB and regression paths; the existing smoke command retains the current SHIELD scanner behavior. No new failure class.
+Windows verification: baseline `15 passed`; after foundation v2, `python -m pytest -q` PASS (`40 passed`, 25 new cases). `python test_shield.py` reports `5/5` input-detection smoke checks and exits `0`. Tests cover manifest validation, policy decisions, risky-source defaults, real temporary vault writes, SHA-256, path isolation, Git ignore defenses, graph validation, no automatic identity merge, and simple contradictions.
 
 ## What Works
-RC6 identifies itself consistently as engine `0.6.0` with report schema `3.0`; consent-based self scan and existing reports remain on their original code paths. No path under `shield/` differs from `main`. Isolated `osint_lab` provides strict source classes, source policy with local-only default, a validated finding schema, raw observation contract and conservative `FOUND → POSSIBLE` normalization. Four new focused tests pass.
+RC6 identifies itself as engine `0.6.0` with report schema `3.0`; its existing smoke flow remains on the original code path. No path under `shield/` differs from `main`. OSINT LAB now validates authorization scope, denies risky classes by default, writes integrity-tagged evidence outside Git, preserves distinct graph nodes, and reports deterministic contradiction severity with evidence references.
 
 ## Known Problems
-See [audit](docs/OSINT_LAB_AUDIT.md). Key items: old Sherlock adapter treats URLs in stdout as found/risk without verification; DNS resolution exceptions can be presented as absent domain; fallback source can mislabel provenance; Holehe can make outbound provider queries; historic exposed API key noted in `docs/SECRET_ROTATION.md` requires independent confirmation of revocation. Current tracked-file pattern review revealed no obvious live secret or case dataset; it cannot establish absence across Git history or all formats. Existing tests do not verify Windows GUI or installer.
+The vault is plaintext and has no key management, permission hardening, retention enforcement, secure deletion, or case loader. Graph state is in-memory only. PolicyGate has no per-run approval executor or collector integration. Contradiction rules compare explicit facts but do not establish truth. See [audit](docs/OSINT_LAB_AUDIT.md) for existing SHIELD risks. Existing tests do not verify the Windows GUI or installer.
 
 ## Architecture Decisions
-Package at repository root because `shield/` and `lumir/` are already top-level; no import into RC6. Planned pipeline and agent roles are described in [architecture](docs/OSINT_LAB_ARCHITECTURE.md). No network collector, Tor agent, vault implementation, automatic correlation, or verification engine exists. `DIRECT_TARGET` is disabled by default. Future verification should record independent evidence in a separate reviewed decision rather than promoting collector output.
+Package remains isolated from RC6. Manifest flags and class allowlists are separate from per-run approval: risky classes return `REQUIRE_EXPLICIT_APPROVAL`, never implicit allow. Vault roots must be disjoint from the repo. Encryption is an unimplemented protocol, not a claim. Matching identifiers remain separate nodes unless an evidence-backed relation is explicitly added. Contradiction checks are rules, not AI verdicts.
 
 ## Current Task
-Foundation complete and verified in the Windows checkout. Publish `feature/osint-lab-v1` without force push, then review remote CI and the branch diff before merge.
+Foundation v2 is implemented and locally verified. Publish the logical commits to `feature/osint-lab-v1` without force push, then review remote CI and the branch diff before merge.
 
 ## Next Task
-Review remote CI and merge readiness. A GUI/report walkthrough is still separate from the automated RC6 checks recorded here. Next implementation milestone: authorization manifest plus a private evidence vault outside Git, with retention, integrity and source-class enforcement before integrating any collector.
+Design the auditable per-run approval record and orchestrator enforcement before integrating any collector. Separately review encryption/key management, Windows ACLs, retention, and graph persistence. A GUI/report walkthrough remains separate from automated RC6 checks.
 
 ## Files Changed
-Created: `WORK_HANDOFF.md`, `docs/OSINT_LAB_AUDIT.md`, `docs/OSINT_LAB_ARCHITECTURE.md`, `osint_lab/` package (12 files), `tests/test_osint_lab_foundation.py`. Modified: `.gitignore`. No files under `shield/` modified.
+Foundation v2 adds `osint_lab/case_manifest.py`, `policies/gate.py`, `evidence/vault.py`, `correlation/graph.py`, `verification/contradictions.py`, three test modules, and four focused documents. Existing package export files and this handoff are updated. No file under `shield/` is modified.
 
 ## Safety Notes
-Only synthetic test identifiers were added. Store actual case data and evidence outside the repo, for example `%LOCALAPPDATA%/LumirOSINTLab/cases`, with access controls; `.gitignore` also blocks common accidental in-repo paths, SQLite case stores and `.env`. Git history may retain an old revoked key: never reuse it; confirm rotation before exposure. Any network class beyond local requires a separate explicit allow decision and authorization. No authentication bypass, credential misuse, exploitation, illegal datasets or evasion.
+Only synthetic test identifiers were added. Actual case data belongs under `%LOCALAPPDATA%/LumirOSINTLab/cases` or another reviewed disjoint root. Current storage is not encrypted. Any risky source class still requires a future explicit per-run approval record; no network collectors were added. Git history may retain an old revoked key: never reuse it and confirm rotation independently.
