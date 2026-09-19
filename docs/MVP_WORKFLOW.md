@@ -28,10 +28,14 @@ The normal run produces private JSON and HTML reports and stores evidence copies
 
 Reports distinguish technical metadata, possible candidates, unknowns, source-specific absence, and contradictions. They do not establish account ownership, merge identities, or produce AI verdicts.
 
+## WINDOWS DESKTOP
+
+Run `LUMIR_OSINT_LAB.cmd` or create the Desktop shortcut with `CREATE_DESKTOP_SHORTCUT.ps1`. The Tkinter adapter accepts any non-empty subset of phone, email, username, and domain, creates a private case automatically, and invokes the same application services and CaseRunner as the CLI. `PASSIVE_WEB` is off by default. The UI provides progress, a factual result summary, and validated actions to open the generated HTML report or private case folder.
+
 ## MVP boundary
 
-IMPLEMENTED: local private cases, deterministic planning/dry-run, guarded sequential execution, evidence/receipts, finding counts, contradiction inclusion, JSON/HTML reporting, hashes, audit verification, and a thin CLI.
+IMPLEMENTED: local private cases, deterministic planning/dry-run, guarded sequential execution, evidence/receipts, finding counts, contradiction inclusion, JSON/HTML reporting, hashes, audit verification, a thin CLI, and a thin Tkinter Windows adapter with launcher and shortcut creation script.
 
 PLANNED: review workflow, budgets/rate limits, redacted exports, encryption, and richer run history selection.
 
-NOT IMPLEMENTED: GUI, PDF, Tor, Holehe, PhoneInfoga, HIBP, paid APIs, browser automation, background workers, scheduler, distributed execution, AI verdicts, or automatic identity merging.
+NOT IMPLEMENTED: PDF, installer/updater, Tor, Holehe, PhoneInfoga, HIBP, paid APIs, browser automation, persistent background workers, scheduler, distributed execution, AI verdicts, or automatic identity merging.
