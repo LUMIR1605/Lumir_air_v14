@@ -16,8 +16,10 @@ Registration rejects duplicate names, missing metadata, unknown source classes, 
 - `PhoneMetadataCollector` v1 with `LOCAL`, `network_required: false`, and installed `phonenumbers` provenance;
 - `DomainDNSCollector` v1 with `PASSIVE_WEB`, `network_required: true`, and installed `dnspython` provenance;
 - `UsernameCollector` v1 with `PASSIVE_WEB`, `network_required: true`, installed `requests` provenance, and a hash of the exact provider configuration.
+- `EmailLocalMetadataCollector` v1 with `LOCAL`, `network_required: false`, stdlib IDNA provenance, and versioned incomplete provider-list metadata;
+- `EmailExposureCollector` v1 with `PASSIVE_WEB`, `network_required: true`, installed `requests` provenance, and a hash of the exact reviewed provider configuration.
 
-Both registrations include declared capabilities and implementation identifiers. The factory does not expose a global mutable registry or perform a DNS query.
+All registrations include declared capabilities and implementation identifiers. The factory does not expose a global mutable registry or perform a DNS or HTTP query. The local email collector cannot trigger the exposure collector; each must be executed and policy-evaluated independently.
 
 ## PLANNED
 
@@ -27,6 +29,6 @@ Both registrations include declared capabilities and implementation identifiers.
 
 ## NOT IMPLEMENTED
 
-- No authenticated/private-profile, browser-automation, commercial API, Tor, direct-target, identity-confirmation, ownership, reverse-lookup, or threat-intelligence collector is registered.
+- No authenticated/private-profile, password-reset, signup/login probing, browser-automation, commercial API, Tor, direct-target, identity-confirmation, ownership, reverse-lookup, or threat-intelligence collector is registered. Holehe is not registered.
 - Module and class identity is provenance metadata, not a cryptographic software attestation.
 - The in-process registry is not a sandbox against hostile imported Python code.
