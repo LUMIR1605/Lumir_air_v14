@@ -2,7 +2,7 @@
 
 `SEED → ORCHESTRATOR → AGENTS / COLLECTORS → NORMALIZER → RAW EVIDENCE → CORRELATION ENGINE → VERIFICATION ENGINE → CONFIDENCE ENGINE → EVIDENCE VAULT → REPORT ENGINE`
 
-This is a staged pipeline, not a claim that every stage is implemented. `osint_lab/` owns contracts plus local case, policy, evidence, graph and contradiction foundations. Production collectors are `PhoneMetadataCollector` v1 (`LOCAL`) and `DomainDNSCollector` v1 (`PASSIVE_WEB`). Existing `shield/` remains the functioning RC6 self-audit and no SHIELD module is automatically registered.
+This is a staged pipeline, not a claim that every stage is implemented. `osint_lab/` owns contracts plus local case, policy, evidence, graph and contradiction foundations. Production collectors are `PhoneMetadataCollector` v1 (`LOCAL`), `DomainDNSCollector` v1 (`PASSIVE_WEB`), and conservative `UsernameCollector` v1 (`PASSIVE_WEB`). Existing `shield/` remains the functioning RC6 self-audit and no SHIELD module is automatically registered.
 
 | Stage | Contract / responsibility |
 | --- | --- |
@@ -17,7 +17,7 @@ This is a staged pipeline, not a claim that every stage is implemented. `osint_l
 | Evidence vault | Local plaintext case directory outside repo with SHA-256 metadata and atomic publication; execution records and receipts are integrated. Encryption, access hardening, retention enforcement and deletion remain deferred. |
 | Report engine | Clearly separate observations, hypotheses, verified facts, unavailable sources and collection limitations. |
 
-Implemented collectors: `PhoneMetadataCollector` v1, a `LOCAL` numbering-plan metadata collector, and `DomainDNSCollector` v1, a current-record DNS collector whose queries leave the computer through the configured resolver. Planned roles remain `EmailAgent`, `UsernameAgent`, `WebArchiveAgent`, `DocumentAgent`, `ImageMetadataAgent`, `TorResearchAgent`, `CorrelationAgent`, `VerificationAgent`, and `ReportAgent`; they are not runnable collectors. Tor research and external crawlers are out of scope. SHIELD DNS, HIBP, GitHub and Holehe are not adapted or automatically registered.
+Implemented collectors: local phone numbering metadata, current-record DNS through the configured resolver, and provider-specific public username checks for GitHub/GitLab. Planned roles remain `EmailAgent`, `WebArchiveAgent`, `DocumentAgent`, `ImageMetadataAgent`, `TorResearchAgent`, `CorrelationAgent`, `VerificationAgent`, and `ReportAgent`; they are not runnable collectors. Tor research and broad external crawling are out of scope. SHIELD DNS, HIBP, GitHub and Holehe are not adapted or automatically registered.
 
 | Source class | Exposure |
 | --- | --- |
@@ -29,6 +29,6 @@ Implemented collectors: `PhoneMetadataCollector` v1, a `LOCAL` numbering-plan me
 
 Finding schema: `case_id`, `entity_type`, `value`, `relation`, `source_name`, `source_url`, `source_class`, `collection_method`, `collected_at` (timezone-aware), `raw_status`, `normalized_status`, `confidence` (0–1 or unknown), `evidence_ref`, `artifact_hash` (SHA-256 or unknown), `notes`. Normalized statuses: `CONFIRMED`, `PROBABLE`, `POSSIBLE`, `UNKNOWN`, `NOT_FOUND`, `FALSE_POSITIVE`. `CONFIRMED` requires a separate verification step with recorded evidence; a collector's `FOUND` cannot automatically grant it. `NOT_FOUND` means only that a defined source and query returned no match, not that the entity does not exist.
 
-Etap 6 adds controlled current-record DNS collection without changing the Etap 4 execution order or controls. PASSIVE_WEB must be explicitly allowed in the CaseManifest. DNS observations pass through the default registry, PolicyGate, audit hash chain, Evidence Vault, and ExecutionReceipt. No HTTP probing, historical/passive DNS, WHOIS/RDAP, reverse IP, ownership inference, signed approvals, encrypted storage, graph persistence, or AI verdict is implemented.
+Etap 7 adds controlled public username checks without changing the Etap 4 execution order or controls. PASSIVE_WEB must be explicitly allowed in the CaseManifest. Provider-specific signals, conservative ambiguity handling, audit privacy, Evidence Vault, and ExecutionReceipt are mandatory. A matching username is never identity confirmation. No authenticated scraping, social graph, CAPTCHA bypass, browser automation, Tor, ownership inference, graph persistence, or AI verdict is implemented.
 
 Use only for authorized OSINT, self-audit and lawful research. No bypassing access controls, credential misuse, exploitation, unauthorized logins, illegal breach databases or evasion. Keep case data in a private folder outside the repository, for example `%LOCALAPPDATA%/LumirOSINTLab/cases`; ignore accidental in-repo case paths as defense in depth. Reports, logs and raw artifacts must not be committed.
