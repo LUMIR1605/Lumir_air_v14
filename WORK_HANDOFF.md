@@ -1,34 +1,34 @@
 # LUMIR OSINT LAB — work handoff
 
 ## Current Status
-Foundation v2 is implemented on `feature/osint-lab-v1`: validated case manifests, fail-closed PolicyGate, local Evidence Vault, relation graph, and deterministic contradiction checks. SHIELD RC6 code was not changed.
+Foundation v3 is implemented on `feature/osint-lab-v1`: scoped RunAuthorization, mandatory PolicyGate enforcement in the Orchestrator, append-only local audit logging, single-use ExecutionContext, and Collector Contract v1. Only synthetic test collectors exist. SHIELD RC6 code was not changed.
 
 ## Last Verified Commit
-Implementation and tests through `4456cce`; full suite and RC6 smoke verified before this documentation update. Branch baseline `main`: `d881757`. Use `git log -1` for the latest documentation commit.
+Implementation and tests through `8f42ccb`; full suite verified before this documentation update. Branch baseline `main`: `d881757`. Use `git log -1` for the latest documentation commit.
 
 ## Environment
 Microsoft Windows `10.0.26200.9457`; Python `3.14.6` (`C:\Python314\python.exe`), pip `26.1.2`, pytest `8.4.2`. The repository uses minimum dependency bounds rather than a locked release environment.
 
 ## Tests
-Windows verification: baseline `15 passed`; after foundation v2, `python -m pytest -q` PASS (`40 passed`, 25 new cases). `python test_shield.py` reports `5/5` input-detection smoke checks and exits `0`. Tests cover manifest validation, policy decisions, risky-source defaults, real temporary vault writes, SHA-256, path isolation, Git ignore defenses, graph validation, no automatic identity merge, and simple contradictions.
+Windows verification: foundation v2 baseline `40 passed`; foundation v3 `python -m pytest -q` PASS (`61 passed`, 21 new cases). `python test_shield.py` PASS (`5/5`, exit `0`). New tests cover LOCAL/PASSIVE_WEB allow paths, missing and mismatched risky-source approvals, expiry, revocation, case/agent/source binding, DENY/SUCCESS/FAILED audit events, append behavior, secret-like metadata rejection, `CONFIRMED` prevention, and public bypass attempts.
 
 ## What Works
-RC6 identifies itself as engine `0.6.0` with report schema `3.0`; its existing smoke flow remains on the original code path. No path under `shield/` differs from `main`. OSINT LAB now validates authorization scope, denies risky classes by default, writes integrity-tagged evidence outside Git, preserves distinct graph nodes, and reports deterministic contradiction severity with evidence references.
+The Orchestrator is the public collector execution path. It evaluates CaseManifest and PolicyGate, requires a matching unexpired approval for risky classes, writes audit decisions, issues a one-use context, executes the collector, normalizes non-final candidates, and records completion or failure. Raw request values are represented in audit metadata by SHA-256 hashes. No path under `shield/` differs from `main`.
 
 ## Known Problems
-The vault is plaintext and has no key management, permission hardening, retention enforcement, secure deletion, or case loader. Graph state is in-memory only. PolicyGate has no per-run approval executor or collector integration. Contradiction rules compare explicit facts but do not establish truth. See [audit](docs/OSINT_LAB_AUDIT.md) for existing SHIELD risks. Existing tests do not verify the Windows GUI or installer.
+Approvals are in-memory objects without signatures, durable lookup, or trusted approver identity. JSONL is append-only through the API but not tamper-proof and has no hash chain or locking. Python contract controls are not a sandbox against hostile code importing private internals. Vault encryption, permission hardening, retention, graph persistence, production collectors, GUI and installer validation remain unimplemented.
 
 ## Architecture Decisions
-Package remains isolated from RC6. Manifest flags and class allowlists are separate from per-run approval: risky classes return `REQUIRE_EXPLICIT_APPROVAL`, never implicit allow. Vault roots must be disjoint from the repo. Encryption is an unimplemented protocol, not a claim. Matching identifiers remain separate nodes unless an evidence-backed relation is explicitly added. Contradiction checks are rules, not AI verdicts.
+Manifest permission and per-run approval are separate controls: authorization cannot override PolicyGate. LOCAL and allowed PASSIVE_WEB need no per-run record; THIRD_PARTY_API, TOR and DIRECT_TARGET require an exact approved record. Collector `run()` is inherited and context-guarded; subclasses implement protected `_run()`. Audit failure prevents context issuance. Synthetic collectors remain test-only.
 
 ## Current Task
-Foundation v2 is implemented and locally verified. Publish the logical commits to `feature/osint-lab-v1` without force push, then review remote CI and the branch diff before merge.
+Foundation v3 is implemented and locally verified. Run final pytest, RC6 smoke and diff checks, then publish `feature/osint-lab-v1` without force push.
 
 ## Next Task
-Design the auditable per-run approval record and orchestrator enforcement before integrating any collector. Separately review encryption/key management, Windows ACLs, retention, and graph persistence. A GUI/report walkthrough remains separate from automated RC6 checks.
+Review the execution-control foundation before adding any real collector. Next design work should cover durable/signed approvals, audit integrity and locking, collector registry/provenance, process isolation, and Evidence Vault integration. Do not start PhoneMetadataCollector until those boundaries are accepted.
 
 ## Files Changed
-Foundation v2 adds `osint_lab/case_manifest.py`, `policies/gate.py`, `evidence/vault.py`, `correlation/graph.py`, `verification/contradictions.py`, three test modules, and four focused documents. Existing package export files and this handoff are updated. No file under `shield/` is modified.
+Foundation v3 adds authorization, execution context, audit and orchestrator modules; replaces the legacy `collect()` contract with guarded Collector Contract v1; adds `tests/test_osint_orchestrator.py` and four focused documents; and updates architecture plus this handoff. No file under `shield/` is modified.
 
 ## Safety Notes
-Only synthetic test identifiers were added. Actual case data belongs under `%LOCALAPPDATA%/LumirOSINTLab/cases` or another reviewed disjoint root. Current storage is not encrypted. Any risky source class still requires a future explicit per-run approval record; no network collectors were added. Git history may retain an old revoked key: never reuse it and confirm rotation independently.
+Only synthetic references and collectors were added. No test collector performs network access. Audit logs belong outside Git under `%LOCALAPPDATA%/LumirOSINTLab/audit` or another reviewed disjoint root and are not immutable. Existing vault data remains plaintext. Git history may retain an old revoked key: never reuse it and confirm rotation independently.
