@@ -24,7 +24,7 @@ VAULT_SUBDIRECTORIES = (
     "reports",
     "graph",
 )
-ARTIFACT_SUBDIRECTORIES = frozenset({"artifacts", "screenshots", "raw"})
+ARTIFACT_SUBDIRECTORIES = frozenset({"artifacts", "screenshots", "raw", "reports"})
 
 
 class VaultEncryption(Protocol):
@@ -70,6 +70,8 @@ class EvidenceArtifact:
     media_type: str
     size: int
     collector_name: str
+    collector_version: str
+    execution_id: str
     source_class: SourceClass
     notes: str
 
@@ -77,7 +79,7 @@ class EvidenceArtifact:
         _require_text("evidence_id", self.evidence_id)
         validate_case_id(self.case_id)
         _validate_filename(self.filename)
-        for name in ("original_source", "media_type", "collector_name"):
+        for name in ("original_source", "media_type", "collector_name", "collector_version", "execution_id"):
             _require_text(name, getattr(self, name))
         _require_aware("collected_at", self.collected_at)
         if len(self.sha256) != 64 or any(character not in "0123456789abcdef" for character in self.sha256):
@@ -100,6 +102,8 @@ class EvidenceArtifact:
             "media_type": self.media_type,
             "size": self.size,
             "collector_name": self.collector_name,
+            "collector_version": self.collector_version,
+            "execution_id": self.execution_id,
             "source_class": self.source_class.value,
             "notes": self.notes,
         }
@@ -142,6 +146,8 @@ class EvidenceVault:
         collected_at: datetime,
         media_type: str,
         collector_name: str,
+        collector_version: str,
+        execution_id: str,
         source_class: SourceClass,
         notes: str = "",
         category: str = "artifacts",
@@ -166,6 +172,8 @@ class EvidenceVault:
             media_type=media_type,
             size=len(content),
             collector_name=collector_name,
+            collector_version=collector_version,
+            execution_id=execution_id,
             source_class=source_class,
             notes=notes,
         )

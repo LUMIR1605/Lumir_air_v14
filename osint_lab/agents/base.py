@@ -4,11 +4,14 @@ from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Mapping, final
+from typing import TYPE_CHECKING, Mapping, final
 
 from osint_lab.orchestrator.context import ExecutionContext
 from osint_lab.policies import SourceClass
 from osint_lab.schemas import FindingStatus
+
+if TYPE_CHECKING:
+    from osint_lab.orchestrator.receipt import ExecutionReceipt
 
 
 class ExecutionStatus(str, Enum):
@@ -74,6 +77,7 @@ class ExecutionResult:
     errors: tuple[str, ...]
     observations: tuple[RawObservation, ...]
     finding_candidates: tuple[FindingCandidate, ...] = ()
+    receipt: "ExecutionReceipt | None" = None
 
     def __post_init__(self) -> None:
         _require_text("execution_id", self.execution_id)

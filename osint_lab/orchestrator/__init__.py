@@ -1,1 +1,1 @@
-"""Future authorized orchestration boundary."""
+"""Authorized, audited collector orchestration boundary."""
