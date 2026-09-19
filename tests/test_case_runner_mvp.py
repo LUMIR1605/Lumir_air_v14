@@ -369,6 +369,31 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert hashlib.sha256(json_bytes).hexdigest() == reference.json_sha256
     assert hashlib.sha256(html_bytes).hexdigest() == reference.html_sha256
     report = json.loads(json_bytes)
+    assert report["schema_version"] == "1.1"
+    phone_execution = next(
+        item for item in report["executions"] if item["collector"] == "phone_metadata"
+    )
+    assert len(phone_execution["observations"]) == 1
+    phone_observation = phone_execution["observations"][0]
+    assert phone_observation["raw_status"] == "PHONE_METADATA"
+    phone_payload = phone_observation["payload"]
+    assert phone_payload["normalized_e164"] == "+48123456789"
+    assert phone_payload["international_format"] == "+48 12 345 67 89"
+    assert phone_payload["national_format"] == "12 345 67 89"
+    assert phone_payload["country_code"] == 48
+    assert phone_payload["region_code"] == "PL"
+    assert phone_payload["possible"] is True
+    assert phone_payload["valid"] is True
+    assert phone_payload["number_type"] == "FIXED_LINE"
+    assert phone_payload["carrier_name"] is None
+    assert phone_payload["geographic_description"]
+    assert phone_payload["timezones"] == ["Europe/Warsaw"]
+    serialized_phone_record = next(
+        item.to_dict()
+        for item in result.executions
+        if item.step.collector_name == "phone_metadata"
+    )
+    assert serialized_phone_record["observations"][0]["payload"] == phone_payload
     assert report["privacy_source_exposure"] == {
         "DIRECT_TARGET": 0,
         "LOCAL": 2,
@@ -381,9 +406,28 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert report["audit"]["verified"] is True
     assert b"Private case report" in html_bytes
     combined = (json_bytes + html_bytes).decode("utf-8").casefold()
+    html = html_bytes.decode("utf-8")
+    assert "Szczegóły techniczne numeru" in html
+    assert "Numer znormalizowany E.164" in html
+    assert "+48123456789" in html
+    assert "Czy numer możliwy</th><td>Tak" in html
+    assert "Czy numer poprawny</th><td>Tak" in html
+    assert "Typ numeru</th><td>FIXED_LINE" in html
+    assert "Operator / carrier metadata</th><td>Brak danych lokalnych" in html
+    assert "Europe/Warsaw" in html
+    assert (
+        "Dane planu numeracyjnego — nie potwierdzają aktualnego operatora, "
+        "właściciela ani lokalizacji osoby."
+    ) in html
     assert "ustalono właściciela" not in combined
     assert "to na pewno ta sama osoba" not in combined
     assert "not independently verified" in combined
+
+    receipt_json = json.dumps(
+        [receipt.to_dict() for receipt in result.receipts],
+        ensure_ascii=False,
+    )
+    assert "+48123456789" not in receipt_json
 
     for evidence_id in (reference.json_evidence_id, reference.html_evidence_id):
         evidence_directory = vault.root / manifest.case_id / "reports" / evidence_id
@@ -391,6 +435,43 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     audit_bytes = (app.audit_log.root / manifest.case_id / "audit.jsonl").read_bytes()
     for seed in manifest.seed_entities:
         assert seed.value.encode() not in audit_bytes
+
+
+def test_phone_report_shows_missing_local_carrier_and_geocoder_data(tmp_path):
+    app, *_ = build_test_application(tmp_path)
+    raw_phone = "123"
+    manifest = mixed_manifest(
+        case_id="case-phone-report-missing-001",
+        allow_passive=False,
+        seeds=(SeedEntity(entity_type="PHONE", value=raw_phone),),
+    )
+    app.case_store.create(manifest)
+    result = app.runner.run(manifest)
+
+    assert result.report_reference is not None
+    report = json.loads(Path(result.report_reference.json_path).read_text(encoding="utf-8"))
+    execution = report["executions"][0]
+    payload = execution["observations"][0]["payload"]
+    assert payload["normalized_e164"] == "+48123"
+    assert payload["possible"] is False
+    assert payload["valid"] is False
+    assert payload["number_type"] == "UNKNOWN"
+    assert payload["carrier_name"] is None
+    assert payload["geographic_description"] is None
+    assert payload["timezones"] == ["Etc/Unknown"]
+
+    html = Path(result.report_reference.html_path).read_text(encoding="utf-8")
+    assert "Operator / carrier metadata</th><td>Brak danych lokalnych" in html
+    assert "Opis geograficzny</th><td>Brak danych lokalnych" in html
+    assert "Czy numer możliwy</th><td>Nie" in html
+    assert "Czy numer poprawny</th><td>Nie" in html
+    assert "Typ numeru</th><td>UNKNOWN" in html
+    assert "Strefy czasowe</th><td>Etc/Unknown" in html
+
+    audit_bytes = (app.audit_log.root / manifest.case_id / "audit.jsonl").read_bytes()
+    assert raw_phone.encode() not in audit_bytes
+    receipt_bytes = json.dumps(result.receipts[0].to_dict(), ensure_ascii=False).encode("utf-8")
+    assert raw_phone.encode() not in receipt_bytes
 
 
 def test_cli_parser_exposes_required_commands():

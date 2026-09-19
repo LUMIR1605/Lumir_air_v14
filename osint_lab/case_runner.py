@@ -126,6 +126,16 @@ class CaseExecutionRecord:
                 if self.result is not None and self.result.receipt is not None
                 else None
             ),
+            "observations": [
+                {
+                    "raw_status": item.raw_status,
+                    "value_reference": item.value_reference,
+                    "evidence_ref": item.evidence_ref,
+                    "notes": item.notes,
+                    "payload": dict(item.payload),
+                }
+                for item in (self.result.observations if self.result is not None else ())
+            ],
             "findings": [
                 {
                     "candidate_type": item.raw_status,

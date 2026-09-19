@@ -17,7 +17,26 @@ from osint_lab.policies import SourceClass
 from osint_lab.verification.contradictions import ContradictionResult
 
 
-REPORT_ENGINE_VERSION = "1.0.0"
+REPORT_ENGINE_VERSION = "1.1.0"
+
+_PHONE_DETAIL_FIELDS = (
+    ("normalized_e164", "Numer znormalizowany E.164"),
+    ("international_format", "Format międzynarodowy"),
+    ("national_format", "Format krajowy"),
+    ("country_code", "Kod kraju"),
+    ("region_code", "Region"),
+    ("possible", "Czy numer możliwy"),
+    ("valid", "Czy numer poprawny"),
+    ("number_type", "Typ numeru"),
+    ("carrier_name", "Operator / carrier metadata"),
+    ("geographic_description", "Opis geograficzny"),
+    ("timezones", "Strefy czasowe"),
+)
+_NO_LOCAL_DATA = "Brak danych lokalnych"
+_PHONE_METADATA_NOTICE = (
+    "Dane planu numeracyjnego — nie potwierdzają aktualnego operatora, "
+    "właściciela ani lokalizacji osoby."
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -115,6 +134,16 @@ class ReportEngine:
                 "receipt": receipt,
                 "receipt_reference": receipt_reference,
                 "evidence_refs": evidence_refs,
+                "observations": [
+                    {
+                        "raw_status": observation.raw_status,
+                        "value_reference": observation.value_reference,
+                        "evidence_ref": observation.evidence_ref,
+                        "notes": observation.notes,
+                        "payload": dict(observation.payload),
+                    }
+                    for observation in (result.observations if result is not None else ())
+                ],
             })
             if result is None:
                 continue
@@ -132,7 +161,7 @@ class ReportEngine:
 
         generated_at = self._now()
         return {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "generated_at": generated_at.isoformat(),
             "case": {
                 "case_id": manifest.case_id,
@@ -321,6 +350,7 @@ class ReportEngine:
             f"<li>{escape(name)}: {count}</li>"
             for name, count in model["privacy_source_exposure"].items()
         )
+        phone_details = ReportEngine._render_phone_details(model["executions"])
         audit = model["audit"]
         return (
             "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
@@ -344,6 +374,7 @@ class ReportEngine:
             f"<th>Result</th><th>Evidence refs</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
             "<h2>Findings</h2><table><thead><tr><th>Candidate</th><th>Status</th>"
             f"<th>Source</th><th>Notes</th></tr></thead><tbody>{''.join(finding_rows)}</tbody></table>"
+            f"{phone_details}"
             f"<h2>Contradictions</h2><p>Severity: {escape(str(contradiction['severity']))}</p><ul>{reasons}</ul>"
             f"<h2>Privacy / source exposure</h2><ul>{exposure}</ul>"
             f"<h2>Limitations</h2><ul>{limitations}</ul>"
@@ -353,6 +384,42 @@ class ReportEngine:
             f"<p>{escape(str(model['interpretation_notice']))}</p>"
             "</body></html>"
         )
+
+    @staticmethod
+    def _render_phone_details(executions: Iterable[object]) -> str:
+        sections: list[str] = []
+        for execution in executions:
+            if not isinstance(execution, Mapping) or execution.get("collector") != "phone_metadata":
+                continue
+            payload: Mapping[str, object] = {}
+            observations = execution.get("observations")
+            if isinstance(observations, list) and observations and isinstance(observations[0], Mapping):
+                candidate = observations[0].get("payload")
+                if isinstance(candidate, Mapping):
+                    payload = candidate
+            detail_rows = "".join(
+                "<tr>"
+                f"<th>{escape(label)}</th>"
+                f"<td>{escape(ReportEngine._display_phone_value(payload.get(key)))}</td>"
+                "</tr>"
+                for key, label in _PHONE_DETAIL_FIELDS
+            )
+            sections.append(
+                "<section><h2>Szczegóły techniczne numeru</h2>"
+                f"<p><strong>{escape(_PHONE_METADATA_NOTICE)}</strong></p>"
+                f"<table><tbody>{detail_rows}</tbody></table></section>"
+            )
+        return "".join(sections)
+
+    @staticmethod
+    def _display_phone_value(value: object) -> str:
+        if value is None or value == "" or value == []:
+            return _NO_LOCAL_DATA
+        if isinstance(value, bool):
+            return "Tak" if value else "Nie"
+        if isinstance(value, list):
+            return ", ".join(str(item) for item in value) or _NO_LOCAL_DATA
+        return str(value)
 
     @staticmethod
     def _atomic_write(path: Path, content: bytes) -> None:
