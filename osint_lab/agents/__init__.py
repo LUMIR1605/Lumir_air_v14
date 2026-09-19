@@ -8,6 +8,8 @@ from .base import (
     RawObservation,
 )
 from .registry import CollectorMetadata, CollectorRegistry, implementation_identifier, metadata_for
+from .phone_metadata import PhoneMetadataCollector
+from .default_registry import build_default_registry
 
 __all__ = [
     "Agent",
@@ -21,4 +23,6 @@ __all__ = [
     "CollectorRegistry",
     "implementation_identifier",
     "metadata_for",
+    "PhoneMetadataCollector",
+    "build_default_registry",
 ]

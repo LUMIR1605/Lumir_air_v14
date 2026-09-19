@@ -268,6 +268,7 @@ class Orchestrator:
                     "value_reference": item.value_reference,
                     "evidence_ref": item.evidence_ref,
                     "notes": item.notes,
+                    "payload": dict(item.payload),
                 }
                 for item in observations
             ],

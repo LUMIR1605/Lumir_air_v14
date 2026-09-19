@@ -1,9 +1,11 @@
 """Collector contract whose public run path requires an orchestrator context."""
 
 from abc import ABC, ABCMeta, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+import json
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Mapping, final
 
 from osint_lab.orchestrator.context import ExecutionContext
@@ -37,6 +39,7 @@ class RawObservation:
     value_reference: str
     evidence_ref: str | None = None
     notes: str = ""
+    payload: Mapping[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         _require_text("raw_status", self.raw_status)
@@ -45,6 +48,15 @@ class RawObservation:
             _require_text("evidence_ref", self.evidence_ref)
         if not isinstance(self.notes, str):
             raise ValueError("notes must be a string")
+        if not isinstance(self.payload, Mapping):
+            raise ValueError("payload must be a mapping")
+        if any(not isinstance(key, str) or not key.strip() for key in self.payload):
+            raise ValueError("payload keys must be non-empty strings")
+        try:
+            copied = json.loads(json.dumps(dict(self.payload), ensure_ascii=False, allow_nan=False))
+        except (TypeError, ValueError) as error:
+            raise ValueError("payload must contain only JSON-safe values") from error
+        object.__setattr__(self, "payload", MappingProxyType(copied))
 
 
 @dataclass(frozen=True, kw_only=True)
