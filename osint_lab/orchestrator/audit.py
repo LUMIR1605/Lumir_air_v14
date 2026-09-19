@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,7 @@ class AuditEventType(str, Enum):
 
 
 _SENSITIVE_KEY_PARTS = ("password", "secret", "token", "api_key", "credential")
+GENESIS_HASH = "0" * 64
 
 
 def _require_text(name: str, value: str) -> None:
@@ -104,8 +106,35 @@ class AuditEntry:
         }
 
 
+@dataclass(frozen=True)
+class AuditAppendResult:
+    path: Path
+    entry_hash: str
+
+
+@dataclass(frozen=True)
+class AuditVerification:
+    valid: bool
+    entry_count: int
+    head_hash: str
+    reason: str
+
+
+def _canonical_bytes(record: Mapping[str, object]) -> bytes:
+    return json.dumps(
+        record,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _entry_hash(record: Mapping[str, object]) -> str:
+    return hashlib.sha256(_canonical_bytes(record)).hexdigest()
+
+
 class AuditLog:
-    """Append JSONL events outside Git; external tamper resistance is not claimed."""
+    """Append a tamper-evident JSONL hash chain outside Git."""
 
     def __init__(self, *, repo_root: Path, root: Path | None = None) -> None:
         self.repo_root = Path(repo_root).resolve()
@@ -113,12 +142,18 @@ class AuditLog:
         if _is_within(self.root, self.repo_root) or _is_within(self.repo_root, self.root):
             raise ValueError("audit log must be outside and disjoint from the repository")
 
-    def append(self, entry: AuditEntry) -> Path:
+    def append(self, entry: AuditEntry) -> AuditAppendResult:
         if not isinstance(entry, AuditEntry):
             raise ValueError("AuditEntry required")
         path = self._path_for(entry.case_id)
         path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(entry.to_dict(), ensure_ascii=False, sort_keys=True).encode("utf-8") + b"\n"
+        verification = self.verify(entry.case_id)
+        if not verification.valid:
+            raise OSError(f"audit hash chain verification failed: {verification.reason}")
+        record = entry.to_dict()
+        record["previous_hash"] = verification.head_hash
+        record["entry_hash"] = _entry_hash(record)
+        payload = _canonical_bytes(record) + b"\n"
         descriptor = os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
         try:
             written = os.write(descriptor, payload)
@@ -127,7 +162,7 @@ class AuditLog:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
-        return path
+        return AuditAppendResult(path=path, entry_hash=str(record["entry_hash"]))
 
     def read(self, case_id: str) -> tuple[dict[str, object], ...]:
         path = self._path_for(case_id)
@@ -140,9 +175,55 @@ class AuditLog:
                     entries.append(json.loads(line))
         return tuple(entries)
 
+    def verify(self, case_id: str) -> AuditVerification:
+        path = self._path_for(case_id)
+        if not path.exists():
+            return AuditVerification(True, 0, GENESIS_HASH, "audit log is empty")
+        previous_hash = GENESIS_HASH
+        entry_count = 0
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                for line_number, line in enumerate(handle, start=1):
+                    if not line.strip():
+                        continue
+                    record = json.loads(line)
+                    if not isinstance(record, dict):
+                        raise ValueError("entry is not a JSON object")
+                    stored_hash = record.pop("entry_hash", None)
+                    if record.get("previous_hash") != previous_hash:
+                        return AuditVerification(
+                            False,
+                            entry_count,
+                            previous_hash,
+                            f"previous_hash mismatch at line {line_number}",
+                        )
+                    if not isinstance(stored_hash, str) or stored_hash != _entry_hash(record):
+                        return AuditVerification(
+                            False,
+                            entry_count,
+                            previous_hash,
+                            f"entry_hash mismatch at line {line_number}",
+                        )
+                    previous_hash = stored_hash
+                    entry_count += 1
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
+            return AuditVerification(
+                False,
+                entry_count,
+                previous_hash,
+                f"invalid audit log at line {entry_count + 1}: {type(error).__name__}",
+            )
+        return AuditVerification(True, entry_count, previous_hash, "audit hash chain is valid")
+
     def _path_for(self, case_id: str) -> Path:
         validate_case_id(case_id)
         path = (self.root / case_id / "audit.jsonl").resolve()
         if not _is_within(path, self.root):
             raise ValueError("audit path escaped audit root")
         return path
+
+
+def verify_audit_log(audit_log: AuditLog, case_id: str) -> AuditVerification:
+    if not isinstance(audit_log, AuditLog):
+        raise ValueError("AuditLog required")
+    return audit_log.verify(case_id)
