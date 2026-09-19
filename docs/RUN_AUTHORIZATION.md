@@ -10,9 +10,10 @@ Every authorization has a finite `expires_at` later than its decision. Wildcard 
 
 For risky source classes, a matching approved record is necessary but not sufficient: the case manifest and PolicyGate must also permit the request.
 
+`AuthorizationStore` persists each decision as a separate atomic JSON history event outside Git. The Orchestrator performs case-specific lookup by authorization ID and revalidates the latest record after reload. Binding fields cannot be changed within an existing authorization history.
+
 ## PLANNED
 
-- Durable authorization storage and append-only decision history.
 - Signed approvals, trusted approver identities, revocation records, and renewal workflow.
 - Explicit binding to a reviewed input-scope hash and purpose taxonomy.
 - UI or CLI approval flow with least-privilege defaults.
@@ -21,4 +22,5 @@ For risky source classes, a matching approved record is necessary but not suffic
 
 - No global allow-all, standing approval, approval inheritance, or automatic renewal.
 - No signature verification, identity provider, role model, or external authorization service.
+- `AuthorizationSignatureProvider` is an interface only; signing and key management are NOT IMPLEMENTED.
 - No claim that free-text purpose or scope proves legal authorization.

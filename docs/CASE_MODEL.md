@@ -25,7 +25,7 @@ The default manifest allows only `LOCAL`. `THIRD_PARTY_API`, `TOR`, and `DIRECT_
 
 ## NOT IMPLEMENTED
 
-- No UI, API, database, collector registration, or automatic case execution.
+- No UI, API, database, persistent registry administration, or automatic case scheduling.
 - No proof that free-text authorization or legal-basis statements are legally sufficient.
 - No automatic consent verification or identity verification.
 - No secret storage in the manifest.

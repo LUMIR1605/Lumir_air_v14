@@ -10,14 +10,16 @@ Normalization returns `FindingCandidate`. Candidate construction rejects `Findin
 
 `SyntheticLocalCollector` and the synthetic policy collector exist only in `tests/test_osint_orchestrator.py`. They use synthetic references, report `network: false`, and make no network calls.
 
+`CollectorRegistry` binds each allowed name to exact metadata, capability declarations, provenance, and implementation identifier. The Orchestrator refuses unregistered, duplicate, mismatched, unknown-source, or substituted collectors before context issuance.
+
 ## PLANNED
 
-- Reviewed collector registration, package provenance, capability verification, and version compatibility rules.
+- Package hashes, signed provenance, and version compatibility rules.
 - Process isolation, resource limits, deterministic fixtures, and contract conformance tests for future collectors.
 - Evidence Vault integration and typed input-reference schemes.
 
 ## NOT IMPLEMENTED
 
-- No real local or network collector is registered.
+- No real local or network collector is registered; registrations exist only in tests.
 - No Sherlock, Holehe, PhoneInfoga, DNS, Tor, third-party API, or direct-target integration.
 - Python type and metaclass controls are not a sandbox against deliberately hostile code importing private internals.

@@ -14,17 +14,15 @@ Evaluation order:
 4. Allowed `LOCAL` and `PASSIVE_WEB` requests return `ALLOW`.
 5. `THIRD_PARTY_API`, `TOR`, and `DIRECT_TARGET` require their matching manifest boolean and return `REQUIRE_EXPLICIT_APPROVAL`.
 
-The risky-source result is intentionally not `ALLOW`: a manifest flag records scope, while a future per-run approval mechanism must record the actual approval. Defaults deny all three risky source classes. Unknown types, invalid manifest objects, paused/closed cases, forbidden classes, and unlisted agents fail closed.
+The risky-source result is intentionally not `ALLOW`: a manifest flag records scope, while the Orchestrator must load an exact durable per-run approval before execution. Defaults deny all three risky source classes. Unknown types, invalid manifest objects, paused/closed cases, forbidden classes, and unlisted agents fail closed.
 
 ## PLANNED
 
-- Orchestrator integration that calls the gate before every agent invocation.
-- A durable, scoped, expiring per-run approval record and audit log.
 - Rate, budget, stop-condition, and source-specific policy checks.
-- Tests proving that future collectors cannot bypass the gate.
+- Process isolation and controls beyond the public Python contract.
 
 ## NOT IMPLEMENTED
 
-- No collector invocation, approval prompt, approval token, network call, Tor access, or direct-target operation.
+- No approval prompt, network call, Tor access, or direct-target operation.
 - No bypass or automatic conversion of `REQUIRE_EXPLICIT_APPROVAL` to `ALLOW`.
 - No runtime integration with SHIELD RC6.
