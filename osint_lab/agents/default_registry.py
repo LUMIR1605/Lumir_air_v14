@@ -5,6 +5,7 @@ import phonenumbers
 import requests
 
 from .domain_dns import DomainDNSCollector
+from .email_exposure import EmailExposureCollector, EmailLocalMetadataCollector
 from .phone_metadata import PhoneMetadataCollector
 from .registry import CollectorRegistry, metadata_for
 from .username_lookup import UsernameCollector
@@ -18,6 +19,8 @@ def build_default_registry() -> CollectorRegistry:
         (PhoneMetadataCollector(), False, f"phonenumbers:{phonenumbers.__version__}"),
         (DomainDNSCollector(), True, f"dnspython:{dns.__version__}"),
         (UsernameCollector(), True, f"requests:{requests.__version__}"),
+        (EmailLocalMetadataCollector(), False, "python-stdlib:idna"),
+        (EmailExposureCollector(), True, f"requests:{requests.__version__}"),
     )
     for collector, network_required, provenance in collectors:
         registry.register(
