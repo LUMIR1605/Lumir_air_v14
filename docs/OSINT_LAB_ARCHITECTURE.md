@@ -2,7 +2,7 @@
 
 `SEED → ORCHESTRATOR → AGENTS / COLLECTORS → NORMALIZER → RAW EVIDENCE → CORRELATION ENGINE → VERIFICATION ENGINE → CONFIDENCE ENGINE → EVIDENCE VAULT → REPORT ENGINE`
 
-This is a planned pipeline, not a claim of implemented collection. `osint_lab/` owns contracts plus local case, policy, evidence, graph and contradiction foundations; it contains no runnable collector. Existing `shield/` remains the functioning RC6 self-audit; an adapter can be designed after evidence and consent policy review. No SHIELD module is automatically registered.
+This is a staged pipeline, not a claim that every stage is implemented. `osint_lab/` owns contracts plus local case, policy, evidence, graph and contradiction foundations. `PhoneMetadataCollector` v1 is the only production collector and performs local numbering-plan metadata analysis. Existing `shield/` remains the functioning RC6 self-audit and no SHIELD module is automatically registered.
 
 | Stage | Contract / responsibility |
 | --- | --- |
@@ -10,14 +10,14 @@ This is a planned pipeline, not a claim of implemented collection. `osint_lab/` 
 | Orchestrator | Enforces registry, manifest, PolicyGate, durable scoped approval when required, tamper-evident audit, single-use context, required vault publication, and execution receipt. Budgets and rate limits remain planned. |
 | Agents / collectors | Declare stable name, type, version, `source_class`, capabilities and network use; registry validation precedes guarded `run()`, which returns raw observations, never final identity or verification claims. |
 | Normalizer | Preserves raw status and source provenance; `FOUND` maps to `POSSIBLE` at most without separate review. |
-| Raw evidence | Capture original response, timestamps, provenance, collection method, content hash and errors. No fabricated evidence. |
+| Raw evidence | Capture original response, optional JSON-safe structured payload, timestamps, provenance, collection method, content hash and errors. No fabricated evidence. |
 | Correlation engine | Propose links with explicit alternatives; matching identifier alone never proves a person or account owner. |
 | Verification engine | Check independent evidence, contradictions and source freshness; record reviewer decisions. |
 | Confidence engine | Assign documented calibrated confidence to a specific claim; unknown is allowed. A numeric score is not a verification decision. |
 | Evidence vault | Local plaintext case directory outside repo with SHA-256 metadata and atomic publication; execution records and receipts are integrated. Encryption, access hardening, retention enforcement and deletion remain deferred. |
 | Report engine | Clearly separate observations, hypotheses, verified facts, unavailable sources and collection limitations. |
 
-Planned agents: `PhoneAgent`, `EmailAgent`, `UsernameAgent`, `DomainAgent`, `WebArchiveAgent`, `DocumentAgent`, `ImageMetadataAgent`, `TorResearchAgent`, `CorrelationAgent`, `VerificationAgent`, `ReportAgent`. These are architecture roles, not runnable collectors. Tor research and external crawlers are out of scope. SHIELD DNS, phone metadata, HIBP, GitHub and Holehe may be adapted later with their actual exposure classification and opt-in authorization.
+Implemented collector: `PhoneMetadataCollector` v1, a `LOCAL` numbering-plan metadata collector with no owner or identity lookup. Planned roles remain `EmailAgent`, `UsernameAgent`, `DomainAgent`, `WebArchiveAgent`, `DocumentAgent`, `ImageMetadataAgent`, `TorResearchAgent`, `CorrelationAgent`, `VerificationAgent`, and `ReportAgent`; they are not runnable collectors. Tor research and external crawlers are out of scope. SHIELD DNS, HIBP, GitHub and Holehe are not adapted or automatically registered.
 
 | Source class | Exposure |
 | --- | --- |
@@ -29,6 +29,6 @@ Planned agents: `PhoneAgent`, `EmailAgent`, `UsernameAgent`, `DomainAgent`, `Web
 
 Finding schema: `case_id`, `entity_type`, `value`, `relation`, `source_name`, `source_url`, `source_class`, `collection_method`, `collected_at` (timezone-aware), `raw_status`, `normalized_status`, `confidence` (0–1 or unknown), `evidence_ref`, `artifact_hash` (SHA-256 or unknown), `notes`. Normalized statuses: `CONFIRMED`, `PROBABLE`, `POSSIBLE`, `UNKNOWN`, `NOT_FOUND`, `FALSE_POSITIVE`. `CONFIRMED` requires a separate verification step with recorded evidence; a collector's `FOUND` cannot automatically grant it. `NOT_FOUND` means only that a defined source and query returned no match, not that the entity does not exist.
 
-Foundation v4 adds durable RunAuthorization history, a tamper-evident JSONL hash chain and verifier, mandatory CollectorRegistry, Evidence Vault execution publication, ExecutionReceipt, and fail-closed audit/vault behavior. Only synthetic test collectors exist. It does not implement production collection, signed approvals, key management, immutable logging, encrypted storage, graph persistence, automatic identity resolution or AI verdicts.
+Etap 5 adds the first production collector without changing the Etap 4 execution order or controls. `RawObservation.payload` is an optional additive JSON-safe field; legacy observations remain valid. Phone metadata executions pass through the default registry, PolicyGate, audit hash chain, Evidence Vault, and ExecutionReceipt. No network collection, owner lookup, identity resolution, signed approvals, encrypted storage, graph persistence, or AI verdict is implemented.
 
 Use only for authorized OSINT, self-audit and lawful research. No bypassing access controls, credential misuse, exploitation, unauthorized logins, illegal breach databases or evasion. Keep case data in a private folder outside the repository, for example `%LOCALAPPDATA%/LumirOSINTLab/cases`; ignore accidental in-repo case paths as defense in depth. Reports, logs and raw artifacts must not be committed.

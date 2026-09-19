@@ -11,6 +11,8 @@
 
 Registration rejects duplicate names, missing metadata, unknown source classes, empty versions, network-capability inconsistency, and any declaration mismatch. Execution revalidates current declarations and exact Python class identity. An unregistered collector or a replacement class using an existing name is denied before an execution context is issued.
 
+`build_default_registry()` creates a new registry for each caller and explicitly registers `PhoneMetadataCollector` v1 with `LOCAL`, `network_required: false`, declared capabilities, implementation identifier, and installed `phonenumbers` version provenance. It does not expose a global mutable registry.
+
 ## PLANNED
 
 - Package hashes, signed release manifests, compatibility policy, and reviewed enable/disable workflows.
@@ -19,6 +21,6 @@ Registration rejects duplicate names, missing metadata, unknown source classes, 
 
 ## NOT IMPLEMENTED
 
-- No production collector is registered.
+- No network, API, Tor, direct-target, identity, or reverse-lookup collector is registered.
 - Module and class identity is provenance metadata, not a cryptographic software attestation.
 - The in-process registry is not a sandbox against hostile imported Python code.
