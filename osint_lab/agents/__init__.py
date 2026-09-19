@@ -7,6 +7,7 @@ from .base import (
     Observation,
     RawObservation,
 )
+from .registry import CollectorMetadata, CollectorRegistry, implementation_identifier, metadata_for
 
 __all__ = [
     "Agent",
@@ -16,4 +17,8 @@ __all__ = [
     "FindingCandidate",
     "Observation",
     "RawObservation",
+    "CollectorMetadata",
+    "CollectorRegistry",
+    "implementation_identifier",
+    "metadata_for",
 ]
