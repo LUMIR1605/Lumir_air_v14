@@ -1,56 +1,16 @@
 """Thin command-line interface for the OSINT LAB MVP case workflow."""
 
 import argparse
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 from typing import Sequence
 
-from osint_lab.agents import build_default_registry
-from osint_lab.case_manifest import CaseManifest, CaseStatus, SeedEntity
-from osint_lab.case_runner import CaseExecutionPlan, CaseRunner, build_default_collectors
-from osint_lab.case_storage import CaseStore
-from osint_lab.evidence import EvidenceVault
-from osint_lab.orchestrator.audit import AuditLog, verify_audit_log
-from osint_lab.orchestrator.authorization_store import AuthorizationStore
-from osint_lab.orchestrator.service import Orchestrator
-from osint_lab.policies import SourceClass
-from osint_lab.reporting import ReportEngine
+from osint_lab.application import ApplicationServices, build_application, create_case_manifest
+from osint_lab.case_manifest import CaseManifest, SeedEntity
+from osint_lab.case_runner import CaseExecutionPlan
+from osint_lab.orchestrator.audit import verify_audit_log
 
 
-@dataclass(frozen=True)
-class CliApplication:
-    case_store: CaseStore
-    runner: CaseRunner
-    audit_log: AuditLog
-
-
-def build_application(*, repo_root: Path | None = None) -> CliApplication:
-    root = (Path(__file__).resolve().parents[1] if repo_root is None else Path(repo_root)).resolve()
-    clock = lambda: datetime.now(timezone.utc)
-    case_store = CaseStore(repo_root=root)
-    vault = EvidenceVault(repo_root=root, root=case_store.root)
-    audit = AuditLog(repo_root=root)
-    registry = build_default_registry()
-    orchestrator = Orchestrator(
-        audit_log=audit,
-        authorization_store=AuthorizationStore(repo_root=root),
-        collector_registry=registry,
-        evidence_vault=vault,
-        clock=clock,
-    )
-    reporter = ReportEngine(evidence_vault=vault, case_root=case_store.root, clock=clock)
-    runner = CaseRunner(
-        orchestrator=orchestrator,
-        registry=registry,
-        collectors=build_default_collectors(),
-        case_store=case_store,
-        report_engine=reporter,
-        audit_log=audit,
-        clock=clock,
-    )
-    return CliApplication(case_store=case_store, runner=runner, audit_log=audit)
+CliApplication = ApplicationServices
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -85,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None, *, application: CliApplication | None = None) -> int:
+def main(argv: Sequence[str] | None = None, *, application: ApplicationServices | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
     app = application or build_application()
@@ -141,30 +101,16 @@ def _parse_seed(value: str) -> SeedEntity:
 
 
 def _manifest_from_arguments(arguments, seeds: tuple[SeedEntity, ...]) -> CaseManifest:
-    allowed_sources = {SourceClass.LOCAL}
-    if arguments.allow_passive_web:
-        allowed_sources.add(SourceClass.PASSIVE_WEB)
-    allowed_agent_types = {seed.entity_type for seed in seeds if seed.entity_type in {"PHONE", "DOMAIN", "USERNAME", "EMAIL"}}
-    if any(seed.entity_type == "EMAIL" for seed in seeds):
-        allowed_agent_types.add("DOMAIN")
-    return CaseManifest(
+    return create_case_manifest(
         case_id=arguments.case_id,
         case_name=arguments.case_name,
-        created_at=datetime.now(timezone.utc),
         authorized_by=arguments.authorized_by,
         purpose=arguments.purpose,
-        legal_basis_or_consent_note=arguments.legal_note,
-        seed_entities=seeds,
-        allowed_source_classes=frozenset(allowed_sources),
-        forbidden_source_classes=frozenset({
-            SourceClass.THIRD_PARTY_API,
-            SourceClass.TOR,
-            SourceClass.DIRECT_TARGET,
-        }),
-        allowed_agent_types=frozenset(allowed_agent_types),
+        legal_note=arguments.legal_note,
+        seeds=seeds,
+        allow_passive_web=arguments.allow_passive_web,
         retention_days=arguments.retention_days,
         notes=arguments.notes,
-        status=CaseStatus.ACTIVE,
     )
 
 

@@ -401,7 +401,10 @@ class CaseRunner:
         include_email_domain_dns: bool = True,
         authorization_ids: Mapping[str, str] | None = None,
         contradiction_assertions: Iterable[ContradictionAssertion] = (),
+        progress_callback: Callable[[str], None] | None = None,
     ) -> CaseRunResult | CaseExecutionPlan:
+        if progress_callback is not None and not callable(progress_callback):
+            raise ValueError("progress_callback must be callable")
         plan = self.plan(
             manifest,
             seeds=seeds,
@@ -425,6 +428,7 @@ class CaseRunner:
 
         for step in steps:
             collector = self._collectors[step.collector_name]
+            self._notify(progress_callback, f"collector:{step.collector_name}")
             if stop_after_failure:
                 record = CaseExecutionRecord(
                     step=step,
@@ -502,6 +506,7 @@ class CaseRunner:
 
         report_reference: ReportReference | None = None
         try:
+            self._notify(progress_callback, "report")
             model = self._report_engine.build_model(
                 manifest=manifest,
                 run_id=run_id,
@@ -615,6 +620,15 @@ class CaseRunner:
     @staticmethod
     def _has_success(records: Iterable[CaseExecutionRecord]) -> bool:
         return any(record.result_status in {"SUCCESS", "PARTIAL"} for record in records)
+
+    @staticmethod
+    def _notify(callback: Callable[[str], None] | None, event: str) -> None:
+        if callback is None:
+            return
+        try:
+            callback(event)
+        except Exception:
+            return
 
     def _now(self) -> datetime:
         value = self._clock()
