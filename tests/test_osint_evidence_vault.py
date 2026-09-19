@@ -73,6 +73,8 @@ def test_store_bytes_writes_hash_metadata_and_payload_atomically(tmp_path):
         collected_at=collected_at,
         media_type="text/plain",
         collector_name="FixtureAgent",
+        collector_version="1.0",
+        execution_id="run-vault-001",
         source_class=SourceClass.LOCAL,
         notes="Synthetic only.",
     )
@@ -84,6 +86,8 @@ def test_store_bytes_writes_hash_metadata_and_payload_atomically(tmp_path):
     assert (evidence_directory / "fixture.txt").read_bytes() == content
     assert metadata["collected_at"] == collected_at.isoformat()
     assert metadata["source_class"] == "LOCAL"
+    assert metadata["collector_version"] == "1.0"
+    assert metadata["execution_id"] == "run-vault-001"
     assert not list(evidence_directory.parent.glob(".tmp-*"))
 
 
@@ -100,6 +104,8 @@ def test_vault_rejects_path_traversal_and_unknown_cases(tmp_path):
             collected_at=datetime.now(timezone.utc),
             media_type="text/plain",
             collector_name="FixtureAgent",
+            collector_version="1.0",
+            execution_id="run-vault-001",
             source_class=SourceClass.LOCAL,
         )
     with pytest.raises(FileNotFoundError):
@@ -111,6 +117,8 @@ def test_vault_rejects_path_traversal_and_unknown_cases(tmp_path):
             collected_at=datetime.now(timezone.utc),
             media_type="text/plain",
             collector_name="FixtureAgent",
+            collector_version="1.0",
+            execution_id="run-vault-001",
             source_class=SourceClass.LOCAL,
         )
 
