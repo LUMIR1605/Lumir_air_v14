@@ -1,6 +1,7 @@
 """Provider-independent parsers selected by reviewed provider metadata."""
 
 from dataclasses import dataclass
+import json
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
@@ -15,6 +16,7 @@ class ParsedPhonePublicResult:
     source_date: str | None
     html_fragment: str
     page_html: str
+    canonical_url: str | None = None
 
 
 def parse_phone_public_results(
@@ -28,6 +30,29 @@ def parse_phone_public_results(
     if parser_id == "body_exact_phone_v1":
         return _parse_body_result(body, final_url)
     raise ValueError("unknown phone public result parser")
+
+
+def parse_target_page(*, body: str, final_url: str) -> ParsedPhonePublicResult:
+    """Parse one fetched target page without treating search snippets as evidence."""
+
+    original = BeautifulSoup(body, "html.parser")
+    visible_soup = BeautifulSoup(body, "html.parser")
+    for item in visible_soup(["script", "style", "noscript", "template"]):
+        item.extract()
+    visible = visible_soup.get_text(" ", strip=True)
+    canonical_node = original.select_one('link[rel~="canonical" i][href]')
+    canonical_url = urljoin(final_url, str(canonical_node.get("href"))) if canonical_node else None
+    source_date = _source_date(original)
+    return ParsedPhonePublicResult(
+        result_url=final_url,
+        page_title=original.title.get_text(" ", strip=True) if original.title else None,
+        snippet=visible[:500],
+        visible_text=visible,
+        source_date=source_date,
+        html_fragment=body,
+        page_html=body,
+        canonical_url=canonical_url,
+    )
 
 
 def _parse_search_results(body: str, final_url: str) -> tuple[ParsedPhonePublicResult, ...]:
@@ -103,3 +128,44 @@ def _unwrap_result_url(value: str) -> str:
         if urlsplit(candidate).scheme in {"http", "https"}:
             return candidate
     return value
+
+
+def _source_date(soup: BeautifulSoup) -> str | None:
+    for selector in (
+        'meta[property="article:modified_time" i][content]',
+        'meta[property="article:published_time" i][content]',
+        'meta[name="dateModified" i][content]',
+        'meta[name="datePublished" i][content]',
+        "time[datetime]",
+    ):
+        node = soup.select_one(selector)
+        if node is not None:
+            value = str(node.get("content") or node.get("datetime") or "").strip()
+            if value:
+                return value
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:
+            payload = json.loads(script.string or "")
+        except (TypeError, json.JSONDecodeError):
+            continue
+        for key in ("dateModified", "datePublished"):
+            value = _find_json_value(payload, key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return None
+
+
+def _find_json_value(value: object, key: str) -> object | None:
+    if isinstance(value, dict):
+        for name, item in value.items():
+            if name == key:
+                return item
+            nested = _find_json_value(item, key)
+            if nested is not None:
+                return nested
+    elif isinstance(value, list):
+        for item in value:
+            nested = _find_json_value(item, key)
+            if nested is not None:
+                return nested
+    return None
