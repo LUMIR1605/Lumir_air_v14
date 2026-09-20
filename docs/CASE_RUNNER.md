@@ -8,13 +8,13 @@ The deterministic `CaseExecutionPlan` contains the case ID, creation time, reque
 
 MVP mapping:
 
-- `PHONE -> phone_metadata`
+- `PHONE -> phone_metadata -> phone_public_web`
 - `DOMAIN -> domain_dns`
 - `USERNAME -> username_lookup`
 - `EMAIL -> email_local_metadata -> email_exposure`
 - email domain -> `domain_dns` as a separate orchestration-level step dependent on local email validation
 
-The email DNS follow-up is separately registry-validated and PolicyGate-evaluated. It is denied when `PASSIVE_WEB` is not allowed and never runs inside an email collector.
+The phone public-web and email DNS follow-up steps are separately registry-validated and PolicyGate-evaluated. When `PASSIVE_WEB` is disabled, local phone metadata still runs while `phone_public_web` is recorded as `DENIED` without HTTP. The desktop's existing PASSIVE_WEB checkbox controls this manifest permission.
 
 Duplicate seeds are skipped deterministically. Unknown seed types, invalid inputs, and unavailable/unregistered collectors are explicit skipped steps with warnings. `dry_run=True` builds and optionally stores the plan without collector execution, audit events, network calls, evidence publication, or receipts.
 
@@ -30,4 +30,4 @@ Duplicate seeds are skipped deterministically. Unknown seed types, invalid input
 
 - Direct/private collector execution, background workers, scheduler, distributed execution, or automatic retries.
 - Automatic identity merge, ownership inference, AI verdicts, or conversion of collector output to `CONFIRMED` identity.
-- New collectors, Holehe, PhoneInfoga, HIBP, Tor, browser automation, or paid APIs.
+- Holehe, PhoneInfoga, HIBP, Tor, browser automation, private/paid APIs, or login/recovery probes.
