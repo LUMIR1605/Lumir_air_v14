@@ -11,13 +11,20 @@ from .registry import CollectorMetadata, CollectorRegistry, implementation_ident
 from .phone_metadata import PhoneMetadataCollector
 from .phone_public_models import DiscoveredEntity, DiscoveredEntityType
 from .phone_public_providers import PhonePublicProvider
-from .phone_public_semantics import PhoneMatchLevel, SemanticPhoneMatch, classify_phone_occurrence
+from .phone_public_semantics import (
+    PhoneMatchLevel,
+    SemanticPhoneMatch,
+    TargetPhoneValidator,
+    classify_phone_occurrence,
+)
 from .phone_public_web import PhonePublicWebCollector
 from .phone_variants import PhoneVariant, generate_phone_variants
 from .domain_dns import DomainDNSCollector
 from .email_exposure import EmailExposureCollector, EmailLocalMetadataCollector, EmailProvider
 from .username_lookup import UsernameCollector
 from .username_providers import UsernameProvider
+from .target_page_analysis import PageRole
+from .target_page_fetcher import FetchStatus, TargetPageFetchResult, TargetPageFetcher, canonicalize_url
 from .default_registry import build_default_registry
 
 __all__ = [
@@ -37,6 +44,7 @@ __all__ = [
     "PhonePublicProvider",
     "PhoneMatchLevel",
     "SemanticPhoneMatch",
+    "TargetPhoneValidator",
     "classify_phone_occurrence",
     "PhoneVariant",
     "generate_phone_variants",
@@ -48,5 +56,10 @@ __all__ = [
     "EmailProvider",
     "UsernameCollector",
     "UsernameProvider",
+    "PageRole",
+    "FetchStatus",
+    "TargetPageFetchResult",
+    "TargetPageFetcher",
+    "canonicalize_url",
     "build_default_registry",
 ]

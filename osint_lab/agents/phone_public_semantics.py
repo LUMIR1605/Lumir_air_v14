@@ -13,7 +13,9 @@ from .phone_variants import PhoneVariant
 
 
 class PhoneMatchLevel(str, Enum):
+    SEARCH_DISCOVERY_ONLY = "SEARCH_DISCOVERY_ONLY"
     NUMERIC_MATCH = "NUMERIC_MATCH"
+    NUMERIC_MATCH_ONLY = "NUMERIC_MATCH_ONLY"
     PHONE_CONTEXT_MATCH = "PHONE_CONTEXT_MATCH"
     STRUCTURED_PHONE_MATCH = "STRUCTURED_PHONE_MATCH"
     REJECTED_NUMERIC_ID = "REJECTED_NUMERIC_ID"
@@ -26,6 +28,13 @@ class SemanticPhoneMatch:
     matched_variant: PhoneVariant | None
     match_location: str | None
     reason: str
+    context_before: str | None = None
+    matched_text: str | None = None
+    context_after: str | None = None
+    signal_type: str | None = None
+    signal_path: str | None = None
+    normalized_phone: str | None = None
+    raw_visible_value: str | None = None
 
     @property
     def accepted(self) -> bool:
@@ -49,6 +58,21 @@ _REJECTED_URL_REASON = (
 )
 
 
+class TargetPhoneValidator:
+    """Validate that a fetched target uses the seed as a telephone reference."""
+
+    def validate(
+        self,
+        result: ParsedPhonePublicResult,
+        variants: tuple[PhoneVariant, ...],
+    ) -> SemanticPhoneMatch:
+        if not isinstance(result, ParsedPhonePublicResult):
+            raise ValueError("ParsedPhonePublicResult required")
+        if not variants or any(not isinstance(item, PhoneVariant) for item in variants):
+            raise ValueError("phone variants required")
+        return classify_phone_occurrence(result, variants)
+
+
 def classify_phone_occurrence(
     result: ParsedPhonePublicResult,
     variants: tuple[PhoneVariant, ...],
@@ -60,15 +84,15 @@ def classify_phone_occurrence(
     if structured is not None:
         return structured
 
-    first_numeric: tuple[PhoneVariant, str] | None = None
-    first_negative: tuple[PhoneVariant, str] | None = None
+    first_numeric: tuple[PhoneVariant, str, str, str, str] | None = None
+    first_negative: tuple[PhoneVariant, str, str, str, str] | None = None
     for location, text in (("snippet", result.snippet), ("body", result.visible_text)):
-        for matched, span in _numeric_occurrences(text, variants, accepted_digits):
+        for matched, span, raw_value in _numeric_occurrences(text, variants, accepted_digits):
             before = text[max(0, span[0] - 48):span[0]]
             after = text[span[1]:min(len(text), span[1] + 48)]
             context = f"{before} {after}"
             if _NEGATIVE_ID_CONTEXT.search(context):
-                first_negative = first_negative or (matched, location)
+                first_negative = first_negative or (matched, location, before, raw_value, after)
                 continue
             if _PHONE_CONTEXT.search(context):
                 return SemanticPhoneMatch(
@@ -76,8 +100,15 @@ def classify_phone_occurrence(
                     matched_variant=matched,
                     match_location=location,
                     reason="The normalized phone value appears in visible text with explicit telephone context.",
+                    context_before=before.strip(),
+                    matched_text=raw_value,
+                    context_after=after.strip(),
+                    signal_type="VISIBLE_PHONE_CONTEXT",
+                    signal_path=location,
+                    normalized_phone=matched.canonical_e164,
+                    raw_visible_value=raw_value,
                 )
-            first_numeric = first_numeric or (matched, location)
+            first_numeric = first_numeric or (matched, location, before, raw_value, after)
 
     url_match = _url_numeric_match(result.result_url, variants, accepted_digits)
     if url_match is not None:
@@ -86,22 +117,40 @@ def classify_phone_occurrence(
             matched_variant=url_match,
             match_location="url",
             reason=_REJECTED_URL_REASON,
+            signal_type="URL_NUMERIC_IDENTIFIER",
+            signal_path="url",
+            normalized_phone=url_match.canonical_e164,
+            raw_visible_value=url_match.variant,
         )
     if first_negative is not None:
-        matched, location = first_negative
+        matched, location, before, raw_value, after = first_negative
         return SemanticPhoneMatch(
             level=PhoneMatchLevel.REJECTED_NUMERIC_ID,
             matched_variant=matched,
             match_location=location,
             reason="Digits matched the phone seed in numeric identifier context, not telephone context.",
+            context_before=before.strip(),
+            matched_text=raw_value,
+            context_after=after.strip(),
+            signal_type="VISIBLE_NUMERIC_IDENTIFIER",
+            signal_path=location,
+            normalized_phone=matched.canonical_e164,
+            raw_visible_value=raw_value,
         )
     if first_numeric is not None:
-        matched, location = first_numeric
+        matched, location, before, raw_value, after = first_numeric
         return SemanticPhoneMatch(
-            level=PhoneMatchLevel.NUMERIC_MATCH,
+            level=PhoneMatchLevel.NUMERIC_MATCH_ONLY,
             matched_variant=matched,
             match_location=location,
             reason="The same digits are visible, but no telephone context or structured telephone field confirms their meaning.",
+            context_before=before.strip(),
+            matched_text=raw_value,
+            context_after=after.strip(),
+            signal_type="VISIBLE_NUMERIC_ONLY",
+            signal_path=location,
+            normalized_phone=matched.canonical_e164,
+            raw_visible_value=raw_value,
         )
     return SemanticPhoneMatch(
         level=PhoneMatchLevel.UNKNOWN,
@@ -121,14 +170,19 @@ def _structured_match(
         value = str(node.get("href", ""))[4:].split("?", 1)[0]
         matched = _variant_for_value(value, variants, accepted_digits)
         if matched is not None:
-            return _structured_result(matched, "structured:tel_href", "A tel: link contains the normalized phone value.")
-    for node in soup.select('[itemprop="telephone" i], [property="telephone" i]'):
+            return _structured_result(
+                matched, "TEL_LINK", "structured:tel_href", value,
+                "A tel: link contains the normalized phone value.",
+            )
+    for node in soup.select(
+        '[itemprop="telephone" i], [property="telephone" i], '
+        'meta[name="phone" i], meta[name="telephone" i]'
+    ):
         value = str(node.get("content") or node.get_text(" ", strip=True))
         matched = _variant_for_value(value, variants, accepted_digits)
         if matched is not None:
             return _structured_result(
-                matched,
-                "structured:schema_telephone",
+                matched, "SCHEMA_TELEPHONE", "structured:schema_telephone", value,
                 "A structured telephone property contains the normalized phone value.",
             )
     for script in soup.select('script[type="application/ld+json"]'):
@@ -140,14 +194,16 @@ def _structured_match(
             matched = _variant_for_value(value, variants, accepted_digits)
             if matched is not None:
                 return _structured_result(
-                    matched,
-                    "structured:json_ld_telephone",
+                    matched, "JSON_LD_TELEPHONE", "structured:json_ld_telephone", value,
                     "A JSON-LD telephone field contains the normalized phone value.",
                 )
     for value in _VCARD_TEL.findall(page_html):
         matched = _variant_for_value(value, variants, accepted_digits)
         if matched is not None:
-            return _structured_result(matched, "structured:vcard_tel", "A vCard TEL field contains the phone value.")
+            return _structured_result(
+                matched, "VCARD_TEL", "structured:vcard_tel", value,
+                "A vCard TEL field contains the phone value.",
+            )
     return None
 
 
@@ -163,17 +219,28 @@ def _telephone_values(value: object):
             yield from _telephone_values(item)
 
 
-def _structured_result(matched: PhoneVariant, location: str, reason: str) -> SemanticPhoneMatch:
+def _structured_result(
+    matched: PhoneVariant,
+    signal_type: str,
+    location: str,
+    raw_value: str,
+    reason: str,
+) -> SemanticPhoneMatch:
     return SemanticPhoneMatch(
         level=PhoneMatchLevel.STRUCTURED_PHONE_MATCH,
         matched_variant=matched,
         match_location=location,
         reason=reason,
+        matched_text=raw_value,
+        signal_type=signal_type,
+        signal_path=location,
+        normalized_phone=matched.canonical_e164,
+        raw_visible_value=raw_value,
     )
 
 
 def _accepted_digits(variants: tuple[PhoneVariant, ...]) -> set[str]:
-    return {re.sub(r"\D", "", item.variant) for item in variants}
+    return {_normalize_digits(item.variant) for item in variants}
 
 
 def _numeric_occurrences(
@@ -184,7 +251,7 @@ def _numeric_occurrences(
     for match in _PHONE_CANDIDATE.finditer(text):
         variant = _variant_for_value(match.group(0), variants, accepted_digits)
         if variant is not None:
-            yield variant, match.span()
+            yield variant, match.span(), match.group(0)
 
 
 def _url_numeric_match(
@@ -194,7 +261,7 @@ def _url_numeric_match(
 ) -> PhoneVariant | None:
     parsed = urlsplit(result_url)
     searchable = unquote(" ".join((parsed.path, parsed.query, parsed.fragment)))
-    return next((item for item, _ in _numeric_occurrences(searchable, variants, accepted_digits)), None)
+    return next((item for item, _, _ in _numeric_occurrences(searchable, variants, accepted_digits)), None)
 
 
 def _variant_for_value(
@@ -202,10 +269,15 @@ def _variant_for_value(
     variants: tuple[PhoneVariant, ...],
     accepted_digits: set[str],
 ) -> PhoneVariant | None:
-    digits = re.sub(r"\D", "", value)
+    digits = _normalize_digits(value)
     if digits not in accepted_digits:
         return None
     return min(
         variants,
-        key=lambda item: (re.sub(r"\D", "", item.variant) != digits, abs(len(item.variant) - len(value))),
+        key=lambda item: (_normalize_digits(item.variant) != digits, abs(len(item.variant) - len(value))),
     )
+
+
+def _normalize_digits(value: str) -> str:
+    digits = re.sub(r"\D", "", value)
+    return digits[2:] if digits.startswith("00") else digits
