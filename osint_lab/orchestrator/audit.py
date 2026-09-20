@@ -23,6 +23,7 @@ class AuditEventType(str, Enum):
     AGENT_STARTED = "AGENT_STARTED"
     AGENT_FINISHED = "AGENT_FINISHED"
     AGENT_FAILED = "AGENT_FAILED"
+    REVIEW_DECISION = "REVIEW_DECISION"
 
 
 _SENSITIVE_KEY_PARTS = ("password", "secret", "token", "api_key", "credential")
