@@ -6,9 +6,11 @@
 
 No automatic review runs in CaseRunner. Promotion is an explicit human action and is represented separately from collector, correlation, and hypothesis output.
 
+Etap 14 adds `ReviewerDecisionEvent` persistence in the case SQLite graph. Every change is a new row with evidence refs and optional previous-decision reference. Relations are materialized as CONFIRMED/REJECTED/POSSIBLE; hypotheses and identity candidates receive a separate VERIFIED/REJECTED/OPEN review effect. Original evidence and prior decisions remain. The hash-chained audit records only decision/target references and a target hash, never notes or raw identifiers.
+
 ## PLANNED
 
-- Durable append-only review storage, UI workflow, revocation/supersession, and reviewer authorization policy.
+- UI workflow, reviewer authorization policy and cryptographic signing/key management.
 
 ## NOT IMPLEMENTED
 

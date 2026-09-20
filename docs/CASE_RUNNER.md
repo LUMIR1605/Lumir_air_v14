@@ -20,10 +20,12 @@ Duplicate seeds are skipped deterministically. Unknown seed types, invalid input
 
 `CaseRunResult` aggregates execution records, receipts, finding counts for every existing `FindingStatus`, contradiction results, warnings, audit verification, and the report reference. `PARTIAL` is used when successful work is mixed with denied/failed/unknown results. Infrastructure exceptions stop later execution and cannot produce `SUCCESS`.
 
+In production composition, eligible collector steps use the EnrichmentBus adapter, which delegates to Orchestrator after PolicyGate/budget/fingerprint checks. After collection, CaseRunner projects accepted intelligence into the private graph, generates paths, review challenges, identity candidates, dossier, JSON/GraphML/viewer exports and report schema 1.5. A graph failure degrades the case; it cannot be hidden as full success.
+
 ## PLANNED
 
 - Interactive approval UX for source classes that require durable per-run authorization.
-- Explicit configurable budgets, rate limits, cancellation, and resume semantics.
+- Cancellation and resume semantics; Etap 14 graph/pivot budgets are finite local defaults.
 - Reviewed plan signing/versioning and a stable machine-readable compatibility policy.
 
 ## NOT IMPLEMENTED

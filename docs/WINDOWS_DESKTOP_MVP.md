@@ -16,6 +16,8 @@ Case seeds and report content stay in the private case/evidence directory outsid
 
 Report and case-folder actions validate that the selected path is inside the expected case directory before passing it to Windows. A backend failure produces a short Polish message and does not bypass the policy, registry, audit, evidence, or receipt controls.
 
+Etap 14 adds `OTWÓRZ GRAF`. It opens only the generated `graph/graph_viewer.html` below the selected private case directory. The viewer is dependency-free and offline; clicking a node or edge shows its type, confidence, status and evidence references.
+
 ## Delivery boundary
 
 IMPLEMENTED: Tkinter form, optional inputs, default-off PASSIVE_WEB control, automatic private case creation, progress states, guarded execution, JSON/HTML report generation, summary, validated report/folder opening, repository-relative launcher, and Desktop shortcut script.

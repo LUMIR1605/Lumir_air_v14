@@ -2,13 +2,15 @@
 
 ## IMPLEMENTED
 
-`ReportEngine` creates private JSON and HTML reports from one `CaseRunResult` model. Reports include case metadata, executive summary, private seed values, executions, raw observations with JSON-safe payloads, receipts, evidence references, finding candidates, deterministic contradiction results, privacy/source exposure counts, known collector limitations, and audit verification/head hash. Report schema `1.4` preserves prior fields and expands Phone Public Intelligence.
+`ReportEngine` creates private JSON and HTML reports from one `CaseRunResult` model. Reports include case metadata, executive summary, private seed values, executions, raw observations with JSON-safe payloads, receipts, evidence references, finding candidates, deterministic contradiction results, privacy/source exposure counts, known collector limitations, and audit verification/head hash. Report schema `1.5` preserves prior fields and adds graph intelligence/dossier.
 
 The analytical section separately renders known technical facts, probable correlations, open hypotheses, contradictory evidence, evidence quality, alternative explanations, adversarial verification, recommended pivots, and unresolved questions. Labels distinguish `FACT`, `CORRELATION`, `HYPOTHESIS`, and `VERIFICATION`. HTML escapes all analytical text. Empty sections remain visible as `None` rather than being silently omitted.
 
 For `phone_metadata`, HTML renders the numbering-plan payload as explicit technical fields. Missing carrier or geographic values are shown as `Brak danych lokalnych`; JSON preserves the original `null`. The section states that numbering-plan data do not confirm the current operator, owner, or a person's location. Receipt and audit serialization remain unchanged and do not receive the raw phone number.
 
 For `phone_public_web`, JSON/HTML render `SEARCH DISCOVERY`, `TARGET PAGES VERIFIED`, `TARGET PAGES REJECTED`, `PHONE SIGNALS`, discovered entities, target-based source independence, evidence quality, correlations, hypotheses, alternatives and recommended pivots. Accepted targets show URL/domain, page role, match/signal, bounded context, quality, source date and evidence reference. `FALSE POSITIVES REJECTED` preserves numeric-ID rejection reasons without presenting them as phone occurrences.
+
+Graph-enabled reports add an Analyst View with key entities/relations, important paths, open hypotheses, contradictions, timeline and next pivots. JSON embeds versioned graph/dossier data and export references; raw Evidence Vault bodies are not copied into GraphML or the graph viewer.
 
 Report wording is intentionally conservative: technical metadata, public signal, possible profile candidate, not independently verified, and unable to determine. Collector candidates are never described as proven ownership or the same person.
 

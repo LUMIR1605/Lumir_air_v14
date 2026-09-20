@@ -6,10 +6,12 @@
 
 The engine rejects unreviewed direct owner/person assertions. It never assigns `VERIFIED`; only a matching reviewer decision can do that.
 
+Graph-enabled runs attach supporting `CorrelationPath` IDs to hypotheses and expose `PATH_SUPPORTED` or `NO_GRAPH_PATH` without promoting status. The dossier preserves alternatives, contradictions and unresolved questions beside those paths.
+
 ## PLANNED
 
 - More temporal-consistency rules and explicit evidence-unknown generation.
-- Persisted hypothesis lifecycle and reviewer history.
+- Full persisted hypothesis event lifecycle and analyst editing UI.
 
 ## NOT IMPLEMENTED
 

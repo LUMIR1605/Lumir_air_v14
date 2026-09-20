@@ -8,9 +8,11 @@ Phone public correlations accept only target-page semantic evidence. Neutral rel
 
 Automatic output is limited to `UNKNOWN`, `POSSIBLE`, `PROBABLE`, or `REJECTED`. `CONFIRMED` requires a matching `ReviewerDecision`.
 
+Etap 14 persists correlation edges and builds `CorrelationPath` explanations across the graph. Path confidence is a weakest-link heuristic with evidence count, unique independence groups, contradiction and circular-provenance penalties; it is not a probability and never creates identity confirmation.
+
 ## PLANNED
 
-- Additional conservative technical relation rules and persisted correlation graph integration.
+- Additional conservative technical relation rules and threshold calibration against synthetic benchmarks.
 - Reviewer-approved relation vocabulary and threshold calibration.
 
 ## NOT IMPLEMENTED
