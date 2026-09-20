@@ -121,6 +121,7 @@ class EvidenceItem:
     parent_source_ref: str | None = None
     claim_key: str | None = None
     claim_value: str | None = None
+    match_level: str | None = None
 
     def __post_init__(self) -> None:
         for name in ("evidence_id", "source_name", "source_class", "independence_group"):
@@ -135,6 +136,8 @@ class EvidenceItem:
             _score("quality_score", self.quality_score)
             if not self.quality_reasons:
                 raise ValueError("assessed evidence must explain its quality score")
+        if self.match_level is not None:
+            _text("match_level", self.match_level)
         _strings("quality_reasons", self.quality_reasons)
 
     @property
@@ -155,6 +158,7 @@ class EvidenceItem:
             "contradiction_count": self.contradiction_count,
             "quality_score": self.quality_score,
             "quality_reasons": list(self.quality_reasons),
+            "match_level": self.match_level,
         }
 
 

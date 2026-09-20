@@ -74,20 +74,26 @@ class IntelligenceCore:
                     json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
                 ).hexdigest()
                 evidence_id = observation.evidence_ref or f"{result.execution_id}:observation:{index}"
-                canonical_url = self._first_text(payload, "profile_url", "endpoint_url", "url")
-                domain = self._domain(canonical_url) or self._first_text(payload, "domain", "region_code")
+                canonical_url = self._first_text(payload, "profile_url", "endpoint_url", "url", "result_url")
+                domain = self._domain(canonical_url) or self._first_text(
+                    payload, "domain", "source_domain", "region_code"
+                )
                 content_hash = self._first_text(payload, "body_sha256", "content_hash")
                 parent_ref = self._first_text(payload, "parent_source_ref", "source_reference")
-                exact_public_fact = payload.get("exact_match") is True
+                match_level = self._first_text(payload, "match_level")
+                semantic_public_fact = (
+                    payload.get("exact_match") is True
+                    and match_level in {"PHONE_CONTEXT_MATCH", "STRUCTURED_PHONE_MATCH"}
+                )
                 raw_evidence.append(EvidenceItem(
                     evidence_id=evidence_id,
                     source_name=step.collector_name,
                     source_class=step.source_class.value,
                     collected_at=self._evidence_time(payload, result.finished_at),
-                    reproducible=step.source_class is SourceClass.LOCAL or exact_public_fact,
+                    reproducible=step.source_class is SourceClass.LOCAL or semantic_public_fact,
                     directness=(
                         Directness.DIRECT
-                        if step.source_class is SourceClass.LOCAL or exact_public_fact
+                        if step.source_class is SourceClass.LOCAL or semantic_public_fact
                         else Directness.INDIRECT
                     ),
                     canonical_url=canonical_url,
@@ -97,6 +103,7 @@ class IntelligenceCore:
                     parent_source_ref=parent_ref,
                     claim_key=f"{step.collector_name}:{step.seed_reference}:{observation.raw_status}",
                     claim_value=observation.raw_status,
+                    match_level=match_level,
                 ))
                 known_facts.append(KnownFact(
                     statement=(f"Collector {step.collector_name} recorded technical status "
@@ -111,7 +118,11 @@ class IntelligenceCore:
                         "public_profile_candidate",
                         "exact_username",
                     ))
-                if step.collector_name == "phone_public_web" and observation.raw_status == "MATCH" and exact_public_fact:
+                if (
+                    step.collector_name == "phone_public_web"
+                    and observation.raw_status == "MATCH"
+                    and semantic_public_fact
+                ):
                     self._collect_phone_public_links(
                         payload=payload,
                         evidence_id=evidence_id,

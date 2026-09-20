@@ -18,7 +18,7 @@ from osint_lab.policies import SourceClass
 from osint_lab.verification.contradictions import ContradictionResult
 
 
-REPORT_ENGINE_VERSION = "1.3.0"
+REPORT_ENGINE_VERSION = "1.3.1"
 
 _PHONE_DETAIL_FIELDS = (
     ("normalized_e164", "Numer znormalizowany E.164"),
@@ -451,11 +451,18 @@ class ReportEngine:
                 observations.extend(item for item in values if isinstance(item, Mapping))
         providers: set[str] = set()
         status_counts = {name: 0 for name in ("MATCH", "NO_MATCH", "UNKNOWN", "ERROR")}
+        match_level_counts = {
+            name: 0 for name in (
+                "NUMERIC_MATCH", "PHONE_CONTEXT_MATCH", "STRUCTURED_PHONE_MATCH",
+                "REJECTED_NUMERIC_ID", "UNKNOWN",
+            )
+        }
         urls: set[str] = set()
         domains: set[str] = set()
         variants: set[str] = set()
         entities: list[object] = []
         evidence_refs: set[str] = set()
+        false_positives: list[dict[str, object]] = []
         for observation in observations:
             payload = observation.get("payload")
             if not isinstance(payload, Mapping):
@@ -466,16 +473,35 @@ class ReportEngine:
             status = payload.get("status")
             if isinstance(status, str) and status in status_counts:
                 status_counts[status] += 1
-            for key, target in (("result_url", urls), ("source_domain", domains), ("matched_variant", variants)):
-                value = payload.get(key)
-                if isinstance(value, str) and value:
-                    target.add(value)
-            discovered = payload.get("discovered_entities")
-            if isinstance(discovered, list):
-                entities.extend(item for item in discovered if isinstance(item, Mapping))
+            match_level = payload.get("match_level")
+            if isinstance(match_level, str) and match_level in match_level_counts:
+                match_level_counts[match_level] += 1
+            accepted_semantic_match = (
+                status == "MATCH"
+                and match_level in {"PHONE_CONTEXT_MATCH", "STRUCTURED_PHONE_MATCH"}
+            )
+            if accepted_semantic_match:
+                for key, target in (
+                    ("result_url", urls), ("source_domain", domains), ("matched_variant", variants),
+                ):
+                    value = payload.get(key)
+                    if isinstance(value, str) and value:
+                        target.add(value)
+                discovered = payload.get("discovered_entities")
+                if isinstance(discovered, list):
+                    entities.extend(item for item in discovered if isinstance(item, Mapping))
             evidence_ref = observation.get("evidence_ref")
             if isinstance(evidence_ref, str) and evidence_ref:
                 evidence_refs.add(evidence_ref)
+            if match_level == "REJECTED_NUMERIC_ID":
+                false_positives.append({
+                    "result_url": payload.get("result_url"),
+                    "source_domain": payload.get("source_domain"),
+                    "matched_variant": payload.get("matched_variant"),
+                    "match_location": payload.get("match_location"),
+                    "reason": payload.get("semantic_reason") or payload.get("error_reason"),
+                    "evidence_ref": evidence_ref,
+                })
 
         quality_values = assessment.get("evidence_quality")
         quality = [
@@ -529,6 +555,7 @@ class ReportEngine:
             "provider_count": len(providers),
             "providers": sorted(providers),
             "status_counts": status_counts,
+            "match_level_counts": match_level_counts,
             "public_urls": sorted(urls),
             "source_domains": sorted(domains),
             "matched_variants": sorted(variants),
@@ -542,6 +569,7 @@ class ReportEngine:
             "hypotheses": hypotheses,
             "alternative_explanations": alternatives,
             "recommended_pivots": pivots,
+            "false_positives_rejected": false_positives,
             "exposure_notice": (
                 "PASSIVE_WEB providers received searched phone variants. Public occurrence. Possible association. "
                 "Not independently verified subscriber identity or ownership."
@@ -594,6 +622,13 @@ class ReportEngine:
             lambda item: f"{item.get('status', '')}: {item.get('proposed_collector', '')}"
             if isinstance(item, Mapping) else str(item),
         )
+        false_positives = items(
+            data.get("false_positives_rejected"),
+            lambda item: (
+                f"{item.get('result_url') or item.get('source_domain') or 'Public result'} — "
+                f"{item.get('reason', 'Numeric identifier rejected.')}"
+            ) if isinstance(item, Mapping) else str(item),
+        )
         return (
             "<section><h2>PHONE PUBLIC INTELLIGENCE</h2>"
             f"<p>{escape(str(data.get('exposure_notice', '')))}</p>"
@@ -608,7 +643,8 @@ class ReportEngine:
             f"<h3>Correlations</h3><ul>{correlations}</ul>"
             f"<h3>Hypotheses</h3><ul>{hypotheses}</ul>"
             f"<h3>Alternative explanations</h3><ul>{items(data.get('alternative_explanations'))}</ul>"
-            f"<h3>Recommended pivots</h3><ul>{pivots}</ul></section>"
+            f"<h3>Recommended pivots</h3><ul>{pivots}</ul>"
+            f"<h3>FALSE POSITIVES REJECTED</h3><ul>{false_positives}</ul></section>"
         )
 
     @staticmethod

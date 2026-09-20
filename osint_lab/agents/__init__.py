@@ -11,6 +11,7 @@ from .registry import CollectorMetadata, CollectorRegistry, implementation_ident
 from .phone_metadata import PhoneMetadataCollector
 from .phone_public_models import DiscoveredEntity, DiscoveredEntityType
 from .phone_public_providers import PhonePublicProvider
+from .phone_public_semantics import PhoneMatchLevel, SemanticPhoneMatch, classify_phone_occurrence
 from .phone_public_web import PhonePublicWebCollector
 from .phone_variants import PhoneVariant, generate_phone_variants
 from .domain_dns import DomainDNSCollector
@@ -34,6 +35,9 @@ __all__ = [
     "PhoneMetadataCollector",
     "PhonePublicWebCollector",
     "PhonePublicProvider",
+    "PhoneMatchLevel",
+    "SemanticPhoneMatch",
+    "classify_phone_occurrence",
     "PhoneVariant",
     "generate_phone_variants",
     "DiscoveredEntity",

@@ -123,6 +123,17 @@ class EvidenceQualityEngine:
             if contradiction_count:
                 score -= min(0.3, contradiction_count * 0.15)
                 reasons.append(f"{contradiction_count} contradictory claim value(s)")
+            quality_ceiling = {
+                "REJECTED_NUMERIC_ID": 0.1,
+                "NUMERIC_MATCH": 0.25,
+                "PHONE_CONTEXT_MATCH": 0.75,
+                "STRUCTURED_PHONE_MATCH": 0.9,
+            }.get(item.match_level or "")
+            if quality_ceiling is not None:
+                score = min(score, quality_ceiling)
+                reasons.append(
+                    f"semantic match level {item.match_level} caps quality at {quality_ceiling:.2f}"
+                )
             assessed.append(replace(
                 item,
                 freshness=freshness,

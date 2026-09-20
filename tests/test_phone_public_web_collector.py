@@ -83,7 +83,7 @@ def matched_html(*, phone="+48 12 345 67 89", result_url="https://company.test/c
     <html><body>
       <article class="result" data-result="1">
         <a class="result__a" href="{result_url}">Fixture Company contact</a>
-        <p class="result__snippet">Public occurrence {phone}; contact Fixture.User@example.test; @fixture_handle</p>
+        <p class="result__snippet">Kontakt: {phone}; contact Fixture.User@example.test; @fixture_handle</p>
         <time datetime="2025-09-20T00:00:00+00:00"></time>
         <script type="application/ld+json">
           {{"@type":"Organization","name":"Fixture Company","address":{{"addressLocality":"Fixture City"}}}}
@@ -163,6 +163,7 @@ def test_exact_snippet_match_is_accepted_and_duplicates_are_removed(tmp_path):
     assert len(result.observations) == 1
     payload = result.observations[0].payload
     assert payload["status"] == "MATCH"
+    assert payload["match_level"] == "PHONE_CONTEXT_MATCH"
     assert payload["exact_match"] is True
     assert payload["matched_variant"] == "+48 12 345 67 89"
     assert payload["match_location"] == "snippet"
@@ -191,6 +192,87 @@ def test_fuzzy_or_non_exact_result_is_unknown(tmp_path):
     assert payload["status"] == "UNKNOWN"
     assert payload["exact_match"] is False
     assert payload["error_code"] == "NON_EXACT_CANDIDATE"
+
+
+@pytest.mark.parametrize(
+    ("result_url", "visible_text"),
+    [
+        pytest.param(
+            "https://stock-images.test/image-photo/man-chainsaw-cutting-tree-123456789",
+            "Stock photo result",
+            id="shutterstock-style-image-id",
+        ),
+        ("https://shop.test/item/widget", "Product ID: 123456789"),
+        ("https://news.test/story", "Article ID: 123456789"),
+        ("https://example.test/resources/123456789", "Unrelated public result"),
+    ],
+)
+def test_numeric_resource_identifiers_are_rejected(tmp_path, result_url, visible_text):
+    html = (
+        '<html><body><article class="result"><a class="result__a" '
+        f'href="{result_url}">Fixture result</a><p>{visible_text}</p></article></body></html>'
+    )
+    collector = PhonePublicWebCollector(
+        providers=(provider(),), http_client=FakeHttpClient(response(200, html)), clock=lambda: NOW,
+    )
+    orchestrator, _, _, _ = setup_orchestrator(tmp_path, collector)
+    result = execute(orchestrator, collector)
+    payload = result.observations[0].payload
+    assert payload["status"] == "UNKNOWN"
+    assert payload["match_level"] == "REJECTED_NUMERIC_ID"
+    assert payload["semantic_match"] is False
+    assert payload["error_code"] == "REJECTED_NUMERIC_ID"
+    assert result.finding_candidates[0].normalized_status is FindingStatus.UNKNOWN
+
+
+def test_generic_visible_numeric_token_is_not_a_phone_match(tmp_path):
+    html = ('<html><body><article class="result"><a href="https://example.test/value">Value</a>'
+            '<p>Reference 123456789 appears in unrelated text.</p></article></body></html>')
+    collector = PhonePublicWebCollector(
+        providers=(provider(),), http_client=FakeHttpClient(response(200, html)), clock=lambda: NOW,
+    )
+    orchestrator, _, _, _ = setup_orchestrator(tmp_path, collector)
+    payload = execute(orchestrator, collector).observations[0].payload
+    assert payload["status"] == "UNKNOWN"
+    assert payload["match_level"] == "NUMERIC_MATCH"
+    assert payload["numeric_exact_match"] is True
+    assert payload["exact_match"] is False
+
+
+@pytest.mark.parametrize("label", ("Telefon", "Kontakt"))
+def test_visible_phone_context_accepts_normalized_number(tmp_path, label):
+    html = ('<html><body><article class="result"><a href="https://company.test/contact">Contact</a>'
+            f'<p>{label}: 123 456 789</p></article></body></html>')
+    collector = PhonePublicWebCollector(
+        providers=(provider(),), http_client=FakeHttpClient(response(200, html)), clock=lambda: NOW,
+    )
+    orchestrator, _, _, _ = setup_orchestrator(tmp_path, collector)
+    payload = execute(orchestrator, collector).observations[0].payload
+    assert payload["status"] == "MATCH"
+    assert payload["match_level"] == "PHONE_CONTEXT_MATCH"
+    assert payload["semantic_match"] is True
+
+
+@pytest.mark.parametrize(
+    ("structured_html", "expected_location"),
+    [
+        ('<a href="tel:+48123456789">Call</a>', "structured:tel_href"),
+        ('<script type="application/ld+json">'
+         '{"@type":"Organization","telephone":"+48123456789"}</script>',
+         "structured:json_ld_telephone"),
+    ],
+)
+def test_structured_telephone_fields_are_accepted(tmp_path, structured_html, expected_location):
+    html = ('<html><body><article class="result"><a class="result__a" '
+            'href="https://company.test/contact">Contact page</a>' + structured_html + '</article></body></html>')
+    collector = PhonePublicWebCollector(
+        providers=(provider(),), http_client=FakeHttpClient(response(200, html)), clock=lambda: NOW,
+    )
+    orchestrator, _, _, _ = setup_orchestrator(tmp_path, collector)
+    payload = execute(orchestrator, collector).observations[0].payload
+    assert payload["status"] == "MATCH"
+    assert payload["match_level"] == "STRUCTURED_PHONE_MATCH"
+    assert payload["match_location"] == expected_location
 
 
 @pytest.mark.parametrize(
@@ -281,6 +363,30 @@ def test_duplicate_content_and_same_domain_share_independence_group():
     assessed, summary = EvidenceQualityEngine().assess(items, now=NOW)
     assert len({item.independence_group for item in assessed}) == 1
     assert summary.independent_group_count == 1
+
+
+@pytest.mark.parametrize(
+    ("match_level", "expected_score"),
+    [
+        ("REJECTED_NUMERIC_ID", 0.1),
+        ("NUMERIC_MATCH", 0.25),
+        ("PHONE_CONTEXT_MATCH", 0.75),
+        ("STRUCTURED_PHONE_MATCH", 0.9),
+    ],
+)
+def test_semantic_match_level_caps_evidence_quality_with_reason(match_level, expected_score):
+    evidence = EvidenceItem(
+        evidence_id=f"evidence-{match_level}",
+        source_name="phone_public_web",
+        source_class="PASSIVE_WEB",
+        collected_at=NOW,
+        directness=Directness.DIRECT,
+        reproducible=True,
+        match_level=match_level,
+    )
+    assessed, _ = EvidenceQualityEngine().assess((evidence,), now=NOW)
+    assert assessed[0].quality_score == expected_score
+    assert any(match_level in reason and "caps quality" in reason for reason in assessed[0].quality_reasons)
 
 
 def test_policy_denial_prevents_http(tmp_path):
@@ -388,13 +494,74 @@ def test_case_runner_intelligence_pivots_and_report_are_integrated(tmp_path):
     assert "Subscriber identified" not in html
 
 
+def test_rejected_numeric_id_stays_low_quality_and_cannot_drive_intelligence(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    case_root = tmp_path / "private-cases"
+    store = CaseStore(repo_root=repo, root=case_root)
+    vault = EvidenceVault(repo_root=repo, root=case_root)
+    audit = AuditLog(repo_root=repo, root=tmp_path / "audit")
+    rejected_html = (
+        '<html><body><article class="result"><a class="result__a" '
+        'href="https://stock-images.test/image-photo/synthetic-fixture-123456789">'
+        'Synthetic stock image</a><p>Royalty-free image result.</p></article></body></html>'
+    )
+    public = PhonePublicWebCollector(
+        providers=(provider(),),
+        http_client=FakeHttpClient(response(200, rejected_html)),
+        clock=lambda: NOW,
+    )
+    local = PhoneMetadataCollector()
+    registry = CollectorRegistry()
+    registry.register(local, metadata_for(local, network_required=False, provenance="phonenumbers:fixture"))
+    registry.register(public, metadata_for(public, network_required=True, provenance="fixture:http"))
+    runner = CaseRunner(
+        orchestrator=Orchestrator(
+            audit_log=audit,
+            authorization_store=AuthorizationStore(repo_root=repo, root=tmp_path / "auth"),
+            collector_registry=registry,
+            evidence_vault=vault,
+            clock=lambda: NOW,
+        ),
+        registry=registry,
+        collectors={"phone_metadata": local, "phone_public_web": public},
+        case_store=store,
+        report_engine=ReportEngine(evidence_vault=vault, case_root=case_root, clock=lambda: NOW),
+        audit_log=audit,
+        clock=lambda: NOW,
+        id_factory=lambda: "phone-public-rejected-run",
+    )
+    case = manifest(case_id="case-phone-public-rejected")
+    store.create(case)
+    result = runner.run(case)
+    summary = result.intelligence_summary
+    assert summary is not None
+    assert summary.probable_correlations == ()
+    assert summary.open_hypotheses == ()
+    assert all(item.proposed_collector != "domain_dns" for item in summary.recommended_pivots)
+    rejected_evidence = next(item for item in summary.evidence_quality if item.source_name == "phone_public_web")
+    assert rejected_evidence.match_level == "REJECTED_NUMERIC_ID"
+    assert rejected_evidence.quality_score <= 0.1
+    assert any("caps quality" in reason for reason in rejected_evidence.quality_reasons)
+    report = json.loads(Path(result.report_reference.json_path).read_text(encoding="utf-8"))
+    rejected = report["phone_public_intelligence"]["false_positives_rejected"]
+    assert len(rejected) == 1
+    assert rejected[0]["match_location"] == "url"
+    assert "resource/image identifier" in rejected[0]["reason"]
+    assert report["phone_public_intelligence"]["public_urls"] == []
+    html = Path(result.report_reference.html_path).read_text(encoding="utf-8")
+    assert "FALSE POSITIVES REJECTED" in html
+    assert "resource/image identifier" in html
+
+
 def test_phone_public_collector_has_no_prohibited_automation_imports():
     root = Path(__file__).resolve().parents[1] / "osint_lab" / "agents"
     source = "\n".join(
         (root / name).read_text(encoding="utf-8")
         for name in (
             "phone_public_web.py", "phone_public_http.py", "phone_public_providers.py",
-            "phone_public_parsers.py", "phone_public_extract.py", "phone_variants.py",
+            "phone_public_parsers.py", "phone_public_extract.py", "phone_public_semantics.py",
+            "phone_variants.py",
         )
     ).casefold()
     for forbidden in (

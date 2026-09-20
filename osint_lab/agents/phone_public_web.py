@@ -5,7 +5,6 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 import hashlib
 import json
-import re
 from typing import Mapping
 from urllib.parse import quote, urlsplit
 
@@ -23,6 +22,7 @@ from .phone_public_http import (
 )
 from .phone_public_parsers import ParsedPhonePublicResult, parse_phone_public_results
 from .phone_public_providers import DEFAULT_PHONE_PUBLIC_PROVIDERS, PhonePublicProvider
+from .phone_public_semantics import PhoneMatchLevel, classify_phone_occurrence
 from .phone_variants import PhoneVariant, generate_phone_variants
 
 
@@ -31,7 +31,7 @@ class PhonePublicWebCollector(Collector):
 
     agent_name = "phone_public_web"
     agent_type = "PHONE"
-    version = "1.0.0"
+    version = "1.0.1"
     source_class = SourceClass.PASSIVE_WEB
     network_required = True
     default_region = "PL"
@@ -233,20 +233,31 @@ class PhonePublicWebCollector(Collector):
         base: dict[str, object],
         result: ParsedPhonePublicResult,
     ) -> RawObservation:
-        matched, location = self._find_match(result, variants)
+        semantic = classify_phone_occurrence(result, variants)
+        matched = semantic.matched_variant
+        location = semantic.match_location
         source_domain = (urlsplit(result.result_url).hostname or "").casefold() or None
         evidence_ref = "phone-public:" + hashlib.sha256(
             f"{provider.provider_id}|{result.result_url}|{base['body_sha256']}".encode("utf-8")
         ).hexdigest()
-        if matched is None:
+        if not semantic.accepted:
+            error_code = {
+                PhoneMatchLevel.REJECTED_NUMERIC_ID: "REJECTED_NUMERIC_ID",
+                PhoneMatchLevel.NUMERIC_MATCH: "PHONE_CONTEXT_MISSING",
+                PhoneMatchLevel.UNKNOWN: "NON_EXACT_CANDIDATE",
+            }.get(semantic.level, "SEMANTIC_MATCH_UNKNOWN")
             return self._observation(
                 base={
                     **base,
                     "status": "UNKNOWN",
                     "exact_match": False,
-                    "matched_variant": None,
-                    "matched_variant_type": None,
-                    "match_location": None,
+                    "numeric_exact_match": matched is not None,
+                    "match_level": semantic.level.value,
+                    "semantic_match": False,
+                    "matched_variant": matched.variant if matched else None,
+                    "matched_variant_type": matched.variant_type if matched else None,
+                    "match_location": location,
+                    "semantic_reason": semantic.reason,
                     "snippet": result.snippet[:500],
                     "result_url": result.result_url,
                     "source_domain": source_domain,
@@ -256,8 +267,8 @@ class PhonePublicWebCollector(Collector):
                 },
                 status="UNKNOWN",
                 evidence_ref=evidence_ref,
-                error_code="NON_EXACT_CANDIDATE",
-                error_reason="A result URL was returned but no exact phone occurrence was present.",
+                error_code=error_code,
+                error_reason=semantic.reason,
             )
         entities = extract_discovered_entities(result, evidence_ref=evidence_ref)
         return self._observation(
@@ -265,9 +276,13 @@ class PhonePublicWebCollector(Collector):
                 **base,
                 "status": "MATCH",
                 "exact_match": True,
+                "numeric_exact_match": True,
+                "match_level": semantic.level.value,
+                "semantic_match": True,
                 "matched_variant": matched.variant,
                 "matched_variant_type": matched.variant_type,
                 "match_location": location,
+                "semantic_reason": semantic.reason,
                 "snippet": result.snippet[:500],
                 "result_url": result.result_url,
                 "source_domain": source_domain,
@@ -297,6 +312,9 @@ class PhonePublicWebCollector(Collector):
             "canonical_phone": canonical,
             "status": status,
             "exact_match": False,
+            "numeric_exact_match": False,
+            "match_level": PhoneMatchLevel.UNKNOWN.value,
+            "semantic_match": False,
             "matched_variant": None,
             "matched_variant_type": None,
             "match_location": None,
@@ -333,18 +351,6 @@ class PhonePublicWebCollector(Collector):
             notes="Public occurrence or provider status only; no subscriber, owner, or identity conclusion.",
             payload=payload,
         )
-
-    @staticmethod
-    def _find_match(
-        result: ParsedPhonePublicResult,
-        variants: tuple[PhoneVariant, ...],
-    ) -> tuple[PhoneVariant | None, str | None]:
-        for location, text in (("snippet", result.snippet), ("body", result.visible_text)):
-            for variant in sorted(variants, key=lambda item: len(item.variant), reverse=True):
-                pattern = rf"(?<!\d){re.escape(variant.variant)}(?!\d)"
-                if re.search(pattern, text):
-                    return variant, location
-        return None, None
 
     @staticmethod
     def _redirected_to_home(provider: PhonePublicProvider, response: PhonePublicHttpResponse) -> bool:
