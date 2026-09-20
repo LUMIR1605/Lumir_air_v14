@@ -207,6 +207,11 @@ class DesktopWindow:
             f"Public matches verified: {summary.public_matches_verified}    "
             f"Rejected false positives: {summary.rejected_false_positives}\n"
             f"Target pages checked: {summary.target_pages_checked}\n"
+            f"Sources executed: {summary.sources_executed}/{summary.sources_enabled}\n"
+            f"Independent evidence: {summary.independent_evidence}    "
+            f"Entities discovered: {summary.entities_discovered}\n"
+            f"Useful pivots: {summary.useful_pivots}    "
+            f"Blocked/Unavailable sources: {summary.blocked_unavailable_sources}\n"
             f"Case ID: {summary.case_id}"
         )
         if summary.report_html_path:

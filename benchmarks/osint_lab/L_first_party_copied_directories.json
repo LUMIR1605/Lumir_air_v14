@@ -1,0 +1,1 @@
+{"case":"L","expected":[{"id":"relation:first-party","label":"TRUE"},{"id":"hypothesis:directory-independence","label":"REJECTED"}],"independence_groups":["first-party","copied-directory","copied-directory"],"synthetic":true}

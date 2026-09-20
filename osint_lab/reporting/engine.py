@@ -441,8 +441,23 @@ class ReportEngine:
         pivots = rows(dossier.get("recommended_pivots"),
                       ("proposed_enricher", "graph_value", "status", "reason"))
         timeline = rows(dossier.get("timeline"), ("event_type", "timestamp", "description", "evidence_refs"))
+        source_coverage = rows(dossier.get("source_coverage"), (
+            "entity_type", "eligible_sources", "enabled_sources", "executed_sources",
+            "successful_sources", "blocked_sources", "unknown_sources",
+            "verified_evidence_count", "independent_evidence_groups",
+        ))
+        coverage_summary = dossier.get("coverage_summary") if isinstance(dossier.get("coverage_summary"), Mapping) else {}
+        source_summary = (
+            f"Sources executed: {escape(str(coverage_summary.get('executed_sources', 0)))}/"
+            f"{escape(str(coverage_summary.get('enabled_sources', 0)))}; independent evidence: "
+            f"{escape(str(coverage_summary.get('independent_path_count', 0)))}; entities discovered: "
+            f"{escape(str(coverage_summary.get('entities_discovered', 0)))}; useful pivots: "
+            f"{escape(str(coverage_summary.get('useful_pivots', 0)))}; blocked/unavailable sources: "
+            f"{escape(str(coverage_summary.get('blocked_unavailable_sources', 0)))}."
+        )
         return (
             "<section><h2>ANALYST VIEW</h2>"
+            f"<h3>SOURCE COVERAGE</h3><p>{source_summary}</p><ul>{source_coverage}</ul>"
             f"<h3>KEY ENTITIES</h3><ul>{entities}</ul>"
             f"<h3>KEY RELATIONS</h3><ul>{relations}</ul>"
             f"<h3>IMPORTANT PATHS</h3><ul>{paths}</ul>"

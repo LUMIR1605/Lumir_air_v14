@@ -1,0 +1,1 @@
+{"case":"P","expected":[{"id":"hypothesis:continuous-ownership","label":"REJECTED"}],"signals":["rdap-event-change","archive-history"],"synthetic":true}

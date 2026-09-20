@@ -8,7 +8,7 @@ from .analytics import (
     build_identity_candidates,
     detect_circular_provenance,
 )
-from .benchmark import BenchmarkMetrics, score_benchmark
+from .benchmark import BenchmarkMetrics, compare_source_expansion, score_benchmark
 from .enrichment import (
     CostClass,
     EnricherDefinition,
@@ -51,5 +51,6 @@ __all__ = [
     "IdentityCandidate", "IdentityStatus", "NormalizedEntity", "PivotBudget", "ProfessionalFailureState",
     "ReviewerDecisionEvent", "ReviewDecisionValue", "ReviewTarget", "SCHEMA_VERSION", "TimelineEvent",
     "TimelineEventType", "build_default_enricher_registry", "build_dossier", "build_identity_candidates",
-    "detect_circular_provenance", "deterministic_entity_id", "deterministic_relation_id", "score_benchmark",
+    "compare_source_expansion", "detect_circular_provenance", "deterministic_entity_id",
+    "deterministic_relation_id", "score_benchmark",
 ]

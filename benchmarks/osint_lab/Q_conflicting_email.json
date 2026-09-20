@@ -1,0 +1,1 @@
+{"case":"Q","expected":[{"id":"hypothesis:email-company","label":"UNKNOWN"}],"signals":["current-first-party","conflicting-directory"],"synthetic":true}

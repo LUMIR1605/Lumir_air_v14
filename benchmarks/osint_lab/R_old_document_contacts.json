@@ -1,0 +1,1 @@
+{"case":"R","expected":[{"id":"relation:document-phone","label":"STALE"},{"id":"relation:document-email","label":"STALE"}],"document_date":"2018-01-01","synthetic":true}

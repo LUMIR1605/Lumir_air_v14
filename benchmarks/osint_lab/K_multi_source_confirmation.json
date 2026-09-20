@@ -1,0 +1,1 @@
+{"case":"K","expected":[{"id":"relation:phone-company","label":"TRUE"}],"sources":["first_party_web","public_dns","registry_rdap"],"synthetic":true}

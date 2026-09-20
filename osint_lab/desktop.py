@@ -44,6 +44,12 @@ class DesktopAnalysisSummary:
     case_folder_path: str
     warnings: tuple[str, ...]
     graph_viewer_path: str | None = None
+    sources_executed: int = 0
+    sources_enabled: int = 0
+    independent_evidence: int = 0
+    entities_discovered: int = 0
+    useful_pivots: int = 0
+    blocked_unavailable_sources: int = 0
 
 
 class DesktopBackend:
@@ -128,10 +134,14 @@ class DesktopBackend:
             raise DesktopAnalysisError("Nie udało się uruchomić analizy.")
         report_path = result.report_reference.html_path if result.report_reference else None
         graph_path = None
+        coverage = {}
         if result.graph_bundle is not None:
             exports = result.graph_bundle.get("exports")
             if isinstance(exports, dict) and isinstance(exports.get("viewer_path"), str):
                 graph_path = exports["viewer_path"]
+            dossier = result.graph_bundle.get("dossier")
+            if isinstance(dossier, dict) and isinstance(dossier.get("coverage_summary"), dict):
+                coverage = dossier["coverage_summary"]
         public_matches, rejected_targets, checked_targets = self._phone_public_counts(result)
         summary = DesktopAnalysisSummary(
             case_id=case_id,
@@ -147,6 +157,12 @@ class DesktopBackend:
             case_folder_path=str((self._application.case_store.root / case_id).resolve()),
             warnings=result.warnings,
             graph_viewer_path=graph_path,
+            sources_executed=int(coverage.get("executed_sources", 0)),
+            sources_enabled=int(coverage.get("enabled_sources", 0)),
+            independent_evidence=int(coverage.get("independent_path_count", 0)),
+            entities_discovered=int(coverage.get("entities_discovered", 0)),
+            useful_pivots=int(coverage.get("useful_pivots", 0)),
+            blocked_unavailable_sources=int(coverage.get("blocked_unavailable_sources", 0)),
         )
         self._last_summary = summary
         self._emit(status_callback, "Gotowe.")

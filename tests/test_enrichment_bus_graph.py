@@ -100,6 +100,8 @@ def test_bus_executes_through_orchestrator_and_suppresses_duplicate(tmp_path):
     result = bus.execute_seed(manifest=manifest(), entity_type="PHONE", seed_reference=PHONE,
                               enricher_id="phone_metadata", graph_store=graph)
     assert result.status.value == "SUCCESS"
+    cache_files = list((graph.case_root / CASE / "source_cache").glob("*.json"))
+    assert len(cache_files) == 1
     with pytest.raises(RuntimeError, match="duplicate enrichment"):
         bus.execute_seed(manifest=manifest(), entity_type="PHONE", seed_reference=PHONE,
                          enricher_id="phone_metadata", graph_store=graph)

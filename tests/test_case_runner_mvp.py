@@ -270,7 +270,7 @@ def test_duplicate_unknown_and_unavailable_steps_are_explicit(tmp_path):
     ))
     plan = app.runner.plan(manifest, persist=False)
     assert len(plan.planned_steps) == 2
-    assert {item.reason for item in plan.skipped_steps} == {"duplicate seed", "unknown seed type"}
+    assert {item.reason for item in plan.skipped_steps} == {"duplicate seed", "collector is unavailable"}
 
     mapping = dict(app.runner._collectors)
     del mapping["phone_metadata"]
