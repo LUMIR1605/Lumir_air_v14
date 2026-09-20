@@ -37,6 +37,8 @@ class TargetPageHttpResponse:
     body_bytes: int
     body_truncated: bool = False
     peer_ip: str | None = None
+    raw_bytes: bytes = b""
+    tls_certificate: Mapping[str, object] | None = None
 
 
 class TargetPageTransport(Protocol):
@@ -65,6 +67,9 @@ class TargetPageFetchResult:
     fetch_status: FetchStatus
     error_code: str | None
     body: str = ""
+    raw_bytes: bytes = b""
+    response_headers: Mapping[str, str] | None = None
+    tls_certificate: Mapping[str, object] | None = None
 
     def to_metadata(self) -> dict[str, object]:
         return {
@@ -80,6 +85,8 @@ class TargetPageFetchResult:
             "body_truncated": self.body_truncated,
             "fetch_status": self.fetch_status.value,
             "error_code": self.error_code,
+            "response_headers": dict(self.response_headers or {}),
+            "tls_certificate": dict(self.tls_certificate or {}),
         }
 
 
@@ -119,6 +126,8 @@ class RequestsTargetPageTransport:
                 body_bytes=len(raw),
                 body_truncated=truncated,
                 peer_ip=peer_ip,
+                raw_bytes=raw,
+                tls_certificate=_response_tls_certificate(response),
             )
         except requests.Timeout as error:
             raise TargetPageTimeout("target page timed out") from error
@@ -153,6 +162,7 @@ class TargetPageFetcher:
         max_redirects: int = 4,
         max_response_bytes: int = 524_288,
         user_agent: str = "LumirOSINTLab-TargetPageFetcher/1.0",
+        supported_content_types: frozenset[str] | None = None,
     ) -> None:
         if connect_timeout <= 0 or read_timeout <= 0:
             raise ValueError("timeouts must be positive")
@@ -167,6 +177,11 @@ class TargetPageFetcher:
         self._max_redirects = max_redirects
         self._max_response_bytes = max_response_bytes
         self._user_agent = user_agent
+        self._supported_content_types = supported_content_types or frozenset(self._SUPPORTED_CONTENT_TYPES)
+        if not self._supported_content_types or any(
+            not isinstance(item, str) or not item.strip() for item in self._supported_content_types
+        ):
+            raise ValueError("supported_content_types must contain non-empty strings")
 
     def fetch(self, requested_url: str) -> TargetPageFetchResult:
         started = self._now()
@@ -281,7 +296,7 @@ class TargetPageFetcher:
                     FetchStatus.UNKNOWN, "INTERACTION_REQUIRED",
                 )
             content_type = _content_type(response.headers)
-            if content_type not in self._SUPPORTED_CONTENT_TYPES:
+            if content_type not in self._supported_content_types:
                 return self._from_response(
                     requested_url, current_url, response, started, chain,
                     FetchStatus.UNKNOWN, "UNSUPPORTED_CONTENT_TYPE",
@@ -343,7 +358,8 @@ class TargetPageFetcher:
         status: FetchStatus,
         error_code: str | None,
     ) -> TargetPageFetchResult:
-        body_hash = hashlib.sha256(response.body.encode("utf-8")).hexdigest() if response.body else None
+        content_bytes = response.raw_bytes or response.body.encode("utf-8")
+        body_hash = hashlib.sha256(content_bytes).hexdigest() if content_bytes else None
         return TargetPageFetchResult(
             requested_url=requested_url,
             final_url=final_url,
@@ -358,6 +374,10 @@ class TargetPageFetcher:
             fetch_status=status,
             error_code=error_code,
             body=response.body if status is FetchStatus.SUCCESS else "",
+            raw_bytes=response.raw_bytes if status is FetchStatus.SUCCESS else b"",
+            response_headers={key: value for key, value in response.headers.items()
+                              if key.casefold() in {"content-type", "content-language", "server", "last-modified"}},
+            tls_certificate=response.tls_certificate,
         )
 
     @staticmethod
@@ -470,4 +490,29 @@ def _response_peer_ip(response) -> str | None:
             return str(candidate().getpeername()[0])
         except (AttributeError, OSError, TypeError):
             continue
+    return None
+
+
+def _response_tls_certificate(response) -> dict[str, object] | None:
+    candidates = (
+        lambda: response.raw._connection.sock,
+        lambda: response.raw._fp.fp.raw._sock,
+    )
+    for candidate in candidates:
+        try:
+            certificate = candidate().getpeercert()
+        except (AttributeError, OSError, TypeError, ValueError):
+            continue
+        if not isinstance(certificate, dict):
+            continue
+        subject = []
+        for group in certificate.get("subject", ()):
+            for key, value in group:
+                subject.append(f"{key}={value}")
+        sans = [value for kind, value in certificate.get("subjectAltName", ()) if kind == "DNS"]
+        return {
+            "subject": ", ".join(subject) or None,
+            "subject_alt_names": sans,
+            "not_after": certificate.get("notAfter"),
+        }
     return None

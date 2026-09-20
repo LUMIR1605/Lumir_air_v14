@@ -16,6 +16,12 @@ from osint_lab.agents import (
     PhoneMetadataCollector,
     PhonePublicWebCollector,
     UsernameCollector,
+    CompanyPublicWebCollector,
+    DocumentIntelligenceCollector,
+    DomainRdapCollector,
+    EmailPublicWebCollector,
+    PublicArchiveCollector,
+    WebsiteMetadataCollector,
 )
 from osint_lab.agents.email_exposure import normalize_email
 from osint_lab.case_manifest import CaseManifest, SeedEntity
@@ -28,6 +34,7 @@ from osint_lab.policies import SourceClass
 from osint_lab.policies.gate import PolicyDecision, PolicyGate
 from osint_lab.reporting import ReportEngine, ReportReference
 from osint_lab.schemas import FindingStatus
+from osint_lab.sources import ProviderHealthStore, SourceFailureStatus
 from osint_lab.verification.contradictions import (
     ContradictionAssertion,
     ContradictionResult,
@@ -206,6 +213,12 @@ def build_default_collectors() -> dict[str, Collector]:
         UsernameCollector(),
         EmailLocalMetadataCollector(),
         EmailExposureCollector(),
+        EmailPublicWebCollector(),
+        DomainRdapCollector(),
+        WebsiteMetadataCollector(),
+        CompanyPublicWebCollector(),
+        DocumentIntelligenceCollector(),
+        PublicArchiveCollector(),
     )
     return {collector.agent_name: collector for collector in collectors}
 
@@ -215,9 +228,13 @@ class CaseRunner:
 
     _SEED_COLLECTORS = {
         "PHONE": ("phone_metadata", "phone_public_web"),
-        "DOMAIN": ("domain_dns",),
+        "DOMAIN": ("domain_dns", "domain_rdap", "website_metadata", "public_archive"),
         "USERNAME": ("username_lookup",),
-        "EMAIL": ("email_local_metadata", "email_exposure"),
+        "EMAIL": ("email_local_metadata", "email_exposure", "email_public_web"),
+        "WEBSITE": ("website_metadata", "public_archive"),
+        "COMPANY": ("company_public_web",),
+        "ORGANIZATION": ("company_public_web",),
+        "DOCUMENT": ("document_intelligence",),
     }
 
     def __init__(
@@ -490,7 +507,7 @@ class CaseRunner:
                     result = self._enrichment_bus.execute_seed(
                         manifest=manifest, entity_type=step.seed_type, seed_reference=step.seed_reference,
                         enricher_id=step.collector_name, graph_store=self._graph_service.store(manifest.case_id),
-                        hop=0, authorization_id=authorizations.get(step.collector_name),
+                        hop=0, authorization_id=authorizations.get(step.collector_name), automatic=False,
                     )
                 else:
                     result = self._orchestrator.execute(
@@ -507,6 +524,10 @@ class CaseRunner:
                     result_status=result.status.value,
                     result=result,
                 )
+                try:
+                    self._record_provider_health(manifest.case_id, record)
+                except Exception:
+                    warnings.append(f"provider health persistence failed for {step.collector_name}")
             except Exception as error:
                 record = CaseExecutionRecord(
                     step=step,
@@ -699,3 +720,31 @@ class CaseRunner:
         if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("CaseRunner clock must return a timezone-aware datetime")
         return value
+
+    def _record_provider_health(self, case_id: str, record: CaseExecutionRecord) -> None:
+        if record.result is None:
+            return
+        store = ProviderHealthStore(
+            repo_root=self._case_store.repo_root,
+            case_root=self._case_store.root / case_id,
+        )
+        for observation in record.result.observations:
+            payload = observation.payload
+            source_id = str(payload.get("source_id") or payload.get("provider_id") or record.step.collector_name)
+            raw_failure = str(payload.get("failure_status") or "")
+            try:
+                status = SourceFailureStatus(raw_failure)
+            except ValueError:
+                if record.result_status in {"SUCCESS", "PARTIAL"} and observation.raw_status not in {"UNKNOWN", "ERROR"}:
+                    status = SourceFailureStatus.SUCCESS
+                elif record.result_status == "DENIED":
+                    status = SourceFailureStatus.BLOCKED
+                else:
+                    status = SourceFailureStatus.UNKNOWN
+            reason = str(payload.get("error_reason") or payload.get("error_code") or "")
+            store.record(
+                provider_id=source_id, status=status, timestamp=record.result.finished_at,
+                parser_version=record.collector_version,
+                challenge_detected="challenge" in reason.casefold(),
+                disabled_reason=reason if status is SourceFailureStatus.TERMS_DISABLED else None,
+            )

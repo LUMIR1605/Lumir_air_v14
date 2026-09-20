@@ -26,6 +26,12 @@ from .username_providers import UsernameProvider
 from .target_page_analysis import PageRole
 from .target_page_fetcher import FetchStatus, TargetPageFetchResult, TargetPageFetcher, canonicalize_url
 from .default_registry import build_default_registry
+from .company_public_web import CompanyPublicWebCollector
+from .document_intelligence import DocumentIntelligenceCollector
+from .domain_rdap import DomainRdapCollector
+from .email_public_web import EmailPublicWebCollector
+from .public_archive import PublicArchiveCollector
+from .website_metadata import WebsiteMetadataCollector
 
 __all__ = [
     "Agent",
@@ -62,4 +68,10 @@ __all__ = [
     "TargetPageFetcher",
     "canonicalize_url",
     "build_default_registry",
+    "CompanyPublicWebCollector",
+    "DocumentIntelligenceCollector",
+    "DomainRdapCollector",
+    "EmailPublicWebCollector",
+    "PublicArchiveCollector",
+    "WebsiteMetadataCollector",
 ]
