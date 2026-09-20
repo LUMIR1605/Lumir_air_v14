@@ -20,6 +20,7 @@ from osint_lab.agents import (
 from osint_lab.agents.email_exposure import normalize_email
 from osint_lab.case_manifest import CaseManifest, SeedEntity
 from osint_lab.case_storage import CaseStore
+from osint_lab.graph import EnrichmentBus, GraphService
 from osint_lab.intelligence import IntelligenceCore, IntelligenceSummary
 from osint_lab.orchestrator.audit import AuditLog, AuditVerification, verify_audit_log
 from osint_lab.orchestrator.service import Orchestrator
@@ -165,6 +166,7 @@ class CaseRunResult:
     report_reference: ReportReference | None
     audit_verification: AuditVerification
     intelligence_summary: IntelligenceSummary | None = None
+    graph_bundle: Mapping[str, object] | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -192,6 +194,7 @@ class CaseRunResult:
             "intelligence_summary": (
                 self.intelligence_summary.to_dict() if self.intelligence_summary is not None else None
             ),
+            "graph_bundle": dict(self.graph_bundle) if self.graph_bundle is not None else None,
         }
 
 
@@ -229,6 +232,8 @@ class CaseRunner:
         clock: Callable[[], datetime],
         id_factory: Callable[[], str] | None = None,
         intelligence_core: IntelligenceCore | None = None,
+        graph_service: GraphService | None = None,
+        enrichment_bus: EnrichmentBus | None = None,
     ) -> None:
         if not isinstance(orchestrator, Orchestrator):
             raise ValueError("Orchestrator required")
@@ -254,6 +259,8 @@ class CaseRunner:
         self._clock = clock
         self._id_factory = id_factory or (lambda: uuid4().hex)
         self._intelligence_core = intelligence_core or IntelligenceCore(clock=clock)
+        self._graph_service = graph_service
+        self._enrichment_bus = enrichment_bus
 
     def plan(
         self,
@@ -478,14 +485,22 @@ class CaseRunner:
                 warnings.append(f"dependency prevented {step.collector_name}")
                 continue
             try:
-                result = self._orchestrator.execute(
-                    manifest=manifest,
-                    collector=collector,
-                    seed_reference=step.seed_reference,
-                    purpose=f"CaseRunner {run_id}: {step.reason}",
-                    requested_by="case-runner",
-                    authorization_id=authorizations.get(step.collector_name),
-                )
+                if self._enrichment_bus is not None and self._graph_service is not None \
+                        and step.step_id not in denied_step_ids:
+                    result = self._enrichment_bus.execute_seed(
+                        manifest=manifest, entity_type=step.seed_type, seed_reference=step.seed_reference,
+                        enricher_id=step.collector_name, graph_store=self._graph_service.store(manifest.case_id),
+                        hop=0, authorization_id=authorizations.get(step.collector_name),
+                    )
+                else:
+                    result = self._orchestrator.execute(
+                        manifest=manifest,
+                        collector=collector,
+                        seed_reference=step.seed_reference,
+                        purpose=f"CaseRunner {run_id}: {step.reason}",
+                        requested_by="case-runner",
+                        authorization_id=authorizations.get(step.collector_name),
+                    )
                 record = CaseExecutionRecord(
                     step=step,
                     collector_version=collector.version,
@@ -532,6 +547,18 @@ class CaseRunner:
             contradiction=contradiction,
         )
 
+        graph_bundle: Mapping[str, object] | None = None
+        if self._graph_service is not None:
+            try:
+                self._notify(progress_callback, "graph")
+                graph_bundle = self._graph_service.process(
+                    manifest=manifest, executions=records, intelligence=intelligence_summary,
+                    run_id=run_id, started_at=started_at, finished_at=finished_at,
+                )
+            except Exception as error:
+                warnings.append(f"{type(error).__name__}: required graph projection failed")
+                status = CaseRunStatus.PARTIAL if self._has_success(records) else CaseRunStatus.FAILED
+
         report_reference: ReportReference | None = None
         try:
             self._notify(progress_callback, "report")
@@ -547,12 +574,18 @@ class CaseRunner:
                 warnings=warnings,
                 audit_verification=audit_verification,
                 intelligence_summary=intelligence_summary,
+                graph_bundle=graph_bundle,
             )
             report_reference = self._report_engine.write(
                 manifest=manifest,
                 run_id=run_id,
                 model=model,
             )
+            if self._graph_service is not None and graph_bundle is not None:
+                self._graph_service.record_report(
+                    case_id=manifest.case_id, run_id=run_id, timestamp=self._now(),
+                    evidence_refs=(report_reference.json_evidence_id, report_reference.html_evidence_id),
+                )
         except Exception as error:
             warnings.append(f"{type(error).__name__}: required report write failed")
             status = CaseRunStatus.PARTIAL if self._has_success(records) else CaseRunStatus.FAILED
@@ -571,6 +604,7 @@ class CaseRunner:
             report_reference=report_reference,
             audit_verification=audit_verification,
             intelligence_summary=intelligence_summary,
+            graph_bundle=graph_bundle,
         )
         try:
             self._case_store.save_run_summary(

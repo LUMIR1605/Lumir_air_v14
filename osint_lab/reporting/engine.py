@@ -18,7 +18,7 @@ from osint_lab.policies import SourceClass
 from osint_lab.verification.contradictions import ContradictionResult
 
 
-REPORT_ENGINE_VERSION = "1.4.0"
+REPORT_ENGINE_VERSION = "1.5.0"
 
 _PHONE_DETAIL_FIELDS = (
     ("normalized_e164", "Numer znormalizowany E.164"),
@@ -94,6 +94,7 @@ class ReportEngine:
         warnings: Iterable[str],
         audit_verification: AuditVerification,
         intelligence_summary: IntelligenceSummary | None = None,
+        graph_bundle: Mapping[str, object] | None = None,
     ) -> dict[str, object]:
         execution_records = tuple(executions)
         execution_payloads: list[dict[str, object]] = []
@@ -171,7 +172,7 @@ class ReportEngine:
             analytical_assessment,
         )
         return {
-            "schema_version": "1.4",
+            "schema_version": "1.5",
             "generated_at": generated_at.isoformat(),
             "case": {
                 "case_id": manifest.case_id,
@@ -205,6 +206,7 @@ class ReportEngine:
             },
             "analytical_assessment": analytical_assessment,
             "phone_public_intelligence": phone_public_intelligence,
+            "graph_intelligence": dict(graph_bundle or {}),
             "privacy_source_exposure": source_counts,
             "limitations": self._limitations(collectors),
             "audit": {
@@ -373,6 +375,7 @@ class ReportEngine:
         analytical_assessment = ReportEngine._render_analytical_assessment(
             model.get("analytical_assessment", {})
         )
+        graph_intelligence = ReportEngine._render_graph_intelligence(model.get("graph_intelligence", {}))
         audit = model["audit"]
         return (
             "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
@@ -399,6 +402,7 @@ class ReportEngine:
             f"{phone_details}"
             f"{phone_public}"
             f"{analytical_assessment}"
+            f"{graph_intelligence}"
             f"<h2>Contradictions</h2><p>Severity: {escape(str(contradiction['severity']))}</p><ul>{reasons}</ul>"
             f"<h2>Privacy / source exposure</h2><ul>{exposure}</ul>"
             f"<h2>Limitations</h2><ul>{limitations}</ul>"
@@ -407,6 +411,45 @@ class ReportEngine:
             f"head: <code>{escape(str(audit['audit_head_hash']))}</code></p>"
             f"<p>{escape(str(model['interpretation_notice']))}</p>"
             "</body></html>"
+        )
+
+    @staticmethod
+    def _render_graph_intelligence(value: object) -> str:
+        data = value if isinstance(value, Mapping) else {}
+        dossier = data.get("dossier") if isinstance(data.get("dossier"), Mapping) else {}
+        if not dossier:
+            return ""
+
+        def rows(values: object, fields: tuple[str, ...]) -> str:
+            if not isinstance(values, list) or not values:
+                return "<li>None</li>"
+            rendered = []
+            for item in values:
+                if isinstance(item, Mapping):
+                    rendered.append("<li>" + escape(" | ".join(
+                        f"{field}: {item.get(field)}" for field in fields if item.get(field) is not None
+                    )) + "</li>")
+                else:
+                    rendered.append(f"<li>{escape(str(item))}</li>")
+            return "".join(rendered)
+
+        entities = rows(dossier.get("key_entities"), ("entity_type", "display_value", "confidence", "status"))
+        relations = rows(dossier.get("key_relations"), ("relation_type", "confidence", "status", "evidence_refs"))
+        paths = rows(dossier.get("important_paths"), ("explanation", "confidence", "evidence_refs"))
+        hypotheses = rows(dossier.get("hypotheses"), ("statement", "status", "confidence"))
+        contradictions = rows(dossier.get("contradictions"), ())
+        pivots = rows(dossier.get("recommended_pivots"),
+                      ("proposed_enricher", "graph_value", "status", "reason"))
+        timeline = rows(dossier.get("timeline"), ("event_type", "timestamp", "description", "evidence_refs"))
+        return (
+            "<section><h2>ANALYST VIEW</h2>"
+            f"<h3>KEY ENTITIES</h3><ul>{entities}</ul>"
+            f"<h3>KEY RELATIONS</h3><ul>{relations}</ul>"
+            f"<h3>IMPORTANT PATHS</h3><ul>{paths}</ul>"
+            f"<h3>OPEN HYPOTHESES</h3><ul>{hypotheses}</ul>"
+            f"<h3>CONTRADICTIONS</h3><ul>{contradictions}</ul>"
+            f"<h3>TIMELINE</h3><ul>{timeline}</ul>"
+            f"<h3>NEXT BEST PIVOTS</h3><ul>{pivots}</ul></section>"
         )
 
     @staticmethod

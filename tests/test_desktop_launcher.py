@@ -54,7 +54,8 @@ class RecordingRunner:
         self.calls.append(manifest)
         if progress_callback:
             for event in (
-                "collector:phone_metadata", "phone_public:search", "phone_public:verify", "intelligence", "report",
+                "collector:phone_metadata", "phone_public:search", "phone_public:verify", "intelligence", "graph",
+                "report",
             ):
                 progress_callback(event)
         reports = self.root / manifest.case_id / "reports"
@@ -63,6 +64,10 @@ class RecordingRunner:
         json_path = reports / "report.json"
         html.write_text("<html>fixture</html>", encoding="utf-8")
         json_path.write_text("{}", encoding="utf-8")
+        graph_directory = self.root / manifest.case_id / "graph"
+        graph_directory.mkdir(parents=True, exist_ok=True)
+        graph_viewer = graph_directory / "graph_viewer.html"
+        graph_viewer.write_text("<html>synthetic graph</html>", encoding="utf-8")
         reference = ReportReference(
             json_path=str(json_path),
             json_sha256="1" * 64,
@@ -100,6 +105,7 @@ class RecordingRunner:
                 head_hash="3" * 64,
                 reason="valid",
             ),
+            graph_bundle={"exports": {"viewer_path": str(graph_viewer)}},
         )
 
 
@@ -182,6 +188,7 @@ def test_desktop_reports_progress_summary_and_run_invocation(tmp_path):
         "Szukanie publicznych wyników...",
         "Weryfikacja stron źródłowych...",
         "Analiza dowodów...",
+        "Budowanie grafu wiedzy...",
         "Generowanie raportu...",
         "Gotowe.",
     ]
@@ -197,7 +204,8 @@ def test_desktop_opens_only_valid_report_and_case_paths(tmp_path):
     summary = backend.analyze(DesktopInput(domain="domain.test"))
     report = backend.open_report(summary)
     folder = backend.open_case_folder(summary)
-    assert opened == [str(report), str(folder)]
+    graph = backend.open_graph(summary)
+    assert opened == [str(report), str(folder), str(graph)]
 
     outside = tmp_path / "outside.html"
     outside.write_text("fixture", encoding="utf-8")

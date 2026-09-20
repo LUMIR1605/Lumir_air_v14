@@ -43,6 +43,7 @@ class DesktopAnalysisSummary:
     report_html_path: str | None
     case_folder_path: str
     warnings: tuple[str, ...]
+    graph_viewer_path: str | None = None
 
 
 class DesktopBackend:
@@ -57,6 +58,7 @@ class DesktopBackend:
         "phone_public:search": "Szukanie publicznych wyników...",
         "phone_public:verify": "Weryfikacja stron źródłowych...",
         "intelligence": "Analiza dowodów...",
+        "graph": "Budowanie grafu wiedzy...",
         "report": "Generowanie raportu...",
     }
 
@@ -125,6 +127,11 @@ class DesktopBackend:
             self.record_error(error)
             raise DesktopAnalysisError("Nie udało się uruchomić analizy.")
         report_path = result.report_reference.html_path if result.report_reference else None
+        graph_path = None
+        if result.graph_bundle is not None:
+            exports = result.graph_bundle.get("exports")
+            if isinstance(exports, dict) and isinstance(exports.get("viewer_path"), str):
+                graph_path = exports["viewer_path"]
         public_matches, rejected_targets, checked_targets = self._phone_public_counts(result)
         summary = DesktopAnalysisSummary(
             case_id=case_id,
@@ -139,6 +146,7 @@ class DesktopBackend:
             report_html_path=report_path,
             case_folder_path=str((self._application.case_store.root / case_id).resolve()),
             warnings=result.warnings,
+            graph_viewer_path=graph_path,
         )
         self._last_summary = summary
         self._emit(status_callback, "Gotowe.")
@@ -179,6 +187,14 @@ class DesktopBackend:
         self._path_opener(str(path))
         return path
 
+    def open_graph(self, summary: DesktopAnalysisSummary | None = None) -> Path:
+        selected = summary or self._last_summary
+        if selected is None or selected.graph_viewer_path is None:
+            raise DesktopValidationError("Graf sprawy nie jest dostępny.")
+        path = self.validate_graph_path(selected.case_id, selected.graph_viewer_path)
+        self._path_opener(str(path))
+        return path
+
     def validate_report_path(self, case_id: str, report_path: str) -> Path:
         path = Path(report_path).resolve()
         reports_directory = (self._application.case_store.root / case_id / "reports").resolve()
@@ -191,6 +207,13 @@ class DesktopBackend:
         expected = (self._application.case_store.root / case_id).resolve()
         if path != expected or not path.is_dir():
             raise DesktopValidationError("Nieprawidłowa ścieżka folderu sprawy.")
+        return path
+
+    def validate_graph_path(self, case_id: str, graph_path: str) -> Path:
+        path = Path(graph_path).resolve()
+        graph_directory = (self._application.case_store.root / case_id / "graph").resolve()
+        if graph_directory not in path.parents or path.name != "graph_viewer.html" or not path.is_file():
+            raise DesktopValidationError("Nieprawidłowa ścieżka grafu.")
         return path
 
     def record_error(self, error: Exception) -> None:

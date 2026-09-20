@@ -10,6 +10,7 @@ from osint_lab.case_manifest import CaseManifest, CaseStatus, SeedEntity
 from osint_lab.case_runner import CaseRunner, build_default_collectors
 from osint_lab.case_storage import CaseStore
 from osint_lab.evidence import EvidenceVault
+from osint_lab.graph import EnrichmentBus, GraphService, build_default_enricher_registry
 from osint_lab.orchestrator.audit import AuditLog
 from osint_lab.orchestrator.authorization_store import AuthorizationStore
 from osint_lab.orchestrator.service import Orchestrator
@@ -31,6 +32,7 @@ def build_application(*, repo_root: Path | None = None) -> ApplicationServices:
     vault = EvidenceVault(repo_root=root, root=case_store.root)
     audit = AuditLog(repo_root=root)
     registry = build_default_registry()
+    collectors = build_default_collectors()
     orchestrator = Orchestrator(
         audit_log=audit,
         authorization_store=AuthorizationStore(repo_root=root),
@@ -39,14 +41,23 @@ def build_application(*, repo_root: Path | None = None) -> ApplicationServices:
         clock=clock,
     )
     reporter = ReportEngine(evidence_vault=vault, case_root=case_store.root, clock=clock)
+    enricher_registry = build_default_enricher_registry()
+    graph_service = GraphService(
+        repo_root=root, case_root=case_store.root, audit_log=audit, enricher_registry=enricher_registry,
+    )
+    enrichment_bus = EnrichmentBus(
+        registry=enricher_registry, orchestrator=orchestrator, collectors=collectors, clock=clock,
+    )
     runner = CaseRunner(
         orchestrator=orchestrator,
         registry=registry,
-        collectors=build_default_collectors(),
+        collectors=collectors,
         case_store=case_store,
         report_engine=reporter,
         audit_log=audit,
         clock=clock,
+        graph_service=graph_service,
+        enrichment_bus=enrichment_bus,
     )
     return ApplicationServices(case_store=case_store, runner=runner, audit_log=audit)
 

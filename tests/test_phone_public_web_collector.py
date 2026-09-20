@@ -673,7 +673,7 @@ def test_case_runner_intelligence_pivots_and_report_are_integrated(tmp_path):
     assert {"email_local_metadata", "email_exposure", "domain_dns", "username_lookup"} <= pivot_names
     report = json.loads(Path(result.report_reference.json_path).read_text(encoding="utf-8"))
     phone_section = report["phone_public_intelligence"]
-    assert report["schema_version"] == "1.4"
+    assert report["schema_version"] == "1.5"
     assert phone_section["provider_count"] == 1
     assert phone_section["status_counts"]["MATCH"] == 1
     assert phone_section["discovered_entities"]

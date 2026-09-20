@@ -103,7 +103,7 @@ class DesktopWindow:
 
         actions = ttk.Frame(card, style="Card.TFrame")
         actions.grid(row=13, column=0, sticky="ew")
-        actions.columnconfigure((0, 1), weight=1)
+        actions.columnconfigure((0, 1, 2), weight=1)
         self.report_button = ttk.Button(
             actions,
             text="OTWÓRZ RAPORT HTML",
@@ -120,6 +120,14 @@ class DesktopWindow:
             state="disabled",
         )
         self.folder_button.grid(row=0, column=1, sticky="ew", padx=(6, 0))
+        self.graph_button = ttk.Button(
+            actions,
+            text="OTWÓRZ GRAF",
+            command=self._open_graph,
+            style="Secondary.TButton",
+            state="disabled",
+        )
+        self.graph_button.grid(row=0, column=2, sticky="ew", padx=(6, 0))
 
     @staticmethod
     def _field(parent: ttk.Frame, label: str, variable: tk.StringVar, row: int) -> None:
@@ -144,6 +152,7 @@ class DesktopWindow:
         self.analyze_button.configure(state="disabled")
         self.report_button.configure(state="disabled")
         self.folder_button.configure(state="disabled")
+        self.graph_button.configure(state="disabled")
         self.status_var.set("Przygotowanie...")
         self.summary_var.set("Analiza jest wykonywana przez kontrolowany pipeline.")
         worker = threading.Thread(target=self._analyze_worker, args=(values,), daemon=True)
@@ -187,6 +196,8 @@ class DesktopWindow:
         self.folder_button.configure(state="normal")
         if summary.report_html_path:
             self.report_button.configure(state="normal")
+        if summary.graph_viewer_path:
+            self.graph_button.configure(state="normal")
         self.status_var.set("Gotowe.")
         self.summary_var.set(
             f"Status sprawy: {summary.overall_status}\n"
@@ -239,6 +250,12 @@ class DesktopWindow:
     def _open_folder(self) -> None:
         try:
             self.backend.open_case_folder(self._last_summary)
+        except (DesktopValidationError, OSError) as error:
+            messagebox.showwarning("LUMIR OSINT LAB", str(error), parent=self.root)
+
+    def _open_graph(self) -> None:
+        try:
+            self.backend.open_graph(self._last_summary)
         except (DesktopValidationError, OSError) as error:
             messagebox.showwarning("LUMIR OSINT LAB", str(error), parent=self.root)
 
