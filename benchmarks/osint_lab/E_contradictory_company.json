@@ -1,0 +1,1 @@
+{"case":"E","fixture_domains":["company-old.test","company-new.test"],"expected":[{"id":"hypothesis:company-association","label":"REJECTED"}],"synthetic":true}

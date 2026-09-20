@@ -1,0 +1,1 @@
+{"case":"I","fixture_domains":["first-party.test","registry.test"],"expected":[{"id":"hypothesis:association","label":"PROBABLE"}],"synthetic":true}

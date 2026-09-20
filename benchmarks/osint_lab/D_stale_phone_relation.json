@@ -1,0 +1,1 @@
+{"case":"D","seeds":[{"type":"PHONE","value":"+48123456789"}],"expected":[{"id":"relation:stale-phone","label":"UNKNOWN"}],"synthetic":true}

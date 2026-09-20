@@ -1,0 +1,1 @@
+{"case":"G","fixture_urls":["https://catalog.test/image/481234567"],"expected":[{"id":"relation:numeric-phone","label":"REJECTED"}],"synthetic":true}

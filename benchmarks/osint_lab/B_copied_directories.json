@@ -1,0 +1,1 @@
+{"case":"B","fixture_domains":["copy-one.test","copy-two.test"],"expected":[{"id":"hypothesis:independent-sources","label":"REJECTED"}],"synthetic":true}

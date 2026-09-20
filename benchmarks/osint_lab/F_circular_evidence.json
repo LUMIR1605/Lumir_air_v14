@@ -1,0 +1,1 @@
+{"case":"F","fixture_domains":["a.test","b.test","c.test"],"expected":[{"id":"hypothesis:independent-sources","label":"REJECTED"}],"synthetic":true}

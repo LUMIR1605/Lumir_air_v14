@@ -1,0 +1,251 @@
+"""Project completed collector evidence and analytics into the persistent graph."""
+
+from datetime import datetime
+import hashlib
+import ipaddress
+import json
+from typing import Iterable
+
+from osint_lab.case_manifest import CaseManifest
+from osint_lab.intelligence import IntelligenceSummary
+
+from .models import (
+    CaseEvent,
+    CaseEventType,
+    EntityNode,
+    EntityRelation,
+    GraphEntityType,
+    GraphRelationType,
+    GraphStatus,
+    TimelineEvent,
+    TimelineEventType,
+)
+from .normalization import EntityNormalizer
+from .store import GraphStore, deterministic_entity_id, deterministic_relation_id
+
+
+class GraphProjector:
+    def __init__(self, *, normalizer: EntityNormalizer | None = None) -> None:
+        self.normalizer = normalizer or EntityNormalizer()
+
+    def project(
+        self,
+        *,
+        store: GraphStore,
+        manifest: CaseManifest,
+        executions: Iterable[object],
+        intelligence: IntelligenceSummary,
+        run_id: str,
+        started_at: datetime,
+        finished_at: datetime,
+    ) -> tuple[int, int]:
+        graph_version_before = store.graph_version
+        execution_values = tuple(executions)
+        entities: dict[str, EntityNode] = {}
+        timeline: list[TimelineEvent] = []
+        events: list[CaseEvent] = []
+        evidence_by_id = {item.evidence_id: item for item in intelligence.evidence_quality}
+
+        for seed in manifest.seed_entities:
+            try:
+                entity_type = GraphEntityType(seed.entity_type.upper())
+                normalized = self.normalizer.normalize(entity_type, seed.value)
+            except (ValueError, KeyError):
+                continue
+            evidence_ref = "seed:" + hashlib.sha256(
+                f"{manifest.case_id}|{entity_type.value}|{normalized.canonical_value}".encode()
+            ).hexdigest()
+            entity = self._entity(
+                case_id=manifest.case_id, entity_type=entity_type, canonical=normalized.canonical_value,
+                display=normalized.display_value, timestamp=manifest.created_at,
+                source_refs=(f"manifest:{manifest.case_id}",), evidence_refs=(evidence_ref,),
+                confidence=1.0, attributes={"seed": True, "hop": 0},
+            )
+            entities[entity.entity_id] = entity
+            timeline.append(self._timeline(entity, evidence_ref, TimelineEventType.FIRST_SEEN, "case_manifest"))
+            events.append(self._case_event(manifest.case_id, CaseEventType.SEED_ADDED, entity.entity_id,
+                                           manifest.created_at, (evidence_ref,)))
+
+        relations: list[EntityRelation] = []
+        for record in execution_values:
+            if record.result is None:
+                continue
+            for index, observation in enumerate(record.result.observations):
+                payload = dict(observation.payload)
+                evidence_id = observation.evidence_ref or f"{record.result.execution_id}:observation:{index}"
+                evidence = evidence_by_id.get(evidence_id)
+                group = evidence.independence_group if evidence is not None else f"execution:{record.result.execution_id}"
+                timestamp = evidence.collected_at if evidence is not None else record.result.finished_at
+                derived: list[tuple[GraphEntityType, str, GraphEntityType, str, GraphRelationType, str]] = []
+                if record.step.collector_name == "email_local_metadata" and observation.raw_status == "VALID":
+                    domain = payload.get("domain")
+                    if isinstance(domain, str):
+                        derived.append((GraphEntityType.EMAIL, record.step.seed_reference, GraphEntityType.DOMAIN,
+                                        domain, GraphRelationType.USES_DOMAIN, "validated email domain"))
+                elif record.step.collector_name == "username_lookup" and observation.raw_status == "CLAIMED":
+                    profile = payload.get("profile_url")
+                    if isinstance(profile, str):
+                        derived.append((GraphEntityType.USERNAME, record.step.seed_reference,
+                                        GraphEntityType.SOCIAL_PROFILE, profile, GraphRelationType.LINKS_TO,
+                                        "provider-specific claimed profile signal"))
+                elif record.step.collector_name == "domain_dns" and observation.raw_status == "FOUND":
+                    if payload.get("query_type") in {"A", "AAAA"} and isinstance(payload.get("records"), list):
+                        for candidate in payload["records"]:
+                            try:
+                                address = str(ipaddress.ip_address(str(candidate)))
+                            except ValueError:
+                                continue
+                            derived.append((GraphEntityType.DOMAIN, record.step.seed_reference, GraphEntityType.IP,
+                                            address, GraphRelationType.HOSTED_ON, "point-in-time DNS address"))
+                for left_type, left_value, right_type, right_value, relation_type, reason in derived:
+                    try:
+                        left = self._from_values(manifest.case_id, left_type, left_value, timestamp,
+                                                 (evidence_id,), (record.step.collector_name,), hop=0)
+                        right = self._from_values(manifest.case_id, right_type, right_value, timestamp,
+                                                  (evidence_id,), (record.step.collector_name,), hop=1)
+                    except ValueError:
+                        continue
+                    entities.setdefault(left.entity_id, left)
+                    entities.setdefault(right.entity_id, right)
+                    relation_id = deterministic_relation_id(manifest.case_id, left.entity_id, right.entity_id,
+                                                            relation_type)
+                    derived_relation = EntityRelation(
+                        relation_id=relation_id, case_id=manifest.case_id, source_entity_id=left.entity_id,
+                        target_entity_id=right.entity_id, relation_type=relation_type, first_seen=timestamp,
+                        last_seen=timestamp, evidence_refs=(evidence_id,),
+                        source_refs=(record.step.collector_name,), independence_groups=(group,),
+                        confidence=evidence.quality_score if evidence and evidence.quality_score is not None else 0.5,
+                        status=GraphStatus.POSSIBLE, reasons=(reason,),
+                        attributes={"collector": record.step.collector_name},
+                    )
+                    relations.append(derived_relation)
+                    timeline.append(TimelineEvent(
+                        event_id="time-" + hashlib.sha256(
+                            f"relation|{relation_id}|{timestamp.isoformat()}".encode()
+                        ).hexdigest()[:24],
+                        case_id=manifest.case_id, entity_ids=(left.entity_id, right.entity_id),
+                        relation_ids=(relation_id,), event_type=TimelineEventType.RELATION_APPEARED,
+                        timestamp=timestamp, timestamp_source="collector_observation",
+                        evidence_refs=(evidence_id,), confidence=derived_relation.confidence,
+                        description=reason,
+                    ))
+                    events.append(self._case_event(manifest.case_id, CaseEventType.RELATION_CREATED,
+                                                   relation_id, timestamp, (evidence_id,)))
+
+        for correlation in intelligence.probable_correlations:
+            left = self._from_ref(manifest.case_id, correlation.left_entity, finished_at,
+                                  correlation.evidence_refs, correlation.supporting_sources)
+            right = self._from_ref(manifest.case_id, correlation.right_entity, finished_at,
+                                   correlation.evidence_refs, correlation.supporting_sources)
+            if left is None or right is None or left.entity_id == right.entity_id:
+                continue
+            entities.setdefault(left.entity_id, left)
+            entities.setdefault(right.entity_id, right)
+            evidence = tuple(dict.fromkeys(correlation.evidence_refs))
+            groups = tuple(dict.fromkeys(correlation.supporting_sources)) or ("UNASSESSED",)
+            source_refs = tuple(sorted({evidence_by_id[item].source_name for item in evidence if item in evidence_by_id}))
+            if not source_refs:
+                source_refs = ("intelligence:correlation",)
+            try:
+                relation_type = GraphRelationType(correlation.relation_type)
+            except ValueError:
+                relation_type = GraphRelationType.OTHER
+            status = GraphStatus(correlation.status.value)
+            relation_id = deterministic_relation_id(manifest.case_id, left.entity_id, right.entity_id, relation_type)
+            relation = EntityRelation(
+                relation_id=relation_id, case_id=manifest.case_id, source_entity_id=left.entity_id,
+                target_entity_id=right.entity_id, relation_type=relation_type, first_seen=finished_at,
+                last_seen=finished_at, evidence_refs=evidence, source_refs=source_refs,
+                independence_groups=groups, confidence=correlation.confidence, status=status,
+                reasons=correlation.reasons, reviewer_decision_id=correlation.verification_decision_id,
+                attributes={"correlation_id": correlation.correlation_id},
+            )
+            relations.append(relation)
+            timeline.append(TimelineEvent(
+                event_id="time-" + hashlib.sha256(f"relation|{relation_id}|{finished_at.isoformat()}".encode()).hexdigest()[:24],
+                case_id=manifest.case_id, entity_ids=(left.entity_id, right.entity_id),
+                relation_ids=(relation_id,), event_type=TimelineEventType.RELATION_APPEARED,
+                timestamp=finished_at, timestamp_source="collector_evidence", evidence_refs=evidence,
+                confidence=relation.confidence, description="Evidence-backed relation appeared.",
+            ))
+            events.append(self._case_event(manifest.case_id, CaseEventType.RELATION_CREATED, relation_id,
+                                           finished_at, evidence))
+
+        for evidence in intelligence.evidence_quality:
+            store.record_evidence(
+                evidence_id=evidence.evidence_id, source_ref=evidence.source_name,
+                independence_group=evidence.independence_group, first_seen=evidence.collected_at,
+                last_seen=evidence.collected_at, quality_score=evidence.quality_score,
+            )
+            events.append(self._case_event(manifest.case_id, CaseEventType.EVIDENCE_ADDED,
+                                           evidence.evidence_id, evidence.collected_at, (evidence.evidence_id,)))
+        store.add_batch(entities=entities.values(), relations=relations, timeline=timeline, events=events)
+        collector_versions = {record.step.collector_name: record.collector_version for record in execution_values}
+        provider_data = []
+        for record in execution_values:
+            if record.result is None:
+                continue
+            for observation in record.result.observations:
+                payload = observation.payload
+                provider_data.append({key: payload.get(key) for key in (
+                    "provider_id", "reviewed_at", "collector_version", "terms_limitations_note"
+                ) if payload.get(key) is not None})
+        policy_payload = {
+            "allowed_sources": sorted(item.value for item in manifest.allowed_source_classes),
+            "forbidden_sources": sorted(item.value for item in manifest.forbidden_source_classes),
+            "allowed_agents": sorted(manifest.allowed_agent_types),
+        }
+        store.record_run({
+            "run_id": run_id, "graph_version_before": graph_version_before,
+            "graph_version_after": store.graph_version + 1,
+            "collector_versions": collector_versions,
+            "provider_config_hash": hashlib.sha256(json.dumps(provider_data, sort_keys=True).encode()).hexdigest(),
+            "policy_hash": hashlib.sha256(json.dumps(policy_payload, sort_keys=True).encode()).hexdigest(),
+            "started_at": started_at.isoformat(), "finished_at": finished_at.isoformat(),
+            "evidence_refs": sorted(evidence_by_id),
+        })
+        return graph_version_before, store.graph_version
+
+    def _from_ref(self, case_id, ref, timestamp, evidence_refs, source_refs):
+        try:
+            entity_type = GraphEntityType(ref.entity_type.value)
+            normalized = self.normalizer.normalize(entity_type, ref.value_reference)
+        except ValueError:
+            return None
+        return self._entity(case_id=case_id, entity_type=entity_type, canonical=normalized.canonical_value,
+                            display=normalized.display_value, timestamp=timestamp,
+                            source_refs=tuple(source_refs) or ("intelligence:correlation",),
+                            evidence_refs=tuple(evidence_refs), confidence=0.7, attributes={"seed": False, "hop": 1})
+
+    def _from_values(self, case_id, entity_type, value, timestamp, evidence_refs, source_refs, *, hop):
+        normalized = self.normalizer.normalize(entity_type, value)
+        return self._entity(case_id=case_id, entity_type=entity_type, canonical=normalized.canonical_value,
+                            display=normalized.display_value, timestamp=timestamp, source_refs=source_refs,
+                            evidence_refs=evidence_refs, confidence=0.7, attributes={"seed": hop == 0, "hop": hop})
+
+    @staticmethod
+    def _entity(*, case_id, entity_type, canonical, display, timestamp, source_refs, evidence_refs,
+                confidence, attributes):
+        return EntityNode(
+            entity_id=deterministic_entity_id(case_id, entity_type, canonical), case_id=case_id,
+            entity_type=entity_type, canonical_value=canonical, display_value=display,
+            aliases=(display,), first_seen=timestamp, last_seen=timestamp, created_at=timestamp,
+            updated_at=timestamp, source_refs=tuple(source_refs), evidence_refs=tuple(evidence_refs),
+            confidence=confidence, status=GraphStatus.POSSIBLE, attributes=attributes,
+        )
+
+    @staticmethod
+    def _timeline(entity, evidence_ref, event_type, timestamp_source):
+        return TimelineEvent(
+            event_id="time-" + hashlib.sha256(f"{entity.entity_id}|{event_type.value}|{entity.first_seen.isoformat()}".encode()).hexdigest()[:24],
+            case_id=entity.case_id, entity_ids=(entity.entity_id,), relation_ids=(), event_type=event_type,
+            timestamp=entity.first_seen, timestamp_source=timestamp_source, evidence_refs=(evidence_ref,),
+            confidence=entity.confidence, description=f"{event_type.value} for {entity.entity_type.value}.",
+        )
+
+    @staticmethod
+    def _case_event(case_id, event_type, subject_id, timestamp, evidence_refs):
+        token = f"{event_type.value}|{subject_id}|{timestamp.isoformat()}"
+        return CaseEvent(event_id="evt-" + hashlib.sha256(token.encode()).hexdigest()[:24], case_id=case_id,
+                         event_type=event_type, timestamp=timestamp, subject_id=subject_id,
+                         evidence_refs=tuple(evidence_refs), attributes={})

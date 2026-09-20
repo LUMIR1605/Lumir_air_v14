@@ -1,0 +1,1 @@
+{"case":"H","fixture_domains":["contact.test"],"expected":[{"id":"relation:phone-web","label":"TRUE"},{"id":"relation:web-email","label":"TRUE"},{"id":"relation:email-domain","label":"TRUE"}],"synthetic":true}

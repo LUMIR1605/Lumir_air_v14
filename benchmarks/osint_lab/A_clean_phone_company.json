@@ -1,0 +1,1 @@
+{"case":"A","seeds":[{"type":"PHONE","value":"+48123456789"}],"fixture_domains":["company-a.test"],"expected":[{"id":"relation:phone-company","label":"TRUE"}],"synthetic":true}
