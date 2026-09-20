@@ -13,3 +13,7 @@ Safe defaults limit hops, pivots, network requests, entities, relations, enrichm
 ## NOT IMPLEMENTED
 
 - Infinite recursion, scheduler, automatic multi-hop network execution or “more results” ranking alone.
+
+## ETAP 15 — IMPLEMENTED
+
+Default limits are `max_hops=2`, `max_auto_pivots=6`, `max_network_requests=24`, one persistent fingerprint per entity/enricher/input and privacy threshold `0.6`. SAFE_LOCAL and reviewed PASSIVE_WEB work may be `AUTO`; higher privacy, credentials, paid/unreviewed or direct-target work is `MANUAL_REQUIRED` or `BLOCKED`. Request reservations also apply per provider and host.

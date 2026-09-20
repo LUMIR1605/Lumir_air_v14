@@ -18,3 +18,7 @@ Etap 14 persists correlation edges and builds `CorrelationPath` explanations acr
 ## NOT IMPLEMENTED
 
 - Automatic identity merge, person resolution, ownership claims, AI verdicts, or cross-case correlation.
+
+## ETAP 15 — IMPLEMENTED
+
+Evidence-backed adapters add PHONE↔EMAIL/DOMAIN/COMPANY, EMAIL↔DOMAIN/WEBSITE, USERNAME↔SOCIAL_PROFILE, COMPANY↔DOMAIN/PHONE/EMAIL and DOCUMENT↔PHONE/EMAIL/DOMAIN paths where source semantics support them. Cross-source corroboration groups identical claims and counts independent groups/source classes. Copied directories, shared usernames, stale records and circular paths cannot become independent confirmation.

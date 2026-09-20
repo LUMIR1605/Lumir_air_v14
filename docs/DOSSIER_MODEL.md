@@ -13,3 +13,7 @@ Report schema 1.5 embeds the dossier and renders KEY ENTITIES, KEY RELATIONS, IM
 ## NOT IMPLEMENTED
 
 - Public sharing, automatic narrative, legal conclusion or identity verdict.
+
+## ETAP 15 — IMPLEMENTED
+
+`SOURCE COVERAGE` is embedded per PHONE, EMAIL, USERNAME, DOMAIN, COMPANY and DOCUMENT. It reports eligible/enabled/executed/blocked/unknown/successful sources, verified evidence references and independent groups, plus compact totals for GUI/report use. Source diversity remains a coverage metric and does not promote findings.

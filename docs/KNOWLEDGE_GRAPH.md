@@ -13,3 +13,7 @@ The graph stores evidence-backed nodes and relations, temporal bounds, source re
 ## NOT IMPLEMENTED
 
 - Cross-case graph, server database, Redis/Kafka/Postgres, cloud sync or automatic identity merge.
+
+## ETAP 15 — IMPLEMENTED
+
+Reviewed source adapters project evidence through explicit adapters into PHONE, EMAIL, USERNAME, DOMAIN, WEBSITE, COMPANY/ORGANIZATION and DOCUMENT nodes. Cross-type relations are created only from accepted source semantics and retain source ID, evidence reference, independence group, reputation class and temporal/stale attributes. `ENTITY_DISCOVERED` records parent, source, extraction method, confidence and timestamp. Discovery-only results do not create evidence edges.

@@ -13,3 +13,7 @@ Production CaseRunner invokes allowed collector steps through `EnrichmentBus`. T
 ## NOT IMPLEMENTED
 
 - Bypass execution, autonomous crawling, background workers or new aggressive collectors.
+
+## ETAP 15 — IMPLEMENTED
+
+The registry now also routes `email_public_web`, `domain_rdap`, `website_metadata`, `company_public_web`, `document_intelligence` and `public_archive`. Every adapter still delegates through PolicyGate, CollectorRegistry and Orchestrator. Pivots declare `AUTO` or `MANUAL_REQUIRED`; automatic execution requires an enabled reviewed source, allowed case policy, hop/pivot/request budgets, a new fingerprint and privacy cost at or below `0.6`. Each executed pivot is written to CaseEvent Bus.
