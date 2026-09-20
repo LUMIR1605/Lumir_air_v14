@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 
 from osint_lab.application import ApplicationServices
-from osint_lab.agents import PhoneMetadataCollector, build_default_registry
+from osint_lab.agents import PhoneMetadataCollector, PhonePublicWebCollector, build_default_registry
+from osint_lab.agents.phone_public_http import PhonePublicHttpResponse
 from osint_lab.case_runner import (
     CaseRunResult,
     CaseRunStatus,
@@ -27,6 +28,20 @@ from osint_lab.verification.contradictions import ContradictionResult, Contradic
 
 
 NOW = datetime(2026, 9, 19, 20, 15, tzinfo=timezone.utc)
+
+
+class FakePhonePublicHttpClient:
+    def __init__(self):
+        self.calls = []
+
+    def get(self, url, *, timeout, headers):
+        self.calls.append(url)
+        return PhonePublicHttpResponse(
+            status_code=200,
+            final_url=url,
+            body="No results.",
+            redirected=False,
+        )
 
 
 class RecordingRunner:
@@ -208,10 +223,14 @@ def test_real_desktop_phone_path_uses_orchestrator_and_keeps_audit_private(tmp_p
         evidence_vault=vault,
         clock=lambda: NOW,
     )
+    phone_http = FakePhonePublicHttpClient()
     runner = CaseRunner(
         orchestrator=orchestrator,
         registry=registry,
-        collectors={"phone_metadata": PhoneMetadataCollector()},
+        collectors={
+            "phone_metadata": PhoneMetadataCollector(),
+            "phone_public_web": PhonePublicWebCollector(http_client=phone_http, clock=lambda: NOW),
+        },
         case_store=store,
         report_engine=ReportEngine(evidence_vault=vault, case_root=case_root, clock=lambda: NOW),
         audit_log=audit,
@@ -224,12 +243,15 @@ def test_real_desktop_phone_path_uses_orchestrator_and_keeps_audit_private(tmp_p
         path_opener=lambda path: None,
     )
     raw_phone = "+48123456789"
-    summary = backend.analyze(DesktopInput(phone=raw_phone))
+    summary = backend.analyze(DesktopInput(phone=raw_phone, allow_passive_web=True))
     assert summary.overall_status in {"SUCCESS", "PARTIAL"}
     assert Path(summary.report_html_path).is_file()
     audit_bytes = (audit.root / summary.case_id / "audit.jsonl").read_bytes()
     assert raw_phone.encode() not in audit_bytes
     assert (case_root / summary.case_id / "raw").is_dir()
+    assert phone_http.calls
+    html = Path(summary.report_html_path).read_text(encoding="utf-8")
+    assert "PHONE PUBLIC INTELLIGENCE" in html
 
 
 def test_launcher_and_gui_keep_windows_mvp_contract():

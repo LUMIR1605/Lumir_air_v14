@@ -18,7 +18,7 @@ from osint_lab.policies import SourceClass
 from osint_lab.verification.contradictions import ContradictionResult
 
 
-REPORT_ENGINE_VERSION = "1.2.0"
+REPORT_ENGINE_VERSION = "1.3.0"
 
 _PHONE_DETAIL_FIELDS = (
     ("normalized_e164", "Numer znormalizowany E.164"),
@@ -162,8 +162,16 @@ class ReportEngine:
                 })
 
         generated_at = self._now()
+        analytical_assessment = (
+            intelligence_summary.to_dict() if intelligence_summary is not None
+            else IntelligenceSummary().to_dict()
+        )
+        phone_public_intelligence = self._phone_public_summary(
+            execution_payloads,
+            analytical_assessment,
+        )
         return {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "generated_at": generated_at.isoformat(),
             "case": {
                 "case_id": manifest.case_id,
@@ -195,10 +203,8 @@ class ReportEngine:
                 "reasons": list(contradiction.reasons),
                 "evidence_refs": list(contradiction.evidence_refs),
             },
-            "analytical_assessment": (
-                intelligence_summary.to_dict() if intelligence_summary is not None
-                else IntelligenceSummary().to_dict()
-            ),
+            "analytical_assessment": analytical_assessment,
+            "phone_public_intelligence": phone_public_intelligence,
             "privacy_source_exposure": source_counts,
             "limitations": self._limitations(collectors),
             "audit": {
@@ -310,6 +316,10 @@ class ReportEngine:
         ]
         if "phone_metadata" in collectors:
             values.append("Phone metadata is numbering-plan data, not subscriber identification.")
+        if "phone_public_web" in collectors:
+            values.append(
+                "Phone public-web matches are public occurrences and possible associations, not subscriber identity."
+            )
         if "domain_dns" in collectors:
             values.append("DNS is a point-in-time resolver observation and does not establish ownership.")
         if "username_lookup" in collectors:
@@ -357,6 +367,9 @@ class ReportEngine:
             for name, count in model["privacy_source_exposure"].items()
         )
         phone_details = ReportEngine._render_phone_details(model["executions"])
+        phone_public = ReportEngine._render_phone_public_intelligence(
+            model.get("phone_public_intelligence", {})
+        )
         analytical_assessment = ReportEngine._render_analytical_assessment(
             model.get("analytical_assessment", {})
         )
@@ -384,6 +397,7 @@ class ReportEngine:
             "<h2>Findings</h2><table><thead><tr><th>Candidate</th><th>Status</th>"
             f"<th>Source</th><th>Notes</th></tr></thead><tbody>{''.join(finding_rows)}</tbody></table>"
             f"{phone_details}"
+            f"{phone_public}"
             f"{analytical_assessment}"
             f"<h2>Contradictions</h2><p>Severity: {escape(str(contradiction['severity']))}</p><ul>{reasons}</ul>"
             f"<h2>Privacy / source exposure</h2><ul>{exposure}</ul>"
@@ -420,6 +434,182 @@ class ReportEngine:
                 f"<table><tbody>{detail_rows}</tbody></table></section>"
             )
         return "".join(sections)
+
+    @staticmethod
+    def _phone_public_summary(
+        executions: list[dict[str, object]],
+        assessment: Mapping[str, object],
+    ) -> dict[str, object]:
+        observations: list[Mapping[str, object]] = []
+        applicable = False
+        for execution in executions:
+            if execution.get("collector") != "phone_public_web":
+                continue
+            applicable = True
+            values = execution.get("observations")
+            if isinstance(values, list):
+                observations.extend(item for item in values if isinstance(item, Mapping))
+        providers: set[str] = set()
+        status_counts = {name: 0 for name in ("MATCH", "NO_MATCH", "UNKNOWN", "ERROR")}
+        urls: set[str] = set()
+        domains: set[str] = set()
+        variants: set[str] = set()
+        entities: list[object] = []
+        evidence_refs: set[str] = set()
+        for observation in observations:
+            payload = observation.get("payload")
+            if not isinstance(payload, Mapping):
+                continue
+            provider_id = payload.get("provider_id")
+            if isinstance(provider_id, str):
+                providers.add(provider_id)
+            status = payload.get("status")
+            if isinstance(status, str) and status in status_counts:
+                status_counts[status] += 1
+            for key, target in (("result_url", urls), ("source_domain", domains), ("matched_variant", variants)):
+                value = payload.get(key)
+                if isinstance(value, str) and value:
+                    target.add(value)
+            discovered = payload.get("discovered_entities")
+            if isinstance(discovered, list):
+                entities.extend(item for item in discovered if isinstance(item, Mapping))
+            evidence_ref = observation.get("evidence_ref")
+            if isinstance(evidence_ref, str) and evidence_ref:
+                evidence_refs.add(evidence_ref)
+
+        quality_values = assessment.get("evidence_quality")
+        quality = [
+            item for item in quality_values
+            if isinstance(item, Mapping) and item.get("source_name") == "phone_public_web"
+        ] if isinstance(quality_values, list) else []
+        correlations_values = assessment.get("probable_correlations")
+        correlations = [
+            item for item in correlations_values
+            if isinstance(item, Mapping)
+            and bool(set(item.get("evidence_refs", [])) & evidence_refs)
+        ] if isinstance(correlations_values, list) else []
+        correlation_refs = {
+            ref for item in correlations for ref in item.get("evidence_refs", []) if isinstance(ref, str)
+        }
+        hypotheses_values = assessment.get("open_hypotheses")
+        hypotheses = [
+            item for item in hypotheses_values
+            if isinstance(item, Mapping)
+            and bool(set(item.get("evidence_for", [])) & correlation_refs)
+        ] if isinstance(hypotheses_values, list) else []
+        hypothesis_ids = {item.get("hypothesis_id") for item in hypotheses}
+        review_values = assessment.get("adversarial_reviews")
+        reviews = [
+            item for item in review_values
+            if isinstance(item, Mapping) and item.get("hypothesis_id") in hypothesis_ids
+        ] if isinstance(review_values, list) else []
+        alternatives = sorted({
+            str(value)
+            for item in hypotheses
+            for value in item.get("alternative_explanations", [])
+        } | {
+            str(value)
+            for item in reviews
+            for value in item.get("alternative_explanations", [])
+        })
+        pivot_values = assessment.get("recommended_next_pivots")
+        pivots = [
+            item for item in pivot_values
+            if isinstance(item, Mapping)
+            and item.get("proposed_collector") in {
+                "phone_public_web", "email_local_metadata", "email_exposure", "domain_dns", "username_lookup"
+            }
+        ] if isinstance(pivot_values, list) else []
+        unique_entities = {
+            (str(item.get("entity_type")), str(item.get("value")), str(item.get("source_url"))): item
+            for item in entities
+        }
+        return {
+            "applicable": applicable,
+            "provider_count": len(providers),
+            "providers": sorted(providers),
+            "status_counts": status_counts,
+            "public_urls": sorted(urls),
+            "source_domains": sorted(domains),
+            "matched_variants": sorted(variants),
+            "discovered_entities": list(unique_entities.values()),
+            "evidence_refs": sorted(evidence_refs),
+            "source_independence_groups": sorted({
+                str(item.get("independence_group")) for item in quality if item.get("independence_group")
+            }),
+            "evidence_quality": quality,
+            "correlations": correlations,
+            "hypotheses": hypotheses,
+            "alternative_explanations": alternatives,
+            "recommended_pivots": pivots,
+            "exposure_notice": (
+                "PASSIVE_WEB providers received searched phone variants. Public occurrence. Possible association. "
+                "Not independently verified subscriber identity or ownership."
+            ),
+        }
+
+    @staticmethod
+    def _render_phone_public_intelligence(value: object) -> str:
+        data = value if isinstance(value, Mapping) else {}
+        if data.get("applicable") is not True:
+            return ""
+
+        def items(values: object, formatter=str) -> str:
+            if not isinstance(values, list) or not values:
+                return "<li>None</li>"
+            return "".join(f"<li>{escape(formatter(item))}</li>" for item in values)
+
+        counts = data.get("status_counts") if isinstance(data.get("status_counts"), Mapping) else {}
+        status_text = ", ".join(
+            f"{name}: {escape(str(counts.get(name, 0)))}" for name in ("MATCH", "NO_MATCH", "UNKNOWN", "ERROR")
+        )
+        entities = items(
+            data.get("discovered_entities"),
+            lambda item: (
+                f"{item.get('entity_type', 'OTHER')}: {item.get('value', '')} "
+                f"(confidence {item.get('confidence', '')})"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        quality = items(
+            data.get("evidence_quality"),
+            lambda item: (
+                f"{item.get('evidence_id', '')}: score {item.get('quality_score', '')}, "
+                f"group {item.get('independence_group', '')}"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        correlations = items(
+            data.get("correlations"),
+            lambda item: (
+                f"{item.get('status', 'UNKNOWN')} {item.get('relation_type', '')} "
+                f"(confidence {item.get('confidence', '')})"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        hypotheses = items(
+            data.get("hypotheses"),
+            lambda item: f"{item.get('status', 'OPEN')}: {item.get('statement', '')}"
+            if isinstance(item, Mapping) else str(item),
+        )
+        pivots = items(
+            data.get("recommended_pivots"),
+            lambda item: f"{item.get('status', '')}: {item.get('proposed_collector', '')}"
+            if isinstance(item, Mapping) else str(item),
+        )
+        return (
+            "<section><h2>PHONE PUBLIC INTELLIGENCE</h2>"
+            f"<p>{escape(str(data.get('exposure_notice', '')))}</p>"
+            f"<p>Providers: {escape(str(data.get('provider_count', 0)))}; {status_text}</p>"
+            f"<h3>Public URLs</h3><ul>{items(data.get('public_urls'))}</ul>"
+            f"<h3>Source domains</h3><ul>{items(data.get('source_domains'))}</ul>"
+            f"<h3>Matched variants</h3><ul>{items(data.get('matched_variants'))}</ul>"
+            f"<h3>Discovered entities</h3><ul>{entities}</ul>"
+            f"<h3>Evidence references</h3><ul>{items(data.get('evidence_refs'))}</ul>"
+            f"<h3>Source independence groups</h3><ul>{items(data.get('source_independence_groups'))}</ul>"
+            f"<h3>Evidence quality</h3><ul>{quality}</ul>"
+            f"<h3>Correlations</h3><ul>{correlations}</ul>"
+            f"<h3>Hypotheses</h3><ul>{hypotheses}</ul>"
+            f"<h3>Alternative explanations</h3><ul>{items(data.get('alternative_explanations'))}</ul>"
+            f"<h3>Recommended pivots</h3><ul>{pivots}</ul></section>"
+        )
 
     @staticmethod
     def _render_analytical_assessment(assessment: object) -> str:

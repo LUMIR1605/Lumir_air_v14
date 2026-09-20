@@ -21,26 +21,51 @@ class SourceIndependenceEngine:
         return urlunsplit((parsed.scheme.casefold(), parsed.netloc.casefold(), parsed.path.rstrip("/"), parsed.query, ""))
 
     def cluster(self, items: tuple[EvidenceItem, ...]) -> tuple[EvidenceItem, ...]:
+        parents = list(range(len(items)))
+
+        def find(index: int) -> int:
+            while parents[index] != index:
+                parents[index] = parents[parents[index]]
+                index = parents[index]
+            return index
+
+        def union(left: int, right: int) -> None:
+            left_root, right_root = find(left), find(right)
+            if left_root != right_root:
+                parents[right_root] = left_root
+
+        first_by_key: dict[str, int] = {}
+        keys_by_index: list[set[str]] = []
+        for index, item in enumerate(items):
+            keys = self._cluster_keys(item)
+            keys_by_index.append(keys)
+            for key in keys:
+                previous = first_by_key.setdefault(key, index)
+                union(index, previous)
+        component_keys: dict[int, set[str]] = {}
+        for index, keys in enumerate(keys_by_index):
+            component_keys.setdefault(find(index), set()).update(keys)
         assigned: list[EvidenceItem] = []
-        for item in items:
-            key = self._cluster_key(item)
-            digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+        for index, item in enumerate(items):
+            digest_source = "|".join(sorted(component_keys[find(index)]))
+            digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:16]
             assigned.append(replace(item, independence_group=f"group-{digest}"))
         return tuple(assigned)
 
-    def _cluster_key(self, item: EvidenceItem) -> str:
+    def _cluster_keys(self, item: EvidenceItem) -> set[str]:
+        keys: set[str] = set()
         if item.parent_source_ref:
-            return f"parent:{item.parent_source_ref.casefold()}"
+            keys.add(f"parent:{item.parent_source_ref.casefold()}")
         if item.content_hash:
-            return f"content:{item.content_hash.casefold()}"
+            keys.add(f"content:{item.content_hash.casefold()}")
         if item.payload_fingerprint:
-            return f"payload:{item.payload_fingerprint.casefold()}"
+            keys.add(f"payload:{item.payload_fingerprint.casefold()}")
         canonical = self.canonical_url(item.canonical_url)
         if canonical:
-            return f"url:{canonical}"
+            keys.add(f"url:{canonical}")
         if item.domain:
-            return f"domain:{item.domain.casefold()}"
-        return f"source:{item.source_name.casefold()}"
+            keys.add(f"domain:{item.domain.casefold()}")
+        return keys or {f"source:{item.source_name.casefold()}"}
 
 
 class EvidenceQualityEngine:

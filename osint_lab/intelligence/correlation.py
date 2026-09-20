@@ -23,7 +23,13 @@ class CorrelationEngine:
         independent = len({item.independence_group for item in supporting})
         support_strength = sum(max(0.0, item.quality_score or 0.0) for item in supporting)
         opposition_strength = sum(max(0.0, item.quality_score or 0.0) for item in opposing)
-        base = {"exact_email": 0.42, "exact_domain": 0.35, "exact_username": 0.22}.get(match_kind, 0.15)
+        base = {
+            "exact_email": 0.42,
+            "exact_domain": 0.35,
+            "exact_username": 0.22,
+            "exact_phone_public": 0.45,
+            "public_extraction": 0.3,
+        }.get(match_kind, 0.15)
         confidence = round(max(0.0, min(0.94, base + min(0.36, support_strength * 0.18)
                                          + min(0.12, max(0, independent - 1) * 0.08)
                                          - min(0.5, opposition_strength * 0.25))), 3)

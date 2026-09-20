@@ -14,6 +14,7 @@ from osint_lab.agents import (
     EmailLocalMetadataCollector,
     ExecutionResult,
     PhoneMetadataCollector,
+    PhonePublicWebCollector,
     UsernameCollector,
 )
 from osint_lab.agents.email_exposure import normalize_email
@@ -197,6 +198,7 @@ class CaseRunResult:
 def build_default_collectors() -> dict[str, Collector]:
     collectors: tuple[Collector, ...] = (
         PhoneMetadataCollector(),
+        PhonePublicWebCollector(),
         DomainDNSCollector(),
         UsernameCollector(),
         EmailLocalMetadataCollector(),
@@ -209,7 +211,7 @@ class CaseRunner:
     """Plan and execute cases without bypassing registry, policy, or Orchestrator."""
 
     _SEED_COLLECTORS = {
-        "PHONE": ("phone_metadata",),
+        "PHONE": ("phone_metadata", "phone_public_web"),
         "DOMAIN": ("domain_dns",),
         "USERNAME": ("username_lookup",),
         "EMAIL": ("email_local_metadata", "email_exposure"),

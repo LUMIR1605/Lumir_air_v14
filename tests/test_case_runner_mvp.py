@@ -14,12 +14,14 @@ from osint_lab.agents import (
     EmailLocalMetadataCollector,
     ExecutionStatus,
     PhoneMetadataCollector,
+    PhonePublicWebCollector,
     UsernameCollector,
     build_default_registry,
     metadata_for,
 )
 from osint_lab.agents.base import Collector, FindingCandidate, RawObservation
 from osint_lab.agents.username_http import UsernameHttpResponse
+from osint_lab.agents.phone_public_http import PhonePublicHttpResponse
 from osint_lab.case_manifest import CaseManifest, CaseStatus, SeedEntity
 from osint_lab.case_runner import CaseExecutionPlan, CaseRunStatus, CaseRunner
 from osint_lab.case_storage import CaseStore, default_case_root
@@ -56,6 +58,20 @@ class FakeHttpClient:
             status_code=404,
             final_url=url,
             body="generic not found",
+            redirected=False,
+        )
+
+
+class FakePhonePublicHttpClient:
+    def __init__(self):
+        self.calls = []
+
+    def get(self, url, *, timeout, headers):
+        self.calls.append({"url": url, "timeout": timeout, "headers": dict(headers)})
+        return PhonePublicHttpResponse(
+            status_code=200,
+            final_url=url,
+            body="No results.",
             redirected=False,
         )
 
@@ -125,8 +141,10 @@ def build_test_application(tmp_path, *, collector_mapping=None, registry=None):
     resolver = FakeResolver()
     username_http = FakeHttpClient()
     email_http = FakeHttpClient()
+    phone_public_http = FakePhonePublicHttpClient()
     collectors = collector_mapping or {
         "phone_metadata": PhoneMetadataCollector(),
+        "phone_public_web": PhonePublicWebCollector(http_client=phone_public_http, clock=lambda: NOW),
         "domain_dns": DomainDNSCollector(resolver=resolver, resolver_label="mock://192.0.2.53"),
         "username_lookup": UsernameCollector(http_client=username_http, clock=lambda: NOW),
         "email_local_metadata": EmailLocalMetadataCollector(),
@@ -213,15 +231,17 @@ def test_plan_is_deterministic_and_maps_all_mvp_seeds(tmp_path):
     assert plan_a.to_dict() == plan_b.to_dict()
     assert [step.collector_name for step in plan_a.planned_steps] == [
         "phone_metadata",
+        "phone_public_web",
         "domain_dns",
         "username_lookup",
         "email_local_metadata",
         "email_exposure",
         "domain_dns",
     ]
-    assert plan_a.planned_steps[-1].dependencies == ("step-004",)
+    assert plan_a.planned_steps[-1].dependencies == ("step-005",)
     assert set(plan_a.available_collectors) == {
         "phone_metadata",
+        "phone_public_web",
         "domain_dns",
         "username_lookup",
         "email_local_metadata",
@@ -250,7 +270,7 @@ def test_duplicate_unknown_and_unavailable_steps_are_explicit(tmp_path):
         SeedEntity(entity_type="DOCUMENT", value="fixture-document"),
     ))
     plan = app.runner.plan(manifest, persist=False)
-    assert len(plan.planned_steps) == 1
+    assert len(plan.planned_steps) == 2
     assert {item.reason for item in plan.skipped_steps} == {"duplicate seed", "unknown seed type"}
 
     mapping = dict(app.runner._collectors)
@@ -277,6 +297,23 @@ def test_local_only_plan_and_passive_web_denial_do_not_call_network(tmp_path):
     assert resolver.calls == []
     assert username_http.calls == []
     assert email_http.calls == []
+
+
+def test_phone_plan_runs_local_metadata_and_denies_public_web_when_disabled(tmp_path):
+    app, *_ = build_test_application(tmp_path)
+    case = mixed_manifest(
+        allow_passive=False,
+        seeds=(SeedEntity(entity_type="PHONE", value="+48123456789"),),
+        case_id="case-phone-passive-disabled",
+    )
+    app.case_store.create(case)
+    plan = app.runner.plan(case, persist=False)
+    assert [item.collector_name for item in plan.planned_steps] == ["phone_metadata"]
+    assert [item.collector_name for item in plan.denied_steps] == ["phone_public_web"]
+    result = app.runner.run(case)
+    assert [item.result_status for item in result.executions] == ["SUCCESS", "DENIED"]
+    client = app.runner._collectors["phone_public_web"]._http_client
+    assert client.calls == []
 
 
 def test_all_denied_case_returns_denied(tmp_path):
@@ -337,15 +374,15 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     manifest = mixed_manifest()
     app.case_store.create(manifest)
     plan = app.runner.plan(manifest)
-    assert len(plan.planned_steps) == 6
+    assert len(plan.planned_steps) == 7
 
     result = app.runner.run(
         manifest,
         contradiction_assertions=contradiction_assertions(),
     )
     assert result.overall_status is CaseRunStatus.PARTIAL
-    assert len(result.executions) == 6
-    assert len(result.receipts) == 6
+    assert len(result.executions) == 7
+    assert len(result.receipts) == 7
     assert result.contradictions.severity is ContradictionSeverity.MEDIUM
     assert set(result.contradictions.evidence_refs) == {"ev-fixture-a", "ev-fixture-b"}
     assert result.findings_summary == {
@@ -353,7 +390,7 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
         "PROBABLE": 0,
         "POSSIBLE": 2,
         "UNKNOWN": 1,
-        "NOT_FOUND": 16,
+        "NOT_FOUND": 17,
         "FALSE_POSITIVE": 0,
     }
     assert len(resolver.calls) == 12
@@ -369,7 +406,7 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert hashlib.sha256(json_bytes).hexdigest() == reference.json_sha256
     assert hashlib.sha256(html_bytes).hexdigest() == reference.html_sha256
     report = json.loads(json_bytes)
-    assert report["schema_version"] == "1.2"
+    assert report["schema_version"] == "1.3"
     assessment = report["analytical_assessment"]
     assert assessment["known_technical_facts"]
     assert "probable_correlations" in assessment
@@ -406,12 +443,12 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert report["privacy_source_exposure"] == {
         "DIRECT_TARGET": 0,
         "LOCAL": 2,
-        "PASSIVE_WEB": 4,
+        "PASSIVE_WEB": 5,
         "THIRD_PARTY_API": 0,
         "TOR": 0,
     }
     assert report["contradictions"]["severity"] == "MEDIUM"
-    assert len(report["audit"]["execution_receipt_refs"]) == 6
+    assert len(report["audit"]["execution_receipt_refs"]) == 7
     assert report["audit"]["verified"] is True
     assert b"Private case report" in html_bytes
     combined = (json_bytes + html_bytes).decode("utf-8").casefold()
