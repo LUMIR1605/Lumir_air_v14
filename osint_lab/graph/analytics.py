@@ -1,6 +1,7 @@
 """Deterministic graph paths, pivots, adversarial review and dossier assembly."""
 
 from collections import defaultdict, deque
+from dataclasses import replace
 import hashlib
 from typing import Iterable, Mapping
 
@@ -17,6 +18,7 @@ from .models import (
     ProfessionalFailureState,
 )
 from .store import GraphStore
+from osint_lab.sources import diversity_score
 
 
 def detect_circular_provenance(relations: Iterable[Mapping[str, object]]) -> tuple[tuple[str, ...], ...]:
@@ -167,9 +169,21 @@ class GraphPivotPlanner:
                     duplication_risk=1.0 if duplicate else 0.1, graph_value=graph_value,
                     reason="; ".join(reasons), status="SUPPRESSED_DUPLICATE" if duplicate else "PROPOSED",
                     execution_fingerprint=fingerprint, hop=hop + 1,
+                    execution_mode=("AUTO" if definition.privacy_cost <= self.budget.max_privacy_cost
+                                    and definition.source_class.value in {"LOCAL", "PASSIVE_WEB"}
+                                    else "MANUAL_REQUIRED"),
                 ))
         proposals.sort(key=lambda item: (item.status != "PROPOSED", -item.graph_value, item.pivot_id))
-        return tuple(proposals[:self.budget.max_pivots])
+        bounded = []
+        automatic_count = 0
+        for item in proposals[:self.budget.max_pivots]:
+            if item.execution_mode == "AUTO":
+                automatic_count += 1
+                if automatic_count > self.budget.max_auto_pivots:
+                    item = replace(item, execution_mode="MANUAL_REQUIRED",
+                                   reason=item.reason + "; automatic pivot budget exhausted")
+            bounded.append(item)
+        return tuple(bounded)
 
 
 class GraphAdversarialVerifier:
@@ -245,6 +259,12 @@ def build_dossier(
     contradictions = tuple(str(item) for item in intelligence.get("contradictions", ()))
     if contradictions:
         failure_states.append(ProfessionalFailureState.CONTRADICTORY.value)
+    graph_evidence = [
+        {"source_class": source, "source_url": source if source.startswith("http") else "",
+         "reputation_class": relation.get("attributes", {}).get("source_reputation", "UNKNOWN")}
+        for relation in edges for source in relation.get("source_refs", ())
+    ]
+    diversity = diversity_score(graph_evidence)
     return CaseDossier(
         case_summary={"case_id": snapshot["case_id"], "graph_version": snapshot["graph_version"],
                       "failure_states": failure_states},
@@ -263,5 +283,8 @@ def build_dossier(
         reviewer_decisions=tuple(snapshot.get("reviewer_decisions", ())),
         coverage_summary={"entity_count": len(nodes), "relation_count": len(edges),
                           "path_count": len(path_values), "independent_path_count": sum(
-                              len(item.independent_groups) >= 2 for item in path_values)},
+                              len(item.independent_groups) >= 2 for item in path_values),
+                          "source_diversity_score": diversity.score,
+                          "unique_source_classes": diversity.independent_source_classes,
+                          "independent_domains": diversity.independent_domains},
     )

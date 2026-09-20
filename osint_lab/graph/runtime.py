@@ -22,17 +22,20 @@ from .export import GraphExporter
 from .models import CaseEvent, CaseEventType, PivotBudget
 from .projector import GraphProjector
 from .store import GraphStore
+from osint_lab.sources import SourceCoverage, SourceFailureStatus, SourceRegistry
 
 
 class GraphService:
     def __init__(self, *, repo_root: Path, case_root: Path, audit_log: AuditLog,
-                 enricher_registry: EnricherRegistry, budget: PivotBudget | None = None) -> None:
+                 enricher_registry: EnricherRegistry, budget: PivotBudget | None = None,
+                 source_registry: SourceRegistry | None = None) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.case_root = Path(case_root).resolve()
         self.audit_log = audit_log
         self.registry = enricher_registry
+        self.source_registry = source_registry
         self.budget = budget or PivotBudget()
-        self.projector = GraphProjector()
+        self.projector = GraphProjector(source_registry=source_registry)
         self.paths = GraphPathEngine()
         self.adversarial = GraphAdversarialVerifier()
         self.exporter = GraphExporter()
@@ -48,8 +51,9 @@ class GraphService:
         finished_at: datetime,
     ) -> dict[str, object]:
         store = self.store(manifest.case_id)
+        execution_values = tuple(executions)
         version_before, version_after = self.projector.project(
-            store=store, manifest=manifest, executions=tuple(executions), intelligence=intelligence,
+            store=store, manifest=manifest, executions=execution_values, intelligence=intelligence,
             run_id=run_id, started_at=started_at, finished_at=finished_at,
         )
         snapshot = store.snapshot()
@@ -80,6 +84,18 @@ class GraphService:
             snapshot=snapshot, seeds=(item.to_dict() for item in manifest.seed_entities), paths=paths,
             intelligence=intelligence_payload, pivots=pivots,
         )
+        source_coverage = self._source_coverage(snapshot, execution_values)
+        dossier_payload = dossier.to_dict()
+        dossier_payload["source_coverage"] = [item.to_dict() for item in source_coverage]
+        dossier_payload["coverage_summary"].update({
+            "eligible_sources": sum(item.eligible_sources for item in source_coverage),
+            "enabled_sources": sum(item.enabled_sources for item in source_coverage),
+            "executed_sources": sum(item.executed_sources for item in source_coverage),
+            "blocked_unavailable_sources": sum(item.blocked_sources + item.unknown_sources for item in source_coverage),
+            "successful_sources": sum(item.successful_sources for item in source_coverage),
+            "entities_discovered": len(snapshot.get("nodes", ())),
+            "useful_pivots": sum(item.status == "PROPOSED" for item in pivots),
+        })
         exports = self.exporter.export_all(snapshot=snapshot, directory=store.directory)
         return {
             "schema_version": snapshot["schema_version"], "graph_version_before": version_before,
@@ -90,8 +106,55 @@ class GraphService:
             "hypothesis_graph": graph_hypotheses,
             "identity_candidates": [item.to_dict() for item in identities],
             "recommended_pivots": [item.to_dict() for item in pivots],
-            "dossier": dossier.to_dict(), "exports": exports,
+            "source_coverage": [item.to_dict() for item in source_coverage],
+            "source_registry": ({"version": self.source_registry.version,
+                                 "config_hash": self.source_registry.config_hash}
+                                if self.source_registry is not None else None),
+            "dossier": dossier_payload, "exports": exports,
         }
+
+    def _source_coverage(self, snapshot, executions) -> tuple[SourceCoverage, ...]:
+        if self.source_registry is None:
+            return ()
+        executed: dict[str, list[str]] = {}
+        evidence: dict[str, set[str]] = {}
+        for record in executions:
+            if record.result is None:
+                continue
+            for observation in record.result.observations:
+                source_id = str(observation.payload.get("source_id") or record.step.collector_name)
+                failure = str(observation.payload.get("failure_status") or observation.raw_status)
+                executed.setdefault(source_id, []).append(failure)
+                if observation.evidence_ref:
+                    evidence.setdefault(source_id, set()).add(observation.evidence_ref)
+        node_types = {item.get("entity_type") for item in snapshot.get("nodes", ())}
+        values = []
+        for entity_type in (
+            "PHONE", "EMAIL", "USERNAME", "DOMAIN", "COMPANY", "DOCUMENT",
+        ):
+            from .models import GraphEntityType
+            graph_type = GraphEntityType(entity_type)
+            definitions = self.source_registry.for_entity(graph_type)
+            enabled = [item for item in definitions if item.enabled]
+            relevant_ids = {item.source_id for item in definitions}
+            executed_ids = relevant_ids & set(executed)
+            failures = [value for source_id in executed_ids for value in executed[source_id]]
+            success = {source_id for source_id in executed_ids
+                       if SourceFailureStatus.SUCCESS.value in executed[source_id]}
+            unknown_values = {SourceFailureStatus.UNKNOWN.value, SourceFailureStatus.PARSER_FAILURE.value,
+                              SourceFailureStatus.TIMEOUT.value, SourceFailureStatus.RATE_LIMITED.value}
+            values.append(SourceCoverage(
+                entity_type=graph_type, eligible_sources=len(definitions) if entity_type in node_types else 0,
+                enabled_sources=len(enabled) if entity_type in node_types else 0,
+                executed_sources=len(executed_ids),
+                blocked_sources=sum(not item.enabled for item in definitions) if entity_type in node_types else 0,
+                unknown_sources=sum(item in unknown_values for item in failures),
+                successful_sources=len(success),
+                verified_evidence_count=sum(len(evidence.get(source_id, ())) for source_id in success),
+                independent_evidence_groups=len({group for edge in snapshot.get("edges", ())
+                                                 for group in edge.get("independence_groups", ())}),
+            ))
+        return tuple(values)
 
     def record_report(self, *, case_id: str, run_id: str, timestamp: datetime,
                       evidence_refs: tuple[str, ...]) -> None:

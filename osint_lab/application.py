@@ -16,6 +16,7 @@ from osint_lab.orchestrator.authorization_store import AuthorizationStore
 from osint_lab.orchestrator.service import Orchestrator
 from osint_lab.policies import SourceClass
 from osint_lab.reporting import ReportEngine
+from osint_lab.sources import build_default_source_registry
 
 
 @dataclass(frozen=True)
@@ -42,11 +43,14 @@ def build_application(*, repo_root: Path | None = None) -> ApplicationServices:
     )
     reporter = ReportEngine(evidence_vault=vault, case_root=case_store.root, clock=clock)
     enricher_registry = build_default_enricher_registry()
+    source_registry = build_default_source_registry()
     graph_service = GraphService(
         repo_root=root, case_root=case_store.root, audit_log=audit, enricher_registry=enricher_registry,
+        source_registry=source_registry,
     )
     enrichment_bus = EnrichmentBus(
         registry=enricher_registry, orchestrator=orchestrator, collectors=collectors, clock=clock,
+        source_registry=source_registry,
     )
     runner = CaseRunner(
         orchestrator=orchestrator,
@@ -82,7 +86,9 @@ def create_case_manifest(
     allowed_agent_types = {
         seed.entity_type.strip().upper()
         for seed in seed_values
-        if seed.entity_type.strip().upper() in {"PHONE", "DOMAIN", "USERNAME", "EMAIL"}
+        if seed.entity_type.strip().upper() in {
+            "PHONE", "DOMAIN", "USERNAME", "EMAIL", "WEBSITE", "COMPANY", "ORGANIZATION", "DOCUMENT"
+        }
     }
     if any(seed.entity_type.strip().upper() == "EMAIL" for seed in seed_values):
         allowed_agent_types.add("DOMAIN")

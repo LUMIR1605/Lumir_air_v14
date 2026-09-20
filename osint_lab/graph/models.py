@@ -95,6 +95,8 @@ class CaseEventType(str, Enum):
     REVIEW_DECISION = "REVIEW_DECISION"
     CONTRADICTION_FOUND = "CONTRADICTION_FOUND"
     REPORT_GENERATED = "REPORT_GENERATED"
+    ENTITY_DISCOVERED = "ENTITY_DISCOVERED"
+    AUTO_PIVOT_RECORDED = "AUTO_PIVOT_RECORDED"
 
 
 class ReviewDecisionValue(str, Enum):
@@ -337,16 +339,22 @@ class CaseEvent:
 
 @dataclass(frozen=True, kw_only=True)
 class PivotBudget:
-    max_hops: int = 4
-    max_pivots: int = 24
-    max_network_requests: int = 32
+    max_hops: int = 2
+    max_pivots: int = 16
+    max_auto_pivots: int = 6
+    max_network_requests: int = 24
     max_entities: int = 500
     max_relations: int = 1000
     max_enrichments_per_entity: int = 4
     max_repeated_provider_queries: int = 1
+    max_privacy_cost: float = 0.6
 
     def __post_init__(self) -> None:
         for name, value in self.__dict__.items():
+            if name == "max_privacy_cost":
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+                    raise ValueError("max_privacy_cost must be between 0 and 1")
+                continue
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise ValueError(f"{name} must be a positive integer")
 
@@ -367,6 +375,7 @@ class GraphPivot:
     status: str
     execution_fingerprint: str
     hop: int
+    execution_mode: str = "MANUAL_REQUIRED"
 
     def to_dict(self) -> dict[str, object]:
         return dict(self.__dict__)
