@@ -32,7 +32,6 @@ from osint_lab.orchestrator.context import ExecutionContext
 from osint_lab.orchestrator.service import Orchestrator
 from osint_lab.policies import SourceClass
 from osint_lab.reporting import ReportEngine
-from osint_lab.schemas import FindingStatus
 from osint_lab.verification.contradictions import ContradictionAssertion, ContradictionSeverity
 
 
@@ -406,7 +405,7 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert hashlib.sha256(json_bytes).hexdigest() == reference.json_sha256
     assert hashlib.sha256(html_bytes).hexdigest() == reference.html_sha256
     report = json.loads(json_bytes)
-    assert report["schema_version"] == "1.3"
+    assert report["schema_version"] == "1.4"
     assessment = report["analytical_assessment"]
     assert assessment["known_technical_facts"]
     assert "probable_correlations" in assessment

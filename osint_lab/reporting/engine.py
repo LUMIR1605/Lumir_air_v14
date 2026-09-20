@@ -18,7 +18,7 @@ from osint_lab.policies import SourceClass
 from osint_lab.verification.contradictions import ContradictionResult
 
 
-REPORT_ENGINE_VERSION = "1.3.1"
+REPORT_ENGINE_VERSION = "1.4.0"
 
 _PHONE_DETAIL_FIELDS = (
     ("normalized_e164", "Numer znormalizowany E.164"),
@@ -171,7 +171,7 @@ class ReportEngine:
             analytical_assessment,
         )
         return {
-            "schema_version": "1.3",
+            "schema_version": "1.4",
             "generated_at": generated_at.isoformat(),
             "case": {
                 "case_id": manifest.case_id,
@@ -453,8 +453,8 @@ class ReportEngine:
         status_counts = {name: 0 for name in ("MATCH", "NO_MATCH", "UNKNOWN", "ERROR")}
         match_level_counts = {
             name: 0 for name in (
-                "NUMERIC_MATCH", "PHONE_CONTEXT_MATCH", "STRUCTURED_PHONE_MATCH",
-                "REJECTED_NUMERIC_ID", "UNKNOWN",
+                "SEARCH_DISCOVERY_ONLY", "NUMERIC_MATCH", "NUMERIC_MATCH_ONLY",
+                "PHONE_CONTEXT_MATCH", "STRUCTURED_PHONE_MATCH", "REJECTED_NUMERIC_ID", "UNKNOWN",
             )
         }
         urls: set[str] = set()
@@ -463,6 +463,10 @@ class ReportEngine:
         entities: list[object] = []
         evidence_refs: set[str] = set()
         false_positives: list[dict[str, object]] = []
+        discovery_rows: list[dict[str, object]] = []
+        verified_targets: list[dict[str, object]] = []
+        rejected_targets: list[dict[str, object]] = []
+        phone_signals: list[dict[str, object]] = []
         for observation in observations:
             payload = observation.get("payload")
             if not isinstance(payload, Mapping):
@@ -470,6 +474,22 @@ class ReportEngine:
             provider_id = payload.get("provider_id")
             if isinstance(provider_id, str):
                 providers.add(provider_id)
+            channels = payload.get("discovery_channels")
+            if isinstance(channels, list):
+                for channel in channels:
+                    if isinstance(channel, Mapping):
+                        discovery_rows.append(dict(channel))
+                        channel_provider = channel.get("provider_id")
+                        if isinstance(channel_provider, str):
+                            providers.add(channel_provider)
+            elif payload.get("stage") == "SEARCH_DISCOVERY":
+                discovery_rows.append({
+                    "provider_id": provider_id,
+                    "query_variant": payload.get("query_variant"),
+                    "request_url": payload.get("request_url"),
+                    "status": payload.get("status"),
+                    "error_code": payload.get("error_code"),
+                })
             status = payload.get("status")
             if isinstance(status, str) and status in status_counts:
                 status_counts[status] += 1
@@ -502,12 +522,50 @@ class ReportEngine:
                     "reason": payload.get("semantic_reason") or payload.get("error_reason"),
                     "evidence_ref": evidence_ref,
                 })
+            if payload.get("stage") == "TARGET_PAGE_VALIDATION":
+                target_fetch = payload.get("target_fetch") if isinstance(payload.get("target_fetch"), Mapping) else {}
+                target_row = {
+                    "url": payload.get("target_canonical_url") or payload.get("result_url"),
+                    "domain": payload.get("target_domain") or payload.get("source_domain"),
+                    "page_role": payload.get("page_role"),
+                    "phone_match_type": payload.get("target_match_type") or match_level,
+                    "signal_type": payload.get("target_signal_type"),
+                    "context": payload.get("context_snippet"),
+                    "source_date": payload.get("source_date"),
+                    "source_date_warning": payload.get("source_date_warning"),
+                    "evidence_ref": evidence_ref,
+                    "fetch_status": target_fetch.get("fetch_status"),
+                    "error_code": payload.get("error_code") or target_fetch.get("error_code"),
+                    "reason": payload.get("semantic_reason") or payload.get("error_reason"),
+                }
+                if accepted_semantic_match:
+                    verified_targets.append(target_row)
+                    phone_signals.append({
+                        "target_url": target_row["url"],
+                        "match_type": target_row["phone_match_type"],
+                        "signal_type": target_row["signal_type"],
+                        "signal_path": payload.get("signal_path"),
+                        "normalized_phone": payload.get("normalized_phone"),
+                        "raw_visible_value": payload.get("raw_visible_value"),
+                        "context_before": payload.get("context_before"),
+                        "matched_text": payload.get("matched_text"),
+                        "context_after": payload.get("context_after"),
+                        "evidence_ref": evidence_ref,
+                    })
+                else:
+                    rejected_targets.append(target_row)
 
         quality_values = assessment.get("evidence_quality")
         quality = [
             item for item in quality_values
             if isinstance(item, Mapping) and item.get("source_name") == "phone_public_web"
         ] if isinstance(quality_values, list) else []
+        quality_by_ref = {
+            item.get("evidence_id"): item.get("quality_score") for item in quality
+            if isinstance(item.get("evidence_id"), str)
+        }
+        for item in (*verified_targets, *rejected_targets):
+            item["evidence_quality"] = quality_by_ref.get(item.get("evidence_ref"))
         correlations_values = assessment.get("probable_correlations")
         correlations = [
             item for item in correlations_values
@@ -543,7 +601,8 @@ class ReportEngine:
             item for item in pivot_values
             if isinstance(item, Mapping)
             and item.get("proposed_collector") in {
-                "phone_public_web", "email_local_metadata", "email_exposure", "domain_dns", "username_lookup"
+                "phone_public_web", "email_local_metadata", "email_exposure", "domain_dns", "username_lookup",
+                "company_web_research",
             }
         ] if isinstance(pivot_values, list) else []
         unique_entities = {
@@ -570,6 +629,14 @@ class ReportEngine:
             "alternative_explanations": alternatives,
             "recommended_pivots": pivots,
             "false_positives_rejected": false_positives,
+            "search_discovery": list({
+                json.dumps(item, ensure_ascii=False, sort_keys=True, default=str): item
+                for item in discovery_rows
+            }.values()),
+            "target_pages_checked": len(verified_targets) + len(rejected_targets),
+            "target_pages_verified": verified_targets,
+            "target_pages_rejected": rejected_targets,
+            "phone_signals": phone_signals,
             "exposure_notice": (
                 "PASSIVE_WEB providers received searched phone variants. Public occurrence. Possible association. "
                 "Not independently verified subscriber identity or ownership."
@@ -629,21 +696,52 @@ class ReportEngine:
                 f"{item.get('reason', 'Numeric identifier rejected.')}"
             ) if isinstance(item, Mapping) else str(item),
         )
+        discovery = items(
+            data.get("search_discovery"),
+            lambda item: (
+                f"{item.get('provider_id', '')}: {item.get('result_url') or item.get('request_url') or ''} "
+                f"[{item.get('query_variant') or item.get('status') or ''}]"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        verified_targets = items(
+            data.get("target_pages_verified"),
+            lambda item: (
+                f"{item.get('url', '')} — {item.get('page_role', 'UNKNOWN')}; "
+                f"{item.get('phone_match_type', '')}/{item.get('signal_type', '')}; "
+                f"quality {item.get('evidence_quality', '')}; source date {item.get('source_date', 'UNKNOWN')}; "
+                f"context: {item.get('context') or 'None'}; evidence: {item.get('evidence_ref', '')}"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        rejected_targets = items(
+            data.get("target_pages_rejected"),
+            lambda item: (
+                f"{item.get('url', '')} — {item.get('phone_match_type', 'UNKNOWN')}; "
+                f"{item.get('reason') or item.get('error_code') or 'Not verified'}"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        signals = items(
+            data.get("phone_signals"),
+            lambda item: (
+                f"{item.get('match_type', '')}/{item.get('signal_type', '')}: "
+                f"{item.get('context_before') or ''} {item.get('matched_text') or item.get('raw_visible_value') or ''} "
+                f"{item.get('context_after') or ''}"
+            ) if isinstance(item, Mapping) else str(item),
+        )
         return (
             "<section><h2>PHONE PUBLIC INTELLIGENCE</h2>"
             f"<p>{escape(str(data.get('exposure_notice', '')))}</p>"
             f"<p>Providers: {escape(str(data.get('provider_count', 0)))}; {status_text}</p>"
-            f"<h3>Public URLs</h3><ul>{items(data.get('public_urls'))}</ul>"
-            f"<h3>Source domains</h3><ul>{items(data.get('source_domains'))}</ul>"
-            f"<h3>Matched variants</h3><ul>{items(data.get('matched_variants'))}</ul>"
-            f"<h3>Discovered entities</h3><ul>{entities}</ul>"
-            f"<h3>Evidence references</h3><ul>{items(data.get('evidence_refs'))}</ul>"
-            f"<h3>Source independence groups</h3><ul>{items(data.get('source_independence_groups'))}</ul>"
-            f"<h3>Evidence quality</h3><ul>{quality}</ul>"
-            f"<h3>Correlations</h3><ul>{correlations}</ul>"
-            f"<h3>Hypotheses</h3><ul>{hypotheses}</ul>"
-            f"<h3>Alternative explanations</h3><ul>{items(data.get('alternative_explanations'))}</ul>"
-            f"<h3>Recommended pivots</h3><ul>{pivots}</ul>"
+            f"<h3>SEARCH DISCOVERY</h3><ul>{discovery}</ul>"
+            f"<h3>TARGET PAGES VERIFIED</h3><ul>{verified_targets}</ul>"
+            f"<h3>TARGET PAGES REJECTED</h3><ul>{rejected_targets}</ul>"
+            f"<h3>PHONE SIGNALS</h3><ul>{signals}</ul>"
+            f"<h3>DISCOVERED ENTITIES</h3><ul>{entities}</ul>"
+            f"<h3>SOURCE INDEPENDENCE</h3><ul>{items(data.get('source_independence_groups'))}</ul>"
+            f"<h3>EVIDENCE QUALITY</h3><ul>{quality}</ul>"
+            f"<h3>CORRELATIONS</h3><ul>{correlations}</ul>"
+            f"<h3>HYPOTHESES</h3><ul>{hypotheses}</ul>"
+            f"<h3>ALTERNATIVE EXPLANATIONS</h3><ul>{items(data.get('alternative_explanations'))}</ul>"
+            f"<h3>RECOMMENDED PIVOTS</h3><ul>{pivots}</ul>"
             f"<h3>FALSE POSITIVES REJECTED</h3><ul>{false_positives}</ul></section>"
         )
 

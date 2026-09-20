@@ -122,6 +122,8 @@ class EvidenceItem:
     claim_key: str | None = None
     claim_value: str | None = None
     match_level: str | None = None
+    normalized_content_hash: str | None = None
+    page_role: str | None = None
 
     def __post_init__(self) -> None:
         for name in ("evidence_id", "source_name", "source_class", "independence_group"):
@@ -138,6 +140,10 @@ class EvidenceItem:
                 raise ValueError("assessed evidence must explain its quality score")
         if self.match_level is not None:
             _text("match_level", self.match_level)
+        if self.normalized_content_hash is not None:
+            _text("normalized_content_hash", self.normalized_content_hash)
+        if self.page_role is not None:
+            _text("page_role", self.page_role)
         _strings("quality_reasons", self.quality_reasons)
 
     @property
@@ -159,6 +165,8 @@ class EvidenceItem:
             "quality_score": self.quality_score,
             "quality_reasons": list(self.quality_reasons),
             "match_level": self.match_level,
+            "normalized_content_hash": self.normalized_content_hash,
+            "page_role": self.page_role,
         }
 
 

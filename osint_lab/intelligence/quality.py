@@ -58,6 +58,8 @@ class SourceIndependenceEngine:
             keys.add(f"parent:{item.parent_source_ref.casefold()}")
         if item.content_hash:
             keys.add(f"content:{item.content_hash.casefold()}")
+        if item.normalized_content_hash:
+            keys.add(f"normalized-content:{item.normalized_content_hash.casefold()}")
         if item.payload_fingerprint:
             keys.add(f"payload:{item.payload_fingerprint.casefold()}")
         canonical = self.canonical_url(item.canonical_url)
@@ -124,8 +126,10 @@ class EvidenceQualityEngine:
                 score -= min(0.3, contradiction_count * 0.15)
                 reasons.append(f"{contradiction_count} contradictory claim value(s)")
             quality_ceiling = {
+                "SEARCH_DISCOVERY_ONLY": 0.05,
                 "REJECTED_NUMERIC_ID": 0.1,
                 "NUMERIC_MATCH": 0.25,
+                "NUMERIC_MATCH_ONLY": 0.25,
                 "PHONE_CONTEXT_MATCH": 0.75,
                 "STRUCTURED_PHONE_MATCH": 0.9,
             }.get(item.match_level or "")
@@ -134,6 +138,15 @@ class EvidenceQualityEngine:
                 reasons.append(
                     f"semantic match level {item.match_level} caps quality at {quality_ceiling:.2f}"
                 )
+            if item.page_role in {"DIRECTORY", "ADVERTISEMENT", "MARKETPLACE"}:
+                penalty = 0.1 if item.page_role == "DIRECTORY" else 0.15
+                score -= penalty
+                reasons.append(f"page role {item.page_role} reduces first-party confidence by {penalty:.2f}")
+            elif item.page_role in {"CONTACT_PAGE", "COMPANY_PAGE"}:
+                reasons.append(f"page role {item.page_role} is consistent with first-party contact evidence")
+            if item.source_name == "phone_public_web" and freshness <= 0.4:
+                score -= 0.15
+                reasons.append("old target-page evidence receives an additional freshness penalty")
             assessed.append(replace(
                 item,
                 freshness=freshness,

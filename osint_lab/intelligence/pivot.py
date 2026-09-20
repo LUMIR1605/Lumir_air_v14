@@ -135,6 +135,24 @@ class PivotPlanner:
                     if already else "A visible public handle can be checked as a profile candidate."
                 ),
             ))
+        company_values = {
+            item.value_reference for item in discovered_entities if item.entity_type is EntityType.COMPANY
+        }
+        for company in sorted(company_values):
+            pivots.append(self._candidate(
+                from_entity=EntityRef(entity_type=EntityType.COMPANY, value_reference=company),
+                action="company_web_research",
+                proposed_input=company,
+                status=PivotStatus.BLOCKED if not passive_allowed else PivotStatus.OPTIONAL,
+                gain=0.55,
+                cost=0.5,
+                source=SourceClass.PASSIVE_WEB,
+                reason=(
+                    "PASSIVE_WEB is not authorized by the case manifest."
+                    if not passive_allowed
+                    else "Future reviewed company-web research may test this possible public association."
+                ),
+            ))
         return tuple(sorted(pivots, key=lambda item: (-item.expected_information_gain, item.action)))
 
     @staticmethod

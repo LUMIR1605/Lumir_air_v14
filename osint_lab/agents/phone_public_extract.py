@@ -3,7 +3,7 @@
 import json
 from pathlib import PurePosixPath
 import re
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -61,6 +61,19 @@ def extract_discovered_entities(
             DiscoveredEntityType.DOCUMENT, filename, result.result_url, evidence_ref,
             f"result_url_extension:{suffix}", 0.95, "Public document filename and type.",
         ))
+    soup = BeautifulSoup(result.page_html, "html.parser")
+    for anchor in soup.select("a[href]"):
+        document_url = urljoin(result.result_url, str(anchor.get("href", "")))
+        parsed_document = urlsplit(document_url)
+        document_suffix = PurePosixPath(parsed_document.path).suffix.casefold()
+        if parsed_document.scheme not in {"http", "https"} or document_suffix not in _DOCUMENT_SUFFIXES:
+            continue
+        filename = PurePosixPath(parsed_document.path).name
+        if filename:
+            values.append(_entity(
+                DiscoveredEntityType.DOCUMENT, filename, result.result_url, evidence_ref,
+                f"document_link:{document_suffix}", 0.9, "Visible public document link on the matched target page.",
+            ))
     deduped: dict[tuple[str, str], DiscoveredEntity] = {}
     for item in values:
         deduped.setdefault((item.entity_type.value, item.value.casefold()), item)

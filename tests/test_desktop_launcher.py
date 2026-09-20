@@ -53,7 +53,9 @@ class RecordingRunner:
     def run(self, manifest, *, progress_callback=None):
         self.calls.append(manifest)
         if progress_callback:
-            for event in ("collector:phone_metadata", "report"):
+            for event in (
+                "collector:phone_metadata", "phone_public:search", "phone_public:verify", "intelligence", "report",
+            ):
                 progress_callback(event)
         reports = self.root / manifest.case_id / "reports"
         reports.mkdir(parents=True, exist_ok=True)
@@ -174,10 +176,19 @@ def test_desktop_reports_progress_summary_and_run_invocation(tmp_path):
         status_callback=messages.append,
     )
     assert len(runner.calls) == 1
-    assert messages == ["Przygotowanie...", "Analiza telefonu...", "Generowanie raportu...", "Gotowe."]
+    assert messages == [
+        "Przygotowanie...",
+        "Analiza telefonu...",
+        "Szukanie publicznych wyników...",
+        "Weryfikacja stron źródłowych...",
+        "Analiza dowodów...",
+        "Generowanie raportu...",
+        "Gotowe.",
+    ]
     assert summary.overall_status == "PARTIAL"
     assert (summary.possible_count, summary.unknown_count, summary.not_found_count) == (2, 1, 3)
     assert summary.report_html_path is not None
+    assert (summary.public_matches_verified, summary.rejected_false_positives, summary.target_pages_checked) == (0, 0, 0)
 
 
 def test_desktop_opens_only_valid_report_and_case_paths(tmp_path):
@@ -250,6 +261,7 @@ def test_real_desktop_phone_path_uses_orchestrator_and_keeps_audit_private(tmp_p
     assert raw_phone.encode() not in audit_bytes
     assert (case_root / summary.case_id / "raw").is_dir()
     assert phone_http.calls
+    assert summary.target_pages_checked == 0
     html = Path(summary.report_html_path).read_text(encoding="utf-8")
     assert "PHONE PUBLIC INTELLIGENCE" in html
 

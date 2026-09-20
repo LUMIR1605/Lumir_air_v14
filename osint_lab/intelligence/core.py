@@ -81,6 +81,8 @@ class IntelligenceCore:
                 content_hash = self._first_text(payload, "body_sha256", "content_hash")
                 parent_ref = self._first_text(payload, "parent_source_ref", "source_reference")
                 match_level = self._first_text(payload, "match_level")
+                normalized_content_hash = self._first_text(payload, "normalized_visible_text_sha256")
+                page_role = self._first_text(payload, "page_role")
                 semantic_public_fact = (
                     payload.get("exact_match") is True
                     and match_level in {"PHONE_CONTEXT_MATCH", "STRUCTURED_PHONE_MATCH"}
@@ -104,6 +106,8 @@ class IntelligenceCore:
                     claim_key=f"{step.collector_name}:{step.seed_reference}:{observation.raw_status}",
                     claim_value=observation.raw_status,
                     match_level=match_level,
+                    normalized_content_hash=normalized_content_hash,
+                    page_role=page_role,
                 ))
                 known_facts.append(KnownFact(
                     statement=(f"Collector {step.collector_name} recorded technical status "
@@ -261,7 +265,9 @@ class IntelligenceCore:
             if ref.entity_type is EntityType.EMAIL:
                 pending_links.append((website_ref, ref, evidence_id, "MENTIONS", "public_extraction"))
             elif ref.entity_type is EntityType.COMPANY:
-                pending_links.append((phone_ref, ref, evidence_id, "ASSOCIATED_WITH", "public_extraction"))
+                pending_links.append((website_ref, ref, evidence_id, "ASSOCIATED_WITH", "public_extraction"))
+            elif ref.entity_type is EntityType.DOMAIN:
+                pending_links.append((website_ref, ref, evidence_id, "REFERENCES", "exact_domain"))
 
     def _now(self) -> datetime:
         value = self._clock()

@@ -446,7 +446,11 @@ class CaseRunner:
 
         for step in steps:
             collector = self._collectors[step.collector_name]
-            self._notify(progress_callback, f"collector:{step.collector_name}")
+            if step.collector_name == "phone_public_web":
+                self._notify(progress_callback, "phone_public:search")
+                self._notify(progress_callback, "phone_public:verify")
+            else:
+                self._notify(progress_callback, f"collector:{step.collector_name}")
             if stop_after_failure:
                 record = CaseExecutionRecord(
                     step=step,
@@ -521,6 +525,7 @@ class CaseRunner:
             for record in records
             if record.result is not None and record.result.receipt is not None
         )
+        self._notify(progress_callback, "intelligence")
         intelligence_summary = self._intelligence_core.analyze(
             manifest=manifest,
             executions=records,

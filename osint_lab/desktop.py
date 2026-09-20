@@ -37,6 +37,9 @@ class DesktopAnalysisSummary:
     unknown_count: int
     not_found_count: int
     contradiction_count: int
+    public_matches_verified: int
+    rejected_false_positives: int
+    target_pages_checked: int
     report_html_path: str | None
     case_folder_path: str
     warnings: tuple[str, ...]
@@ -51,6 +54,9 @@ class DesktopBackend:
         "collector:username_lookup": "Analiza username...",
         "collector:email_local_metadata": "Analiza e-mail...",
         "collector:email_exposure": "Analiza e-mail...",
+        "phone_public:search": "Szukanie publicznych wyników...",
+        "phone_public:verify": "Weryfikacja stron źródłowych...",
+        "intelligence": "Analiza dowodów...",
         "report": "Generowanie raportu...",
     }
 
@@ -119,6 +125,7 @@ class DesktopBackend:
             self.record_error(error)
             raise DesktopAnalysisError("Nie udało się uruchomić analizy.")
         report_path = result.report_reference.html_path if result.report_reference else None
+        public_matches, rejected_targets, checked_targets = self._phone_public_counts(result)
         summary = DesktopAnalysisSummary(
             case_id=case_id,
             overall_status=result.overall_status.value,
@@ -126,6 +133,9 @@ class DesktopBackend:
             unknown_count=result.findings_summary.get("UNKNOWN", 0),
             not_found_count=result.findings_summary.get("NOT_FOUND", 0),
             contradiction_count=len(result.contradictions.reasons),
+            public_matches_verified=public_matches,
+            rejected_false_positives=rejected_targets,
+            target_pages_checked=checked_targets,
             report_html_path=report_path,
             case_folder_path=str((self._application.case_store.root / case_id).resolve()),
             warnings=result.warnings,
@@ -133,6 +143,25 @@ class DesktopBackend:
         self._last_summary = summary
         self._emit(status_callback, "Gotowe.")
         return summary
+
+    @staticmethod
+    def _phone_public_counts(result: CaseRunResult) -> tuple[int, int, int]:
+        verified = 0
+        rejected = 0
+        checked = 0
+        for record in result.executions:
+            if record.step.collector_name != "phone_public_web" or record.result is None:
+                continue
+            for observation in record.result.observations:
+                payload = observation.payload
+                if payload.get("stage") != "TARGET_PAGE_VALIDATION":
+                    continue
+                checked += 1
+                if payload.get("target_verified") is True:
+                    verified += 1
+                else:
+                    rejected += 1
+        return verified, rejected, checked
 
     def open_report(self, summary: DesktopAnalysisSummary | None = None) -> Path:
         selected = summary or self._last_summary

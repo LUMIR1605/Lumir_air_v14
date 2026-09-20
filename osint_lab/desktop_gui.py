@@ -193,6 +193,9 @@ class DesktopWindow:
             f"POSSIBLE: {summary.possible_count}    UNKNOWN: {summary.unknown_count}    "
             f"NOT_FOUND: {summary.not_found_count}\n"
             f"Contradictions: {summary.contradiction_count}\n"
+            f"Public matches verified: {summary.public_matches_verified}    "
+            f"Rejected false positives: {summary.rejected_false_positives}\n"
+            f"Target pages checked: {summary.target_pages_checked}\n"
             f"Case ID: {summary.case_id}"
         )
         if summary.report_html_path:

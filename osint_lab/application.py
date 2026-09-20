@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Iterable
 
 from osint_lab.agents import build_default_registry
 from osint_lab.case_manifest import CaseManifest, CaseStatus, SeedEntity
