@@ -4,7 +4,7 @@
 Etap 11 Intelligence Core v1 is implemented on `feature/osint-lab-v1`. The deterministic post-collection pipeline assesses evidence quality and independence, proposes conservative correlations/hypotheses, challenges them adversarially, recommends non-executing pivots, creates an IntelligenceSummary, and renders private report schema `1.2`. Collector behavior, audit, receipts, PolicyGate/Registry/Orchestrator, and SHIELD remain unchanged.
 
 ## Last Verified Commit
-Published Etap 10 plus Phone Report Details baseline: `c306059`; branch baseline `main`: `d881757`. Use `git log -1` for the Etap 11 commit after publication.
+Etap 11 implementation and documentation were published through `9617a9b`; branch baseline `main`: `d881757`. Use `git log -1` for the final handoff closeout commit.
 
 ## Environment
 Microsoft Windows `10.0.26200.9457`; Python `3.14.6` (`C:\Python314\python.exe`), pip `26.1.2`, pytest `8.4.2`, phonenumbers `9.0.34`, dnspython `2.8.0`, requests `2.34.2`. The repository uses minimum dependency bounds rather than a locked release environment.
@@ -22,7 +22,7 @@ The runner is sequential and has no budgets, cancellation/resume, scheduler, or 
 Plans are advisory and transparent, while Orchestrator enforcement remains authoritative at execution time. Policy-denied steps are submitted only to record the denial; their collectors do not run and source exposure remains zero. Email-derived DNS is a separate dependent step and is never invoked from an email collector. A report write or audit verification failure cannot return full `SUCCESS`. Desktop and CLI construction plus manifest policy live in one shared application module; GUI status callbacks are observational and do not control execution.
 
 ## Current Task
-Commit the verified Etap 11 changes, confirm a clean tree, and publish `feature/osint-lab-v1` without force push.
+Etap 11 is verified and published on `feature/osint-lab-v1` without force push. Preserve this baseline for the next stage; do not merge to `main` as part of this handoff.
 
 ## Next Task
 Design durable append-only ReviewerDecision storage and a manual review workflow before any dossier/export layer. Do not add automatic identity inference.
