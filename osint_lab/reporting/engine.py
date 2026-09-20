@@ -12,12 +12,13 @@ from typing import Iterable, Mapping
 
 from osint_lab.case_manifest import CaseManifest
 from osint_lab.evidence import EvidenceVault
+from osint_lab.intelligence import IntelligenceSummary
 from osint_lab.orchestrator.audit import AuditVerification
 from osint_lab.policies import SourceClass
 from osint_lab.verification.contradictions import ContradictionResult
 
 
-REPORT_ENGINE_VERSION = "1.1.0"
+REPORT_ENGINE_VERSION = "1.2.0"
 
 _PHONE_DETAIL_FIELDS = (
     ("normalized_e164", "Numer znormalizowany E.164"),
@@ -92,6 +93,7 @@ class ReportEngine:
         contradiction: ContradictionResult,
         warnings: Iterable[str],
         audit_verification: AuditVerification,
+        intelligence_summary: IntelligenceSummary | None = None,
     ) -> dict[str, object]:
         execution_records = tuple(executions)
         execution_payloads: list[dict[str, object]] = []
@@ -161,7 +163,7 @@ class ReportEngine:
 
         generated_at = self._now()
         return {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "generated_at": generated_at.isoformat(),
             "case": {
                 "case_id": manifest.case_id,
@@ -193,6 +195,10 @@ class ReportEngine:
                 "reasons": list(contradiction.reasons),
                 "evidence_refs": list(contradiction.evidence_refs),
             },
+            "analytical_assessment": (
+                intelligence_summary.to_dict() if intelligence_summary is not None
+                else IntelligenceSummary().to_dict()
+            ),
             "privacy_source_exposure": source_counts,
             "limitations": self._limitations(collectors),
             "audit": {
@@ -351,6 +357,9 @@ class ReportEngine:
             for name, count in model["privacy_source_exposure"].items()
         )
         phone_details = ReportEngine._render_phone_details(model["executions"])
+        analytical_assessment = ReportEngine._render_analytical_assessment(
+            model.get("analytical_assessment", {})
+        )
         audit = model["audit"]
         return (
             "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
@@ -375,6 +384,7 @@ class ReportEngine:
             "<h2>Findings</h2><table><thead><tr><th>Candidate</th><th>Status</th>"
             f"<th>Source</th><th>Notes</th></tr></thead><tbody>{''.join(finding_rows)}</tbody></table>"
             f"{phone_details}"
+            f"{analytical_assessment}"
             f"<h2>Contradictions</h2><p>Severity: {escape(str(contradiction['severity']))}</p><ul>{reasons}</ul>"
             f"<h2>Privacy / source exposure</h2><ul>{exposure}</ul>"
             f"<h2>Limitations</h2><ul>{limitations}</ul>"
@@ -410,6 +420,71 @@ class ReportEngine:
                 f"<table><tbody>{detail_rows}</tbody></table></section>"
             )
         return "".join(sections)
+
+    @staticmethod
+    def _render_analytical_assessment(assessment: object) -> str:
+        value = assessment if isinstance(assessment, Mapping) else {}
+
+        def text_list(items: object, formatter) -> str:
+            if not isinstance(items, list) or not items:
+                return "<li>None</li>"
+            return "".join(f"<li>{escape(formatter(item))}</li>" for item in items)
+
+        facts = text_list(
+            value.get("known_technical_facts"),
+            lambda item: "FACT — " + str(item.get("statement", "")) if isinstance(item, Mapping) else str(item),
+        )
+        correlations = text_list(
+            value.get("probable_correlations"),
+            lambda item: (
+                "CORRELATION — " + str(item.get("status", "UNKNOWN")) + ": "
+                + str(item.get("relation_type", "")) + " (confidence " + str(item.get("confidence", "")) + ")"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        hypotheses = text_list(
+            value.get("open_hypotheses"),
+            lambda item: (
+                "HYPOTHESIS — " + str(item.get("status", "OPEN")) + ": " + str(item.get("statement", ""))
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        contradictions = text_list(value.get("contradictory_evidence"), str)
+        alternatives = text_list(value.get("alternative_explanations"), str)
+        pivots = text_list(
+            value.get("recommended_next_pivots"),
+            lambda item: (
+                str(item.get("status", "")) + " — " + str(item.get("proposed_collector", ""))
+                + " (information gain " + str(item.get("expected_information_gain", "")) + ")"
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        questions = text_list(value.get("unresolved_questions"), str)
+        reviews = text_list(
+            value.get("adversarial_reviews"),
+            lambda item: (
+                "VERIFICATION — " + str(item.get("result", "UNTESTED")) + ": "
+                + "; ".join(str(part) for part in item.get("challenges", []))
+            ) if isinstance(item, Mapping) else str(item),
+        )
+        quality = value.get("evidence_quality_summary")
+        if isinstance(quality, Mapping):
+            quality_text = (
+                f"Evidence: {escape(str(quality.get('evidence_count', 0)))}; independent groups: "
+                f"{escape(str(quality.get('independent_group_count', 0)))}; average score: "
+                f"{escape(str(quality.get('average_quality_score', 0)))}."
+            )
+        else:
+            quality_text = "No assessed evidence."
+        return (
+            "<section><h2>ANALYTICAL ASSESSMENT</h2>"
+            f"<h3>Known technical facts</h3><ul>{facts}</ul>"
+            f"<h3>Probable correlations</h3><ul>{correlations}</ul>"
+            f"<h3>Open hypotheses</h3><ul>{hypotheses}</ul>"
+            f"<h3>Contradictory evidence</h3><ul>{contradictions}</ul>"
+            f"<h3>Evidence quality</h3><p>{quality_text}</p>"
+            f"<h3>Alternative explanations</h3><ul>{alternatives}</ul>"
+            f"<h3>Adversarial verification</h3><ul>{reviews}</ul>"
+            f"<h3>Recommended next pivots</h3><ul>{pivots}</ul>"
+            f"<h3>Unresolved questions</h3><ul>{questions}</ul></section>"
+        )
 
     @staticmethod
     def _display_phone_value(value: object) -> str:

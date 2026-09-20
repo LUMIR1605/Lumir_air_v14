@@ -13,13 +13,13 @@ from osint_lab.agents import (
     EmailExposureCollector,
     EmailLocalMetadataCollector,
     ExecutionResult,
-    ExecutionStatus,
     PhoneMetadataCollector,
     UsernameCollector,
 )
 from osint_lab.agents.email_exposure import normalize_email
 from osint_lab.case_manifest import CaseManifest, SeedEntity
 from osint_lab.case_storage import CaseStore
+from osint_lab.intelligence import IntelligenceCore, IntelligenceSummary
 from osint_lab.orchestrator.audit import AuditLog, AuditVerification, verify_audit_log
 from osint_lab.orchestrator.service import Orchestrator
 from osint_lab.policies import SourceClass
@@ -163,6 +163,7 @@ class CaseRunResult:
     warnings: tuple[str, ...]
     report_reference: ReportReference | None
     audit_verification: AuditVerification
+    intelligence_summary: IntelligenceSummary | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -187,6 +188,9 @@ class CaseRunResult:
                 "head_hash": self.audit_verification.head_hash,
                 "reason": self.audit_verification.reason,
             },
+            "intelligence_summary": (
+                self.intelligence_summary.to_dict() if self.intelligence_summary is not None else None
+            ),
         }
 
 
@@ -222,6 +226,7 @@ class CaseRunner:
         audit_log: AuditLog,
         clock: Callable[[], datetime],
         id_factory: Callable[[], str] | None = None,
+        intelligence_core: IntelligenceCore | None = None,
     ) -> None:
         if not isinstance(orchestrator, Orchestrator):
             raise ValueError("Orchestrator required")
@@ -246,6 +251,7 @@ class CaseRunner:
         self._audit_log = audit_log
         self._clock = clock
         self._id_factory = id_factory or (lambda: uuid4().hex)
+        self._intelligence_core = intelligence_core or IntelligenceCore(clock=clock)
 
     def plan(
         self,
@@ -513,6 +519,11 @@ class CaseRunner:
             for record in records
             if record.result is not None and record.result.receipt is not None
         )
+        intelligence_summary = self._intelligence_core.analyze(
+            manifest=manifest,
+            executions=records,
+            contradiction=contradiction,
+        )
 
         report_reference: ReportReference | None = None
         try:
@@ -528,6 +539,7 @@ class CaseRunner:
                 contradiction=contradiction,
                 warnings=warnings,
                 audit_verification=audit_verification,
+                intelligence_summary=intelligence_summary,
             )
             report_reference = self._report_engine.write(
                 manifest=manifest,
@@ -551,6 +563,7 @@ class CaseRunner:
             warnings=tuple(warnings),
             report_reference=report_reference,
             audit_verification=audit_verification,
+            intelligence_summary=intelligence_summary,
         )
         try:
             self._case_store.save_run_summary(

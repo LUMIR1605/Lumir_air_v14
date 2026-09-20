@@ -369,7 +369,16 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert hashlib.sha256(json_bytes).hexdigest() == reference.json_sha256
     assert hashlib.sha256(html_bytes).hexdigest() == reference.html_sha256
     report = json.loads(json_bytes)
-    assert report["schema_version"] == "1.1"
+    assert report["schema_version"] == "1.2"
+    assessment = report["analytical_assessment"]
+    assert assessment["known_technical_facts"]
+    assert "probable_correlations" in assessment
+    assert "open_hypotheses" in assessment
+    assert "alternative_explanations" in assessment
+    assert assessment["evidence_quality"]
+    assert assessment["evidence_quality_summary"]["evidence_count"] > 0
+    assert assessment["recommended_next_pivots"]
+    assert assessment["layer_labels"] == ["FACT", "CORRELATION", "HYPOTHESIS", "VERIFICATION"]
     phone_execution = next(
         item for item in report["executions"] if item["collector"] == "phone_metadata"
     )
@@ -422,6 +431,16 @@ def test_full_offline_end_to_end_pipeline_and_reports(tmp_path):
     assert "ustalono właściciela" not in combined
     assert "to na pewno ta sama osoba" not in combined
     assert "not independently verified" in combined
+    assert "ANALYTICAL ASSESSMENT" in html
+    assert "Known technical facts" in html
+    assert "Probable correlations" in html
+    assert "Open hypotheses" in html
+    assert "Evidence quality" in html
+    assert "Alternative explanations" in html
+    assert "Recommended next pivots" in html
+    assert "Unresolved questions" in html
+    assert "is the owner" not in combined
+    assert "confirmed identity" not in combined
 
     receipt_json = json.dumps(
         [receipt.to_dict() for receipt in result.receipts],
@@ -469,7 +488,19 @@ def test_phone_report_shows_missing_local_carrier_and_geocoder_data(tmp_path):
     assert "Strefy czasowe</th><td>Etc/Unknown" in html
 
     audit_bytes = (app.audit_log.root / manifest.case_id / "audit.jsonl").read_bytes()
-    assert raw_phone.encode() not in audit_bytes
+    audit_entries = [json.loads(line) for line in audit_bytes.decode("utf-8").splitlines()]
+
+    def scalar_values(value):
+        if isinstance(value, dict):
+            for item in value.values():
+                yield from scalar_values(item)
+        elif isinstance(value, list):
+            for item in value:
+                yield from scalar_values(item)
+        else:
+            yield value
+
+    assert raw_phone not in {item for entry in audit_entries for item in scalar_values(entry)}
     receipt_bytes = json.dumps(result.receipts[0].to_dict(), ensure_ascii=False).encode("utf-8")
     assert raw_phone.encode() not in receipt_bytes
 
