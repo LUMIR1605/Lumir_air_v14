@@ -159,6 +159,7 @@ class GraphPivotPlanner:
                     reasons.append("may resolve a contradiction")
                 graph_value = round(min(1.0, graph_value), 3)
                 token = f"{node['entity_id']}|{definition.enricher_id}"
+                next_hop = hop if definition.source_class.value == "LOCAL" and hop > 0 else hop + 1
                 proposals.append(GraphPivot(
                     pivot_id="gpivot-" + hashlib.sha256(token.encode()).hexdigest()[:20],
                     case_id=str(snapshot["case_id"]), source_entity_id=str(node["entity_id"]),
@@ -168,7 +169,7 @@ class GraphPivotPlanner:
                     network_cost=0.0 if not definition.network_required else 0.6,
                     duplication_risk=1.0 if duplicate else 0.1, graph_value=graph_value,
                     reason="; ".join(reasons), status="SUPPRESSED_DUPLICATE" if duplicate else "PROPOSED",
-                    execution_fingerprint=fingerprint, hop=hop + 1,
+                    execution_fingerprint=fingerprint, hop=next_hop,
                     execution_mode=("AUTO" if definition.privacy_cost <= self.budget.max_privacy_cost
                                     and definition.source_class.value in {"LOCAL", "PASSIVE_WEB"}
                                     else "MANUAL_REQUIRED"),

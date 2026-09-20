@@ -171,6 +171,10 @@ class ReportEngine:
             execution_payloads,
             analytical_assessment,
         )
+        graph_payload = dict(graph_bundle or {})
+        multi_hop = graph_payload.get("multi_hop_execution")
+        if not isinstance(multi_hop, Mapping):
+            multi_hop = {}
         return {
             "schema_version": "1.5",
             "generated_at": generated_at.isoformat(),
@@ -206,7 +210,8 @@ class ReportEngine:
             },
             "analytical_assessment": analytical_assessment,
             "phone_public_intelligence": phone_public_intelligence,
-            "graph_intelligence": dict(graph_bundle or {}),
+            "graph_intelligence": graph_payload,
+            "investigation_execution_path": dict(multi_hop),
             "privacy_source_exposure": source_counts,
             "limitations": self._limitations(collectors),
             "audit": {
@@ -376,6 +381,7 @@ class ReportEngine:
             model.get("analytical_assessment", {})
         )
         graph_intelligence = ReportEngine._render_graph_intelligence(model.get("graph_intelligence", {}))
+        execution_path = ReportEngine._render_execution_path(model.get("investigation_execution_path", {}))
         audit = model["audit"]
         return (
             "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
@@ -402,6 +408,7 @@ class ReportEngine:
             f"{phone_details}"
             f"{phone_public}"
             f"{analytical_assessment}"
+            f"{execution_path}"
             f"{graph_intelligence}"
             f"<h2>Contradictions</h2><p>Severity: {escape(str(contradiction['severity']))}</p><ul>{reasons}</ul>"
             f"<h2>Privacy / source exposure</h2><ul>{exposure}</ul>"
@@ -446,6 +453,12 @@ class ReportEngine:
             "successful_sources", "blocked_sources", "unknown_sources",
             "verified_evidence_count", "independent_evidence_groups",
         ))
+        direct_sources = rows(dossier.get("direct_sources"), (
+            "collector_id", "source_id", "source_registry_id", "status",
+        ))
+        downstream_sources = rows(dossier.get("downstream_sources"), (
+            "entity_type", "enricher_id", "source_id", "status",
+        ))
         coverage_summary = dossier.get("coverage_summary") if isinstance(dossier.get("coverage_summary"), Mapping) else {}
         source_summary = (
             f"Sources executed: {escape(str(coverage_summary.get('executed_sources', 0)))}/"
@@ -458,6 +471,8 @@ class ReportEngine:
         return (
             "<section><h2>ANALYST VIEW</h2>"
             f"<h3>SOURCE COVERAGE</h3><p>{source_summary}</p><ul>{source_coverage}</ul>"
+            f"<h3>DIRECT SOURCES</h3><ul>{direct_sources}</ul>"
+            f"<h3>DOWNSTREAM SOURCES</h3><ul>{downstream_sources}</ul>"
             f"<h3>KEY ENTITIES</h3><ul>{entities}</ul>"
             f"<h3>KEY RELATIONS</h3><ul>{relations}</ul>"
             f"<h3>IMPORTANT PATHS</h3><ul>{paths}</ul>"
@@ -465,6 +480,43 @@ class ReportEngine:
             f"<h3>CONTRADICTIONS</h3><ul>{contradictions}</ul>"
             f"<h3>TIMELINE</h3><ul>{timeline}</ul>"
             f"<h3>NEXT BEST PIVOTS</h3><ul>{pivots}</ul></section>"
+        )
+
+    @staticmethod
+    def _render_execution_path(value: object) -> str:
+        data = value if isinstance(value, Mapping) else {}
+        steps = data.get("execution_path")
+        if not isinstance(steps, list) or not steps:
+            return ""
+        rows = []
+        for item in steps:
+            if not isinstance(item, Mapping):
+                continue
+            rows.append(
+                "<tr>"
+                f"<td>{escape(str(item.get('phase', 'UNKNOWN')))}</td>"
+                f"<td>{escape(str(item.get('hop', 'UNKNOWN')))}</td>"
+                f"<td>{escape(str(item.get('enricher_id', 'UNKNOWN')))}</td>"
+                f"<td>{escape(str(item.get('source_id', 'UNKNOWN')))}</td>"
+                f"<td>{escape(str(item.get('entity_input', 'UNKNOWN')))}</td>"
+                f"<td>{escape(str(item.get('result_status', 'UNKNOWN')))}</td>"
+                f"<td>{escape(', '.join(str(value) for value in item.get('new_entities', [])))}</td>"
+                f"<td>{escape(', '.join(str(value) for value in item.get('evidence_refs', [])))}</td>"
+                "</tr>"
+            )
+        metrics = (
+            f"Initial collectors: {escape(str(data.get('initial_executions', 0)))}; "
+            f"automatic pivots executed: {escape(str(data.get('auto_executions', 0)))}; "
+            f"hop 1: {escape(str(data.get('hop_1_count', 0)))}; "
+            f"hop 2: {escape(str(data.get('hop_2_count', 0)))}; "
+            f"sources actually executed: {escape(str(len(data.get('sources_executed', []))))}; "
+            f"stop reason: {escape(str(data.get('stop_reason', 'UNKNOWN')))}."
+        )
+        return (
+            "<section><h2>INVESTIGATION EXECUTION PATH</h2>"
+            f"<p>{metrics}</p><table><thead><tr><th>Phase</th><th>Hop</th><th>Enricher</th>"
+            "<th>Source</th><th>Entity input</th><th>Result</th><th>New entities</th>"
+            f"<th>Evidence refs</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
         )
 
     @staticmethod

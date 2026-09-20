@@ -92,6 +92,10 @@ def create_case_manifest(
     }
     if any(seed.entity_type.strip().upper() == "EMAIL" for seed in seed_values):
         allowed_agent_types.add("DOMAIN")
+    if allow_passive_web:
+        # Passive-web consent covers the bounded transitive collector set used by the
+        # reviewed AUTO pivot loop; PolicyGate still evaluates every execution.
+        allowed_agent_types.update({"WEBSITE", "EMAIL", "DOMAIN", "COMPANY", "ORGANIZATION", "DOCUMENT"})
     return CaseManifest(
         case_id=case_id,
         case_name=case_name,

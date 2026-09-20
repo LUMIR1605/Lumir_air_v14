@@ -39,6 +39,49 @@ class GraphService:
         self.paths = GraphPathEngine()
         self.adversarial = GraphAdversarialVerifier()
         self.exporter = GraphExporter()
+        self._validate_source_mappings()
+
+    def _validate_source_mappings(self) -> None:
+        if self.source_registry is None:
+            return
+        for definition in self.registry.definitions:
+            if not definition.enabled or definition.source_id is None:
+                continue
+            try:
+                source = self.source_registry.get(definition.source_id)
+            except KeyError as error:
+                raise ValueError(f"SOURCE_MAPPING_ERROR: {definition.enricher_id}") from error
+            if source.source_class is not definition.source_class:
+                raise ValueError(f"source class mismatch: {definition.enricher_id}")
+
+    def project_batch(
+        self,
+        *,
+        manifest: CaseManifest,
+        executions: Iterable[object],
+        intelligence: IntelligenceSummary,
+        run_id: str,
+        batch_id: str,
+        started_at: datetime,
+        finished_at: datetime,
+    ) -> tuple[int, int]:
+        return self.projector.project(
+            store=self.store(manifest.case_id), manifest=manifest, executions=tuple(executions),
+            intelligence=intelligence, run_id=f"{run_id}:projection:{batch_id}",
+            started_at=started_at, finished_at=finished_at,
+        )
+
+    def plan_pivots(
+        self,
+        *,
+        case_id: str,
+        intelligence: IntelligenceSummary,
+    ):
+        store = self.store(case_id)
+        return GraphPivotPlanner(registry=self.registry, budget=self.budget).plan(
+            snapshot=store.snapshot(), store=store, contradictions=intelligence.contradictions,
+            open_hypotheses=(item.to_dict() for item in intelligence.open_hypotheses),
+        )
 
     def process(
         self,
@@ -49,13 +92,17 @@ class GraphService:
         run_id: str,
         started_at: datetime,
         finished_at: datetime,
+        project_executions: bool = True,
     ) -> dict[str, object]:
         store = self.store(manifest.case_id)
         execution_values = tuple(executions)
-        version_before, version_after = self.projector.project(
-            store=store, manifest=manifest, executions=execution_values, intelligence=intelligence,
-            run_id=run_id, started_at=started_at, finished_at=finished_at,
-        )
+        if project_executions:
+            version_before, _ = self.projector.project(
+                store=store, manifest=manifest, executions=execution_values, intelligence=intelligence,
+                run_id=run_id, started_at=started_at, finished_at=finished_at,
+            )
+        else:
+            version_before = store.graph_version
         snapshot = store.snapshot()
         paths = self.paths.paths(snapshot, max_hops=self.budget.max_hops)
         planner = GraphPivotPlanner(registry=self.registry, budget=self.budget)
@@ -84,18 +131,23 @@ class GraphService:
             snapshot=snapshot, seeds=(item.to_dict() for item in manifest.seed_entities), paths=paths,
             intelligence=intelligence_payload, pivots=pivots,
         )
-        source_coverage = self._source_coverage(snapshot, execution_values)
+        source_coverage, coverage_details = self._source_coverage(snapshot, execution_values, manifest)
         dossier_payload = dossier.to_dict()
         dossier_payload["source_coverage"] = [item.to_dict() for item in source_coverage]
         dossier_payload["coverage_summary"].update({
-            "eligible_sources": sum(item.eligible_sources for item in source_coverage),
-            "enabled_sources": sum(item.enabled_sources for item in source_coverage),
-            "executed_sources": sum(item.executed_sources for item in source_coverage),
+            "eligible_sources": coverage_details["eligible_source_count"],
+            "enabled_sources": coverage_details["enabled_source_count"],
+            "executed_sources": coverage_details["executed_source_count"],
             "blocked_unavailable_sources": sum(item.blocked_sources + item.unknown_sources for item in source_coverage),
             "successful_sources": sum(item.successful_sources for item in source_coverage),
             "entities_discovered": len(snapshot.get("nodes", ())),
             "useful_pivots": sum(item.status == "PROPOSED" for item in pivots),
+            "direct_source_count": len(coverage_details["direct_sources"]),
+            "downstream_source_count": len(coverage_details["downstream_sources"]),
         })
+        dossier_payload["direct_sources"] = coverage_details["direct_sources"]
+        dossier_payload["downstream_sources"] = coverage_details["downstream_sources"]
+        dossier_payload["executed_source_ids"] = coverage_details["executed_source_ids"]
         exports = self.exporter.export_all(snapshot=snapshot, directory=store.directory)
         return {
             "schema_version": snapshot["schema_version"], "graph_version_before": version_before,
@@ -107,30 +159,61 @@ class GraphService:
             "identity_candidates": [item.to_dict() for item in identities],
             "recommended_pivots": [item.to_dict() for item in pivots],
             "source_coverage": [item.to_dict() for item in source_coverage],
+            "source_mapping": coverage_details["execution_mappings"],
             "source_registry": ({"version": self.source_registry.version,
                                  "config_hash": self.source_registry.config_hash}
                                 if self.source_registry is not None else None),
             "dossier": dossier_payload, "exports": exports,
         }
 
-    def _source_coverage(self, snapshot, executions) -> tuple[SourceCoverage, ...]:
+    def _source_coverage(self, snapshot, executions, manifest):
         if self.source_registry is None:
-            return ()
+            return (), {
+                "eligible_source_count": 0, "enabled_source_count": 0, "executed_source_count": 0,
+                "executed_source_ids": [], "direct_sources": [], "downstream_sources": [],
+                "execution_mappings": [],
+            }
         executed: dict[str, list[str]] = {}
         evidence: dict[str, set[str]] = {}
+        execution_mappings = []
         for record in executions:
             if record.result is None:
                 continue
+            source_registry_id = getattr(record, "source_registry_id", None)
+            source_id = getattr(record, "source_id", None) or record.step.collector_name
+            mapping = {
+                "execution_id": record.result.execution_id,
+                "collector_id": getattr(record, "collector_id", None) or record.step.collector_name,
+                "enricher_id": getattr(record, "enricher_id", None) or record.step.collector_name,
+                "source_id": source_id,
+                "source_registry_id": source_registry_id,
+                "hop": int(getattr(record, "hop", 0)),
+                "phase": getattr(record, "execution_phase", "INITIAL"),
+                "result_status": record.result_status,
+            }
+            execution_mappings.append(mapping)
+            if record.result_status == "DENIED":
+                continue
+            if source_registry_id is None:
+                if record.step.source_class.value != "LOCAL":
+                    raise RuntimeError(f"SOURCE_MAPPING_ERROR: {record.step.collector_name}")
+                continue
+            try:
+                self.source_registry.get(source_registry_id)
+            except KeyError as error:
+                raise RuntimeError(f"SOURCE_MAPPING_ERROR: {record.step.collector_name}") from error
+            failure_values = []
             for observation in record.result.observations:
-                source_id = str(observation.payload.get("source_id") or record.step.collector_name)
-                failure = str(observation.payload.get("failure_status") or observation.raw_status)
-                executed.setdefault(source_id, []).append(failure)
+                failure_values.append(str(observation.payload.get("failure_status") or ""))
                 if observation.evidence_ref:
-                    evidence.setdefault(source_id, set()).add(observation.evidence_ref)
+                    evidence.setdefault(source_registry_id, set()).add(observation.evidence_ref)
+            if record.result_status in {"SUCCESS", "PARTIAL"} and not any(failure_values):
+                failure_values = [SourceFailureStatus.SUCCESS.value]
+            executed.setdefault(source_registry_id, []).extend(failure_values or [SourceFailureStatus.UNKNOWN.value])
         node_types = {item.get("entity_type") for item in snapshot.get("nodes", ())}
         values = []
         for entity_type in (
-            "PHONE", "EMAIL", "USERNAME", "DOMAIN", "COMPANY", "DOCUMENT",
+            "PHONE", "EMAIL", "USERNAME", "DOMAIN", "WEBSITE", "COMPANY", "ORGANIZATION", "DOCUMENT",
         ):
             from .models import GraphEntityType
             graph_type = GraphEntityType(entity_type)
@@ -154,7 +237,45 @@ class GraphService:
                 independent_evidence_groups=len({group for edge in snapshot.get("edges", ())
                                                  for group in edge.get("independence_groups", ())}),
             ))
-        return tuple(values)
+        seed_types = {item.entity_type.strip().upper() for item in manifest.seed_entities}
+        discovered_types = node_types - seed_types
+        relevant = {item.source_id: item for graph_type in GraphEntityType
+                    if graph_type.value in node_types for item in self.source_registry.for_entity(graph_type)}
+        enabled = {key for key, item in relevant.items() if item.enabled}
+        executed_ids = set(executed)
+        direct_sources = []
+        for mapping in execution_mappings:
+            if mapping["phase"] != "INITIAL" or mapping["hop"] != 0:
+                continue
+            direct_sources.append({
+                **mapping,
+                "status": "EXECUTED" if mapping["result_status"] != "DENIED" else "BLOCKED",
+            })
+        downstream_by_enricher = {}
+        for graph_type in GraphEntityType:
+            if graph_type.value not in discovered_types:
+                continue
+            for definition in self.registry.for_entity(graph_type):
+                downstream_by_enricher.setdefault(definition.enricher_id, {
+                    "enricher_id": definition.enricher_id,
+                    "source_id": definition.source_id or definition.enricher_id,
+                    "source_registry_id": definition.source_id,
+                    "entity_type": graph_type.value,
+                    "status": "DOWNSTREAM_ELIGIBLE",
+                })
+        executed_enrichers = {item["enricher_id"] for item in execution_mappings if item["hop"] > 0}
+        for enricher_id in executed_enrichers & set(downstream_by_enricher):
+            downstream_by_enricher[enricher_id]["status"] = "EXECUTED"
+        details = {
+            "eligible_source_count": len(relevant),
+            "enabled_source_count": len(enabled),
+            "executed_source_count": len(executed_ids),
+            "executed_source_ids": sorted(executed_ids),
+            "direct_sources": direct_sources,
+            "downstream_sources": [downstream_by_enricher[key] for key in sorted(downstream_by_enricher)],
+            "execution_mappings": execution_mappings,
+        }
+        return tuple(values), details
 
     def record_report(self, *, case_id: str, run_id: str, timestamp: datetime,
                       evidence_refs: tuple[str, ...]) -> None:

@@ -50,6 +50,12 @@ class DesktopAnalysisSummary:
     entities_discovered: int = 0
     useful_pivots: int = 0
     blocked_unavailable_sources: int = 0
+    initial_collectors: int = 0
+    automatic_pivots_executed: int = 0
+    hop_1_count: int = 0
+    hop_2_count: int = 0
+    new_relations: int = 0
+    stop_reason: str = "NOT_AVAILABLE"
 
 
 class DesktopBackend:
@@ -135,6 +141,7 @@ class DesktopBackend:
         report_path = result.report_reference.html_path if result.report_reference else None
         graph_path = None
         coverage = {}
+        multi_hop = {}
         if result.graph_bundle is not None:
             exports = result.graph_bundle.get("exports")
             if isinstance(exports, dict) and isinstance(exports.get("viewer_path"), str):
@@ -142,6 +149,9 @@ class DesktopBackend:
             dossier = result.graph_bundle.get("dossier")
             if isinstance(dossier, dict) and isinstance(dossier.get("coverage_summary"), dict):
                 coverage = dossier["coverage_summary"]
+            candidate = result.graph_bundle.get("multi_hop_execution")
+            if isinstance(candidate, dict):
+                multi_hop = candidate
         public_matches, rejected_targets, checked_targets = self._phone_public_counts(result)
         summary = DesktopAnalysisSummary(
             case_id=case_id,
@@ -163,6 +173,12 @@ class DesktopBackend:
             entities_discovered=int(coverage.get("entities_discovered", 0)),
             useful_pivots=int(coverage.get("useful_pivots", 0)),
             blocked_unavailable_sources=int(coverage.get("blocked_unavailable_sources", 0)),
+            initial_collectors=int(multi_hop.get("initial_executions", len(result.executions))),
+            automatic_pivots_executed=int(multi_hop.get("auto_executions", 0)),
+            hop_1_count=int(multi_hop.get("hop_1_count", 0)),
+            hop_2_count=int(multi_hop.get("hop_2_count", 0)),
+            new_relations=sum(int(value) for value in multi_hop.get("new_relations_by_hop", {}).values()),
+            stop_reason=str(multi_hop.get("stop_reason", "NOT_AVAILABLE")),
         )
         self._last_summary = summary
         self._emit(status_callback, "Gotowe.")

@@ -120,12 +120,24 @@ class CaseExecutionRecord:
     result_status: str
     result: ExecutionResult | None
     errors: tuple[str, ...] = ()
+    execution_phase: str = "INITIAL"
+    hop: int = 0
+    collector_id: str | None = None
+    enricher_id: str | None = None
+    source_id: str | None = None
+    source_registry_id: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
             "step": self.step.to_dict(),
             "collector_version": self.collector_version,
             "result_status": self.result_status,
+            "execution_phase": self.execution_phase,
+            "hop": self.hop,
+            "collector_id": self.collector_id or self.step.collector_name,
+            "enricher_id": self.enricher_id or self.step.collector_name,
+            "source_id": self.source_id or self.step.collector_name,
+            "source_registry_id": self.source_registry_id,
             "execution_id": self.result.execution_id if self.result is not None else None,
             "started_at": self.result.started_at.isoformat() if self.result is not None else None,
             "finished_at": self.result.finished_at.isoformat() if self.result is not None else None,
@@ -159,6 +171,34 @@ class CaseExecutionRecord:
 
 
 @dataclass(frozen=True, kw_only=True)
+class MultiHopExecutionSummary:
+    initial_executions: int
+    auto_executions: int
+    manual_required: int
+    blocked: int
+    suppressed_duplicates: int
+    hop_0_count: int
+    hop_1_count: int
+    hop_2_count: int
+    new_entities_by_hop: Mapping[str, int]
+    new_relations_by_hop: Mapping[str, int]
+    sources_executed: tuple[str, ...]
+    network_requests_reserved: int
+    stop_reason: str
+    execution_path: tuple[Mapping[str, object], ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            **{key: value for key, value in self.__dict__.items()
+               if key not in {"new_entities_by_hop", "new_relations_by_hop", "execution_path"}},
+            "new_entities_by_hop": dict(self.new_entities_by_hop),
+            "new_relations_by_hop": dict(self.new_relations_by_hop),
+            "execution_path": [dict(item) for item in self.execution_path],
+            "sources_executed": list(self.sources_executed),
+        }
+
+
+@dataclass(frozen=True, kw_only=True)
 class CaseRunResult:
     case_id: str
     run_id: str
@@ -174,6 +214,7 @@ class CaseRunResult:
     audit_verification: AuditVerification
     intelligence_summary: IntelligenceSummary | None = None
     graph_bundle: Mapping[str, object] | None = None
+    multi_hop_summary: MultiHopExecutionSummary | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -202,7 +243,242 @@ class CaseRunResult:
                 self.intelligence_summary.to_dict() if self.intelligence_summary is not None else None
             ),
             "graph_bundle": dict(self.graph_bundle) if self.graph_bundle is not None else None,
+            "multi_hop_summary": (
+                self.multi_hop_summary.to_dict() if self.multi_hop_summary is not None else None
+            ),
         }
+
+
+@dataclass(frozen=True, kw_only=True)
+class _EnrichmentLoopResult:
+    records: tuple[CaseExecutionRecord, ...]
+    summary: MultiHopExecutionSummary
+    warnings: tuple[str, ...]
+
+
+class EnrichmentExecutionLoop:
+    """Execute bounded AUTO pivots through EnrichmentBus and project every completed batch."""
+
+    def __init__(self, *, graph_service: GraphService, enrichment_bus: EnrichmentBus,
+                 collectors: Mapping[str, Collector], clock: Callable[[], datetime]) -> None:
+        self.graph_service = graph_service
+        self.bus = enrichment_bus
+        self.collectors = dict(collectors)
+        self.clock = clock
+
+    def execute(
+        self,
+        *,
+        manifest: CaseManifest,
+        initial_records: tuple[CaseExecutionRecord, ...],
+        run_id: str,
+        started_at: datetime,
+        analyze: Callable[[tuple[CaseExecutionRecord, ...]], IntelligenceSummary],
+        authorization_ids: Mapping[str, str],
+        progress_callback: Callable[[str], None] | None,
+        next_order: int,
+    ) -> _EnrichmentLoopResult:
+        records = list(initial_records)
+        auto_records: list[CaseExecutionRecord] = []
+        warnings: list[str] = []
+        manual_fingerprints: set[str] = set()
+        blocked_fingerprints: set[str] = set()
+        suppressed_fingerprints: set[str] = set()
+        path: list[Mapping[str, object]] = []
+        entity_counts = {"0": 0, "1": 0, "2": 0}
+        relation_counts = {"0": 0, "1": 0, "2": 0}
+        store = self.graph_service.store(manifest.case_id)
+
+        before = store.snapshot()
+        intelligence = analyze(tuple(records))
+        self.graph_service.project_batch(
+            manifest=manifest, executions=tuple(records), intelligence=intelligence, run_id=run_id,
+            batch_id="initial", started_at=started_at, finished_at=self.clock(),
+        )
+        after = store.snapshot()
+        new_nodes = self._new_non_seed_nodes(before, after)
+        entity_counts["0"] = len(new_nodes)
+        relation_counts["0"] = len(after["edges"]) - len(before["edges"])
+        path.extend(self._path_steps(initial_records, new_nodes))
+
+        stop_reason: str | None = None
+        last_hop_created_information = bool(new_nodes or relation_counts["0"])
+        for hop in range(1, self.graph_service.budget.max_hops + 1):
+            while True:
+                pivots = self.graph_service.plan_pivots(case_id=manifest.case_id, intelligence=intelligence)
+                for pivot in pivots:
+                    if pivot.status == "SUPPRESSED_DUPLICATE":
+                        suppressed_fingerprints.add(pivot.execution_fingerprint)
+                    if pivot.execution_mode == "MANUAL_REQUIRED":
+                        manual_fingerprints.add(pivot.execution_fingerprint)
+                candidates = [item for item in pivots if item.status == "PROPOSED"
+                              and item.execution_mode == "AUTO" and item.hop == hop]
+                if not candidates:
+                    break
+                if len(auto_records) >= self.graph_service.budget.max_auto_pivots:
+                    stop_reason = "PIVOT_BUDGET"
+                    break
+                pivot = candidates[0]
+                collector = self.collectors.get(pivot.proposed_enricher)
+                if collector is None:
+                    blocked_fingerprints.add(pivot.execution_fingerprint)
+                    warnings.append(f"automatic pivot collector unavailable: {pivot.proposed_enricher}")
+                    break
+                decision = PolicyGate.decide(
+                    manifest, agent_type=collector.agent_type, source_class=collector.source_class,
+                )
+                definition = self.bus.registry.get(pivot.proposed_enricher)
+                source = (
+                    self.bus.source_registry.get(definition.source_id)
+                    if self.bus.source_registry is not None and definition.source_id is not None else None
+                )
+                if decision.decision is not PolicyDecision.ALLOW or (
+                    source is not None and (
+                        not source.enabled or not source.terms_reviewed or not source.automation_allowed
+                    )
+                ):
+                    blocked_fingerprints.add(pivot.execution_fingerprint)
+                    stop_reason = "POLICY_BLOCKED"
+                    break
+                reservation = self.bus.request_reservation(pivot.proposed_enricher)
+                if (self.bus.network_requests_reserved(manifest.case_id) + reservation
+                        > self.graph_service.budget.max_network_requests):
+                    blocked_fingerprints.add(pivot.execution_fingerprint)
+                    stop_reason = "REQUEST_BUDGET"
+                    break
+                source_node = next(
+                    (item for item in store.snapshot()["nodes"]
+                     if item["entity_id"] == pivot.source_entity_id), None,
+                )
+                if source_node is None:
+                    blocked_fingerprints.add(pivot.execution_fingerprint)
+                    warnings.append(f"automatic pivot source entity missing: {pivot.pivot_id}")
+                    break
+                if progress_callback is not None:
+                    try:
+                        progress_callback(f"auto:{pivot.proposed_enricher}")
+                    except Exception:
+                        pass
+                step = PlannedStep(
+                    step_id=f"auto-{next_order:03d}", seed_reference=pivot.proposed_input,
+                    seed_type=str(source_node["entity_type"]), collector_name=pivot.proposed_enricher,
+                    source_class=collector.source_class,
+                    reason=f"AUTO graph pivot {pivot.pivot_id} at hop {hop}", execution_order=next_order,
+                )
+                next_order += 1
+                source_id, source_registry_id = self.bus.source_mapping(pivot.proposed_enricher)
+                try:
+                    result = self.bus.execute_seed(
+                        manifest=manifest, entity_type=step.seed_type, seed_reference=step.seed_reference,
+                        enricher_id=step.collector_name, graph_store=store, hop=hop,
+                        authorization_id=authorization_ids.get(step.collector_name), automatic=True,
+                    )
+                except PermissionError:
+                    blocked_fingerprints.add(pivot.execution_fingerprint)
+                    stop_reason = "POLICY_BLOCKED"
+                    break
+                except RuntimeError as error:
+                    message = str(error).casefold()
+                    if "duplicate" in message:
+                        suppressed_fingerprints.add(pivot.execution_fingerprint)
+                        continue
+                    if "request budget" in message:
+                        blocked_fingerprints.add(pivot.execution_fingerprint)
+                        stop_reason = "REQUEST_BUDGET"
+                        break
+                    if "pivot" in message or "enrichment budget" in message:
+                        blocked_fingerprints.add(pivot.execution_fingerprint)
+                        stop_reason = "PIVOT_BUDGET"
+                        break
+                    raise
+                record = CaseExecutionRecord(
+                    step=step, collector_version=collector.version, result_status=result.status.value,
+                    result=result, execution_phase="AUTO", hop=hop,
+                    collector_id=collector.agent_name, enricher_id=definition.enricher_id,
+                    source_id=source_id, source_registry_id=source_registry_id,
+                )
+                auto_records.append(record)
+                records.append(record)
+                batch_before = store.snapshot()
+                intelligence = analyze(tuple(records))
+                self.graph_service.project_batch(
+                    manifest=manifest, executions=(record,), intelligence=intelligence, run_id=run_id,
+                    batch_id=f"hop-{hop}-{len(auto_records)}", started_at=result.started_at,
+                    finished_at=result.finished_at,
+                )
+                batch_after = store.snapshot()
+                new_nodes = self._new_non_seed_nodes(batch_before, batch_after)
+                new_relations = len(batch_after["edges"]) - len(batch_before["edges"])
+                entity_counts[str(hop)] += len(new_nodes)
+                relation_counts[str(hop)] += new_relations
+                last_hop_created_information = bool(new_nodes or new_relations)
+                path.extend(self._path_steps((record,), new_nodes))
+            if stop_reason is not None:
+                break
+
+        if stop_reason is None:
+            if len(auto_records) >= self.graph_service.budget.max_auto_pivots:
+                stop_reason = "PIVOT_BUDGET"
+            elif any(record.hop == self.graph_service.budget.max_hops for record in auto_records) \
+                    and last_hop_created_information:
+                stop_reason = "MAX_HOPS"
+            elif not any(entity_counts.values()) and not any(relation_counts.values()):
+                stop_reason = "NO_NEW_INFORMATION"
+            else:
+                stop_reason = "NO_NEW_PIVOTS"
+
+        all_records = (*initial_records, *auto_records)
+        sources = tuple(sorted({record.source_id or record.step.collector_name for record in all_records
+                                if record.result is not None and record.result_status != "DENIED"}))
+        summary = MultiHopExecutionSummary(
+            initial_executions=len(initial_records), auto_executions=len(auto_records),
+            manual_required=len(manual_fingerprints), blocked=len(blocked_fingerprints),
+            suppressed_duplicates=len(suppressed_fingerprints),
+            hop_0_count=len(initial_records), hop_1_count=sum(item.hop == 1 for item in auto_records),
+            hop_2_count=sum(item.hop == 2 for item in auto_records),
+            new_entities_by_hop=entity_counts, new_relations_by_hop=relation_counts,
+            sources_executed=sources,
+            network_requests_reserved=self.bus.network_requests_reserved(manifest.case_id),
+            stop_reason=stop_reason, execution_path=tuple(path),
+        )
+        return _EnrichmentLoopResult(records=tuple(auto_records), summary=summary, warnings=tuple(warnings))
+
+    @staticmethod
+    def _new_non_seed_nodes(before, after) -> tuple[Mapping[str, object], ...]:
+        known = {item["entity_id"] for item in before["nodes"]}
+        return tuple(item for item in after["nodes"] if item["entity_id"] not in known
+                     and not item.get("attributes", {}).get("seed"))
+
+    @staticmethod
+    def _path_steps(records, new_nodes) -> tuple[Mapping[str, object], ...]:
+        output = []
+        for record in records:
+            observation_refs = tuple(
+                item.evidence_ref for item in (record.result.observations if record.result is not None else ())
+                if item.evidence_ref
+            )
+            if record.result is None:
+                evidence_refs = ()
+            elif record.result.receipt is not None:
+                evidence_refs = tuple(record.result.receipt.evidence_refs)
+            else:
+                evidence_refs = observation_refs
+            related = []
+            evidence_set = set(observation_refs)
+            for node in new_nodes:
+                if evidence_set & set(node.get("evidence_refs", ())):
+                    related.append(f"{node['entity_type']}:{node['display_value']}")
+            output.append({
+                "phase": record.execution_phase, "hop": record.hop,
+                "collector_id": record.collector_id or record.step.collector_name,
+                "enricher_id": record.enricher_id or record.step.collector_name,
+                "source_id": record.source_id or record.step.collector_name,
+                "source_registry_id": record.source_registry_id,
+                "entity_type": record.step.seed_type, "entity_input": record.step.seed_reference,
+                "result_status": record.result_status, "new_entities": related,
+                "evidence_refs": list(evidence_refs),
+            })
+        return tuple(output)
 
 
 def build_default_collectors() -> dict[str, Collector]:
@@ -482,6 +758,7 @@ class CaseRunner:
                     result_status="FAILED",
                     result=None,
                     errors=("case execution stopped after a fail-closed infrastructure error",),
+                    **self._record_metadata(step.collector_name),
                 )
                 records.append(record)
                 completed[step.step_id] = record.result_status
@@ -496,6 +773,7 @@ class CaseRunner:
                     result_status="FAILED",
                     result=None,
                     errors=("required execution dependency did not complete successfully",),
+                    **self._record_metadata(step.collector_name),
                 )
                 records.append(record)
                 completed[step.step_id] = record.result_status
@@ -523,6 +801,7 @@ class CaseRunner:
                     collector_version=collector.version,
                     result_status=result.status.value,
                     result=result,
+                    **self._record_metadata(step.collector_name),
                 )
                 try:
                     self._record_provider_health(manifest.case_id, record)
@@ -535,6 +814,7 @@ class CaseRunner:
                     result_status="FAILED",
                     result=None,
                     errors=(f"{type(error).__name__}: orchestrator execution failed closed",),
+                    **self._record_metadata(step.collector_name),
                 )
                 warnings.append(f"fail-closed infrastructure error at {step.collector_name}")
                 stop_after_failure = True
@@ -545,6 +825,35 @@ class CaseRunner:
         if any(item.case_id != manifest.case_id for item in contradiction_values):
             raise ValueError("contradiction assertions must belong to the current case")
         contradiction = detect_contradictions(contradiction_values)
+        multi_hop_summary: MultiHopExecutionSummary | None = None
+        graph_projected = False
+        if self._graph_service is not None and self._enrichment_bus is not None:
+            graph_projected = True
+            try:
+                loop = EnrichmentExecutionLoop(
+                    graph_service=self._graph_service, enrichment_bus=self._enrichment_bus,
+                    collectors=self._collectors, clock=self._now,
+                )
+                loop_result = loop.execute(
+                    manifest=manifest, initial_records=tuple(records), run_id=run_id,
+                    started_at=started_at,
+                    analyze=lambda execution_values: self._intelligence_core.analyze(
+                        manifest=manifest, executions=execution_values, contradiction=contradiction,
+                    ),
+                    authorization_ids=authorizations, progress_callback=progress_callback,
+                    next_order=max((item.step.execution_order for item in records), default=0) + 1,
+                )
+                records.extend(loop_result.records)
+                warnings.extend(loop_result.warnings)
+                multi_hop_summary = loop_result.summary
+                for record in loop_result.records:
+                    try:
+                        self._record_provider_health(manifest.case_id, record)
+                    except Exception:
+                        warnings.append(f"provider health persistence failed for {record.step.collector_name}")
+            except Exception as error:
+                warnings.append(f"{type(error).__name__}: automatic enrichment failed closed")
+
         findings_summary = self._finding_counts(records)
         audit_verification = verify_audit_log(self._audit_log, manifest.case_id)
         if not audit_verification.valid:
@@ -575,7 +884,13 @@ class CaseRunner:
                 graph_bundle = self._graph_service.process(
                     manifest=manifest, executions=records, intelligence=intelligence_summary,
                     run_id=run_id, started_at=started_at, finished_at=finished_at,
+                    project_executions=not graph_projected,
                 )
+                if multi_hop_summary is not None:
+                    graph_bundle["multi_hop_execution"] = multi_hop_summary.to_dict()
+                    dossier = graph_bundle.get("dossier")
+                    if isinstance(dossier, dict):
+                        dossier["multi_hop_execution"] = multi_hop_summary.to_dict()
             except Exception as error:
                 warnings.append(f"{type(error).__name__}: required graph projection failed")
                 status = CaseRunStatus.PARTIAL if self._has_success(records) else CaseRunStatus.FAILED
@@ -626,6 +941,7 @@ class CaseRunner:
             audit_verification=audit_verification,
             intelligence_summary=intelligence_summary,
             graph_bundle=graph_bundle,
+            multi_hop_summary=multi_hop_summary,
         )
         try:
             self._case_store.save_run_summary(
@@ -665,6 +981,20 @@ class CaseRunner:
                 continue
             values.append(name)
         return tuple(values)
+
+    def _record_metadata(self, collector_name: str) -> dict[str, object]:
+        source_id = collector_name
+        source_registry_id = None
+        if self._enrichment_bus is not None:
+            source_id, source_registry_id = self._enrichment_bus.source_mapping(collector_name)
+        return {
+            "execution_phase": "INITIAL",
+            "hop": 0,
+            "collector_id": collector_name,
+            "enricher_id": collector_name,
+            "source_id": source_id,
+            "source_registry_id": source_registry_id,
+        }
 
     @staticmethod
     def _finding_counts(records: Iterable[CaseExecutionRecord]) -> dict[str, int]:

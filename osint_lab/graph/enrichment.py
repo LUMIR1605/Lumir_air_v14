@@ -94,12 +94,12 @@ def build_default_enricher_registry() -> EnricherRegistry:
     registry = EnricherRegistry()
     values = (
         ("phone_metadata", (GraphEntityType.PHONE,), (GraphEntityType.PHONE,), SourceClass.LOCAL,
-         CostClass.LOCAL_LOW, 0.05, 0.35, "1.0.0", "phone_metadata_local"),
+         CostClass.LOCAL_LOW, 0.05, 0.35, "1.0.0", None),
         ("phone_public_web", (GraphEntityType.PHONE,),
          (GraphEntityType.WEBSITE, GraphEntityType.EMAIL, GraphEntityType.DOMAIN, GraphEntityType.COMPANY),
          SourceClass.PASSIVE_WEB, CostClass.NETWORK_MEDIUM, 0.55, 0.8, "1.1.0", "duckduckgo_html"),
         ("email_local_metadata", (GraphEntityType.EMAIL,), (GraphEntityType.DOMAIN,), SourceClass.LOCAL,
-         CostClass.LOCAL_LOW, 0.05, 0.55, "1.0.0", "email_local_metadata"),
+         CostClass.LOCAL_LOW, 0.05, 0.55, "1.0.0", None),
         ("email_exposure", (GraphEntityType.EMAIL,), (GraphEntityType.EMAIL, GraphEntityType.WEBSITE),
          SourceClass.PASSIVE_WEB, CostClass.NETWORK_MEDIUM, 0.6, 0.65, "1.0.0", "gravatar_public_profile"),
         ("email_public_web", (GraphEntityType.EMAIL,),
@@ -141,7 +141,7 @@ class EnrichmentBus:
     """Routes entities and delegates every execution to the existing Orchestrator."""
 
     _NETWORK_REQUEST_RESERVATION = {
-        "phone_public_web": 16,
+        "phone_public_web": 10,
         "email_exposure": 4,
         "username_lookup": 8,
         "domain_dns": 8,
@@ -189,6 +189,29 @@ class EnrichmentBus:
         ))
         self._network_requests: dict[str, int] = {}
         self._enrichments: dict[tuple[str, str], int] = {}
+        self._validate_mappings()
+
+    def _validate_mappings(self) -> None:
+        registered_sources = (
+            {item.source_id: item for item in self.source_registry.definitions}
+            if self.source_registry is not None else {}
+        )
+        for definition in self.registry.definitions:
+            collector = self._collectors.get(definition.enricher_id)
+            if collector is not None and (
+                collector.agent_name != definition.enricher_id
+                or collector.version != definition.version
+                or collector.source_class is not definition.source_class
+                or collector.network_required != definition.network_required
+            ):
+                raise ValueError(f"collector/enricher metadata mismatch: {definition.enricher_id}")
+            if not definition.enabled or definition.source_id is None or self.source_registry is None:
+                continue
+            source = registered_sources.get(definition.source_id)
+            if source is None:
+                raise ValueError(f"SOURCE_MAPPING_ERROR: {definition.enricher_id}")
+            if source.source_class is not definition.source_class:
+                raise ValueError(f"source class mismatch: {definition.enricher_id}")
 
     def eligible(self, *, manifest: CaseManifest, entity: EntityNode) -> tuple[EnricherDefinition, ...]:
         values = []
@@ -217,12 +240,12 @@ class EnrichmentBus:
         definition = self.registry.get(enricher_id)
         if entity.entity_type not in definition.supported_entity_types or not definition.enabled:
             raise ValueError("entity is not supported by enricher")
-        if self.source_registry is not None and definition.source_id not in {
-            None, "phone_metadata_local", "email_local_metadata"
-        }:
+        if self.source_registry is not None and definition.source_id is not None:
             source = self.source_registry.get(definition.source_id)
             if not source.enabled:
                 raise PermissionError("source review registry disabled this source")
+            if automatic and (not source.terms_reviewed or not source.automation_allowed):
+                raise PermissionError("source is not reviewed for automatic execution")
         collector = self._collectors.get(enricher_id)
         if collector is None:
             raise ValueError("collector adapter is unavailable")
@@ -339,3 +362,14 @@ class EnrichmentBus:
     def execution_fingerprint(case_id: str, entity: EntityNode, enricher_id: str) -> str:
         token = f"{case_id}|{entity.entity_id}|{enricher_id}|{entity.canonical_value}"
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def source_mapping(self, enricher_id: str) -> tuple[str, str | None]:
+        definition = self.registry.get(enricher_id)
+        return definition.source_id or enricher_id, definition.source_id
+
+    def request_reservation(self, enricher_id: str) -> int:
+        definition = self.registry.get(enricher_id)
+        return self._NETWORK_REQUEST_RESERVATION.get(enricher_id, 1) if definition.network_required else 0
+
+    def network_requests_reserved(self, case_id: str) -> int:
+        return self._network_requests.get(case_id, 0)

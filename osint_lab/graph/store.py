@@ -380,12 +380,17 @@ class GraphStore:
         source_refs = set(value.source_refs)
         evidence_refs = set(value.evidence_refs)
         first_seen, created_at = value.first_seen, value.created_at
+        attributes = dict(value.attributes)
         if existing is not None:
             aliases.update(_load(existing["aliases"]))
             source_refs.update(_load(existing["source_refs"]))
             evidence_refs.update(_load(existing["evidence_refs"]))
             first_seen = min(first_seen, datetime.fromisoformat(existing["first_seen"]))
             created_at = min(created_at, datetime.fromisoformat(existing["created_at"]))
+            previous_attributes = dict(_load(existing["attributes"]))
+            if "hop" in previous_attributes and "hop" in attributes:
+                attributes["hop"] = min(int(previous_attributes["hop"]), int(attributes["hop"]))
+            attributes["seed"] = bool(previous_attributes.get("seed")) or bool(attributes.get("seed"))
         connection.execute("""INSERT INTO entities VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(entity_id) DO UPDATE SET display_value=excluded.display_value,aliases=excluded.aliases,
             first_seen=excluded.first_seen,last_seen=excluded.last_seen,updated_at=excluded.updated_at,
@@ -394,7 +399,7 @@ class GraphStore:
             (value.entity_id, value.case_id, value.entity_type.value, value.canonical_value, value.display_value,
              _json(sorted(aliases)), first_seen.isoformat(), value.last_seen.isoformat(), created_at.isoformat(),
              value.updated_at.isoformat(), _json(sorted(source_refs)), _json(sorted(evidence_refs)),
-             value.confidence, value.status.value, _json(dict(value.attributes))))
+             value.confidence, value.status.value, _json(attributes)))
         connection.execute("INSERT INTO entity_events(entity_id,timestamp,action,payload) VALUES(?,?,?,?)",
                            (value.entity_id, value.updated_at.isoformat(), action, _json(value.to_dict())))
 

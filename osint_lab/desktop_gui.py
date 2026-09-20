@@ -208,10 +208,14 @@ class DesktopWindow:
             f"Rejected false positives: {summary.rejected_false_positives}\n"
             f"Target pages checked: {summary.target_pages_checked}\n"
             f"Sources executed: {summary.sources_executed}/{summary.sources_enabled}\n"
+            f"Initial collectors: {summary.initial_collectors}    "
+            f"Automatic pivots executed: {summary.automatic_pivots_executed}\n"
+            f"Hop 1: {summary.hop_1_count}    Hop 2: {summary.hop_2_count}\n"
             f"Independent evidence: {summary.independent_evidence}    "
-            f"Entities discovered: {summary.entities_discovered}\n"
+            f"Entities discovered: {summary.entities_discovered}    New relations: {summary.new_relations}\n"
             f"Useful pivots: {summary.useful_pivots}    "
             f"Blocked/Unavailable sources: {summary.blocked_unavailable_sources}\n"
+            f"Stop reason: {summary.stop_reason}\n"
             f"Case ID: {summary.case_id}"
         )
         if summary.report_html_path:

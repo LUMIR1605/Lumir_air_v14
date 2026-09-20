@@ -74,6 +74,13 @@ class GraphProjector:
                 continue
             for index, observation in enumerate(record.result.observations):
                 payload = dict(observation.payload)
+                execution_hop = int(getattr(record, "hop", 0))
+                source_ref = str(
+                    getattr(record, "source_registry_id", None)
+                    or getattr(record, "source_id", None)
+                    or payload.get("source_id")
+                    or record.step.collector_name
+                )
                 evidence_id = observation.evidence_ref or f"{record.result.execution_id}:observation:{index}"
                 evidence = evidence_by_id.get(evidence_id)
                 group = evidence.independence_group if evidence is not None else f"execution:{record.result.execution_id}"
@@ -81,10 +88,17 @@ class GraphProjector:
                 derived = self._derive_observation(record, observation)
                 for left_type, left_value, right_type, right_value, relation_type, reason in derived:
                     try:
+                        step_source_class = getattr(record.step, "source_class", None)
+                        is_local = (
+                            getattr(step_source_class, "value", None) == "LOCAL"
+                            or record.step.collector_name in {"phone_metadata", "email_local_metadata"}
+                        )
+                        left_hop = execution_hop if is_local else max(0, execution_hop - 1)
                         left = self._from_values(manifest.case_id, left_type, left_value, timestamp,
-                                                 (evidence_id,), (record.step.collector_name,), hop=0)
+                                                 (evidence_id,), (source_ref,), hop=left_hop,
+                                                 seed=execution_hop == 0)
                         right = self._from_values(manifest.case_id, right_type, right_value, timestamp,
-                                                  (evidence_id,), (record.step.collector_name,), hop=1)
+                                                  (evidence_id,), (source_ref,), hop=execution_hop, seed=False)
                     except ValueError:
                         continue
                     entities.setdefault(left.entity_id, left)
@@ -95,7 +109,7 @@ class GraphProjector:
                         relation_id=relation_id, case_id=manifest.case_id, source_entity_id=left.entity_id,
                         target_entity_id=right.entity_id, relation_type=relation_type, first_seen=timestamp,
                         last_seen=timestamp, evidence_refs=(evidence_id,),
-                        source_refs=(str(payload.get("source_id") or record.step.collector_name),),
+                        source_refs=(source_ref,),
                         independence_groups=(group,),
                         confidence=evidence.quality_score if evidence and evidence.quality_score is not None else 0.5,
                         status=GraphStatus.POSSIBLE, reasons=(reason,),
@@ -122,7 +136,7 @@ class GraphProjector:
                             manifest.case_id, CaseEventType.ENTITY_DISCOVERED, right.entity_id,
                             timestamp, (evidence_id,), attributes={
                                 "parent_entity": left.entity_id,
-                                "source": str(payload.get("source_id") or record.step.collector_name),
+                                "source": source_ref,
                                 "extraction_method": record.step.collector_name,
                                 "confidence": derived_relation.confidence,
                             },
@@ -219,11 +233,12 @@ class GraphProjector:
                             source_refs=tuple(source_refs) or ("intelligence:correlation",),
                             evidence_refs=tuple(evidence_refs), confidence=0.7, attributes={"seed": False, "hop": 1})
 
-    def _from_values(self, case_id, entity_type, value, timestamp, evidence_refs, source_refs, *, hop):
+    def _from_values(self, case_id, entity_type, value, timestamp, evidence_refs, source_refs, *, hop,
+                     seed=False):
         normalized = self.normalizer.normalize(entity_type, value)
         return self._entity(case_id=case_id, entity_type=entity_type, canonical=normalized.canonical_value,
                             display=normalized.display_value, timestamp=timestamp, source_refs=source_refs,
-                            evidence_refs=evidence_refs, confidence=0.7, attributes={"seed": hop == 0, "hop": hop})
+                            evidence_refs=evidence_refs, confidence=0.7, attributes={"seed": seed, "hop": hop})
 
     @staticmethod
     def _entity(*, case_id, entity_type, canonical, display, timestamp, source_refs, evidence_refs,
@@ -266,6 +281,28 @@ class GraphProjector:
         if name == "email_local_metadata" and observation.raw_status == "VALID":
             add(GraphEntityType.EMAIL, seed, GraphEntityType.DOMAIN, payload.get("domain"),
                 GraphRelationType.USES_DOMAIN, "validated email domain")
+        elif name == "phone_public_web" and observation.raw_status == "MATCH" \
+                and payload.get("target_verified") is True:
+            relation_by_type = {
+                GraphEntityType.WEBSITE: GraphRelationType.MENTIONED_ON,
+                GraphEntityType.DOMAIN: GraphRelationType.USES_DOMAIN,
+                GraphEntityType.EMAIL: GraphRelationType.ASSOCIATED_WITH,
+                GraphEntityType.COMPANY: GraphRelationType.ASSOCIATED_WITH,
+                GraphEntityType.DOCUMENT: GraphRelationType.MENTIONED_ON,
+                GraphEntityType.USERNAME: GraphRelationType.ASSOCIATED_WITH,
+                GraphEntityType.LOCATION: GraphRelationType.ASSOCIATED_WITH,
+            }
+            for item in payload.get("discovered_entities", ()):
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    discovered_type = GraphEntityType(str(item.get("entity_type")))
+                except ValueError:
+                    continue
+                relation = relation_by_type.get(discovered_type)
+                if relation is not None:
+                    add(GraphEntityType.PHONE, seed, discovered_type, item.get("value"), relation,
+                        "entity co-occurs on a verified public phone target; no ownership inference")
         elif name == "username_lookup" and observation.raw_status == "CLAIMED":
             add(GraphEntityType.USERNAME, seed, GraphEntityType.SOCIAL_PROFILE, payload.get("profile_url"),
                 GraphRelationType.LINKS_TO, "provider-specific claimed profile signal")
