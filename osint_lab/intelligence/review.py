@@ -37,4 +37,3 @@ class ReviewerDecisionEngine:
                                       verification_decision_id=decision.decision_id)
         return replace_hypothesis(value, status=HypothesisStatus.OPEN,
                                   verification_decision_id=decision.decision_id)
-
