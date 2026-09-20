@@ -14,7 +14,7 @@ MVP mapping:
 - `EMAIL -> email_local_metadata -> email_exposure`
 - email domain -> `domain_dns` as a separate orchestration-level step dependent on local email validation
 
-The phone public-web and email DNS follow-up steps are separately registry-validated and PolicyGate-evaluated. When `PASSIVE_WEB` is disabled, local phone metadata still runs while `phone_public_web` is recorded as `DENIED` without HTTP. The desktop's existing PASSIVE_WEB checkbox controls this manifest permission.
+The phone public-web and email DNS follow-up steps are separately registry-validated and PolicyGate-evaluated. When `PASSIVE_WEB` is disabled, local phone metadata still runs while `phone_public_web` is recorded as `DENIED` without search or target HTTP. When enabled, the phone collector internally performs bounded discovery and target verification as one authorized execution. Desktop progress reports search, source verification, evidence analysis and report generation without changing enforcement.
 
 Duplicate seeds are skipped deterministically. Unknown seed types, invalid inputs, and unavailable/unregistered collectors are explicit skipped steps with warnings. `dry_run=True` builds and optionally stores the plan without collector execution, audit events, network calls, evidence publication, or receipts.
 

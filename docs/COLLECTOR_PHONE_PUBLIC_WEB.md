@@ -2,17 +2,17 @@
 
 ## IMPLEMENTED
 
-`PhonePublicWebCollector` (`phone_public_web`, version `1.0.1`) is a `PASSIVE_WEB` PHONE collector with `network_required = true`. It runs only through CaseManifest, Registry, PolicyGate, Orchestrator, Audit, Evidence Vault, ExecutionReceipt, Intelligence Core, and ReportEngine.
+`PhonePublicWebCollector` (`phone_public_web`, version `1.1.0`) is a `PASSIVE_WEB` PHONE collector with `network_required = true`. It runs only through CaseManifest, Registry, PolicyGate, Orchestrator, Audit, Evidence Vault, ExecutionReceipt, Intelligence Core, and ReportEngine.
 
-The collector performs public unauthenticated GET searches using reviewed providers and bounded phone variants. Numeric normalization is only candidate detection. A result becomes `MATCH` only as `PHONE_CONTEXT_MATCH` (visible normalized number near an explicit phone/contact label) or `STRUCTURED_PHONE_MATCH` (`tel:`, schema/JSON-LD telephone, or vCard TEL). A plain `NUMERIC_MATCH` remains `UNKNOWN`. Digits occurring only as a URL/resource, image, product, article, listing, document, tracking, pagination, or similar identifier become `REJECTED_NUMERIC_ID`. `NO_MATCH` requires an explicit reviewed provider no-results signal. CAPTCHA, JS challenge, 403, 429, timeout, homepage redirect, generic page, and inconclusive parsing produce `UNKNOWN`; technical client/parser failures produce `ERROR`.
+The collector separates search discovery from evidence. Reviewed search providers return bounded candidates; canonical target URLs are deduplicated, fetched through `TargetPageFetcher`, parsed and validated by `TargetPhoneValidator`. Search snippets never create evidence. A target becomes `MATCH` only as `PHONE_CONTEXT_MATCH` or `STRUCTURED_PHONE_MATCH`. `NUMERIC_MATCH_ONLY` remains `UNKNOWN`, while resource identifiers become `REJECTED_NUMERIC_ID`.
 
-Accepted semantic occurrences record canonical phone, match level, matched variant/type, match location, snippet, result URL/domain, collection timestamp, content hash, explicit source date or `UNKNOWN`, and a warning for dates older than 24 months. Conservative extraction supports visible email/handle, URL/domain, structured organization/location, and document filename/type. Extraction confidence describes extraction quality only. Rejected numeric identifiers are retained as low-quality evidence with an explainable reason but cannot create entities, correlations, hypotheses, or derived pivots.
+Accepted target occurrences record complete discovery-to-target provenance, final/canonical URL, target domain, body and normalized-text hashes, page role, structured signal or bounded visible context, source date/warning, and evidence reference. Conservative extraction supports visible email/handle, URL/domain, structured organization/location, and document links. Rejected or unavailable targets cannot create entities, correlations, hypotheses or derived pivots.
 
 Audit and receipts omit the raw phone. The private vault/report may contain it. Findings are at most `POSSIBLE`; no result confirms subscriber, owner, person, or identity.
 
 ## PLANNED
 
-- Additional individually reviewed public providers and parser fixtures.
+- A second enabled provider after terms/privacy review and parser fixtures.
 - Provider health monitoring, per-provider budgets, and retry scheduling.
 - Durable reviewer handling of public occurrence hypotheses.
 

@@ -2,9 +2,9 @@
 
 ## IMPLEMENTED
 
-`EvidenceQualityEngine` assigns an explainable score from `0.0` to `1.0` to each `EvidenceItem`. Inputs cover source, source class, collection time, freshness, reproducibility, directness, corroboration, contradictions, independence group, and `quality_reasons`. Direct reproducible observations score above indirect inference; stale or contradictory evidence scores lower.
+`EvidenceQualityEngine` assigns an explainable score from `0.0` to `1.0` to each `EvidenceItem`. Inputs cover source, source class, collection time, freshness, reproducibility, directness, corroboration, contradictions, match level, target page role, independence group, and `quality_reasons`. Search discovery is capped at `0.05`, rejected numeric IDs at `0.10`, numeric-only candidates at `0.25`, target visible phone context at `0.75`, and structured target telephone evidence at `0.90`. Directories/marketplaces/advertisements and old target pages receive explicit penalties.
 
-`SourceIndependenceEngine` deterministically clusters explicit parent references, content hashes, canonical URLs, JSON payload fingerprints, and domains. Copies in one cluster do not count as independent corroboration. Exact normalized payload fingerprints are the v1 near-identity heuristic.
+`SourceIndependenceEngine` deterministically clusters explicit parent references, target body hashes, normalized visible-text hashes, canonical target URLs, JSON payload fingerprints, and target domains. Discovery providers do not create independence. Copies in one cluster do not count as independent corroboration.
 
 ## PLANNED
 
