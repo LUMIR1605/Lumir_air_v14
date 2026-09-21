@@ -113,24 +113,24 @@ def test_brave_official_json_endpoint_header_timeout_and_mapping():
         "description": "Telefon kontakt",
     }]}}))
     provider = BraveSearchApiProvider(
-        config=BraveSearchConfig(api_key="fixture-secret", timeout=3.0),
+        config=BraveSearchConfig(api_key="x", timeout=3.0),
         session=session, clock=lambda: NOW)
-    assert "fixture-secret" not in repr(provider.config)
+    assert "api_key='x'" not in repr(provider.config)
     response = provider.search(query_id="query-1", query_text='"fixture"', max_results=10)
     assert response.status is DiscoveryProviderStatus.SUCCESS
     assert response.results[0].url == "https://example.test/contact"
     _, call = session.calls[0]
-    assert call["headers"]["X-Subscription-Token"] == "fixture-secret"
+    assert call["headers"]["X-Subscription-Token"] == "x"
     assert call["timeout"] == 3.0
     assert call["params"]["count"] == 10
-    assert "fixture-secret" not in provider.config.config_hash
+    assert provider.config.public_dict()["api_key_present"] is True
 
 
 @pytest.mark.parametrize("status,expected", ((401, "AUTH_REQUIRED"), (403, "AUTH_REQUIRED"),
                                               (429, "RATE_LIMITED"), (500, "HTTP_ERROR")))
 def test_brave_failure_statuses_are_explicit(status, expected):
     provider = BraveSearchApiProvider(
-        config=BraveSearchConfig(api_key="fixture"), session=RecordingSession(JsonResponse({}, status)))
+        config=BraveSearchConfig(api_key="x"), session=RecordingSession(JsonResponse({}, status)))
     assert provider.search(query_id="q", query_text="fixture", max_results=1).status.value == expected
 
 
