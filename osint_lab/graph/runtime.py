@@ -190,6 +190,7 @@ class GraphService:
                 "hop": int(getattr(record, "hop", 0)),
                 "phase": getattr(record, "execution_phase", "INITIAL"),
                 "result_status": record.result_status,
+                "provider_source_ids": [],
             }
             execution_mappings.append(mapping)
             if record.result_status == "DENIED":
@@ -203,13 +204,31 @@ class GraphService:
             except KeyError as error:
                 raise RuntimeError(f"SOURCE_MAPPING_ERROR: {record.step.collector_name}") from error
             failure_values = []
+            explicit_sources: set[str] = set()
             for observation in record.result.observations:
-                failure_values.append(str(observation.payload.get("failure_status") or ""))
-                if observation.evidence_ref:
-                    evidence.setdefault(source_registry_id, set()).add(observation.evidence_ref)
+                payload = observation.payload
+                failure = str(payload.get("failure_status") or "")
+                failure_values.append(failure)
+                explicit_source = payload.get("source_id")
+                if isinstance(explicit_source, str):
+                    try:
+                        self.source_registry.get(explicit_source)
+                    except KeyError:
+                        pass
+                    else:
+                        explicit_sources.add(explicit_source)
+                        executed.setdefault(explicit_source, []).append(
+                            failure or (SourceFailureStatus.SUCCESS.value
+                                        if record.result_status in {"SUCCESS", "PARTIAL"}
+                                        else SourceFailureStatus.UNKNOWN.value))
+                        if observation.evidence_ref:
+                            evidence.setdefault(explicit_source, set()).add(observation.evidence_ref)
+            mapping["provider_source_ids"] = sorted(explicit_sources)
             if record.result_status in {"SUCCESS", "PARTIAL"} and not any(failure_values):
                 failure_values = [SourceFailureStatus.SUCCESS.value]
-            executed.setdefault(source_registry_id, []).extend(failure_values or [SourceFailureStatus.UNKNOWN.value])
+            if not explicit_sources:
+                executed.setdefault(source_registry_id, []).extend(
+                    failure_values or [SourceFailureStatus.UNKNOWN.value])
         node_types = {item.get("entity_type") for item in snapshot.get("nodes", ())}
         values = []
         for entity_type in (

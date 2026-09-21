@@ -577,6 +577,8 @@ class ReportEngine:
         verified_targets: list[dict[str, object]] = []
         rejected_targets: list[dict[str, object]] = []
         phone_signals: list[dict[str, object]] = []
+        discovery_coverage: dict[str, object] = {}
+        provider_health: dict[str, dict[str, object]] = {}
         for observation in observations:
             payload = observation.get("payload")
             if not isinstance(payload, Mapping):
@@ -584,6 +586,17 @@ class ReportEngine:
             provider_id = payload.get("provider_id")
             if isinstance(provider_id, str):
                 providers.add(provider_id)
+                if payload.get("stage") == "SEARCH_DISCOVERY":
+                    provider_health[provider_id] = {
+                        "provider_id": provider_id,
+                        "status": payload.get("provider_status") or payload.get("status"),
+                        "failure_status": payload.get("failure_status"),
+                        "error_code": payload.get("error_code"),
+                        "requests_made": payload.get("requests_made"),
+                    }
+            coverage_value = payload.get("discovery_coverage")
+            if isinstance(coverage_value, Mapping):
+                discovery_coverage = dict(coverage_value)
             channels = payload.get("discovery_channels")
             if isinstance(channels, list):
                 for channel in channels:
@@ -719,6 +732,14 @@ class ReportEngine:
             (str(item.get("entity_type")), str(item.get("value")), str(item.get("source_url"))): item
             for item in entities
         }
+        if discovery_coverage:
+            discovery_coverage.update({
+                "candidates_verified": len(verified_targets),
+                "candidates_rejected": len(false_positives),
+                "candidates_unknown": max(0, len(rejected_targets) - len(false_positives)),
+                "verified_phone_occurrences": len(verified_targets),
+                "discovered_entities": len(unique_entities),
+            })
         return {
             "applicable": applicable,
             "provider_count": len(providers),
@@ -747,8 +768,11 @@ class ReportEngine:
             "target_pages_verified": verified_targets,
             "target_pages_rejected": rejected_targets,
             "phone_signals": phone_signals,
+            "discovery_coverage": discovery_coverage,
+            "provider_health": [provider_health[key] for key in sorted(provider_health)],
             "exposure_notice": (
-                "PASSIVE_WEB providers received searched phone variants. Public occurrence. Possible association. "
+                "Brave Search API receives the query when configured and executed. DuckDuckGo receives the query "
+                "when executed. Public occurrence. Possible association. "
                 "Not independently verified subscriber identity or ownership."
             ),
         }
@@ -837,10 +861,27 @@ class ReportEngine:
                 f"{item.get('context_after') or ''}"
             ) if isinstance(item, Mapping) else str(item),
         )
+        coverage = data.get("discovery_coverage") if isinstance(data.get("discovery_coverage"), Mapping) else {}
+        coverage_text = ", ".join(
+            f"{key}: {coverage.get(key)}" for key in (
+                "providers_executed", "queries_executed", "raw_results",
+                "duplicate_results_removed", "unique_candidates", "unique_domains",
+                "candidates_selected", "requests_made", "budget_exhausted",
+            ) if key in coverage
+        ) or "No discovery coverage data"
+        provider_health = items(
+            data.get("provider_health"),
+            lambda item: (
+                f"{item.get('provider_id', '')}: {item.get('status', 'UNKNOWN')}; "
+                f"requests {item.get('requests_made', 0)}; error {item.get('error_code') or 'None'}"
+            ) if isinstance(item, Mapping) else str(item),
+        )
         return (
             "<section><h2>PHONE PUBLIC INTELLIGENCE</h2>"
             f"<p>{escape(str(data.get('exposure_notice', '')))}</p>"
             f"<p>Providers: {escape(str(data.get('provider_count', 0)))}; {status_text}</p>"
+            f"<p>Discovery coverage: {escape(coverage_text)}</p>"
+            f"<h3>PROVIDER HEALTH</h3><ul>{provider_health}</ul>"
             f"<h3>SEARCH DISCOVERY</h3><ul>{discovery}</ul>"
             f"<h3>TARGET PAGES VERIFIED</h3><ul>{verified_targets}</ul>"
             f"<h3>TARGET PAGES REJECTED</h3><ul>{rejected_targets}</ul>"

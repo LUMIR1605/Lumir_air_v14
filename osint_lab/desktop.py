@@ -56,6 +56,11 @@ class DesktopAnalysisSummary:
     hop_2_count: int = 0
     new_relations: int = 0
     stop_reason: str = "NOT_AVAILABLE"
+    discovery_providers: int = 0
+    discovery_queries: int = 0
+    discovery_candidates: int = 0
+    discovery_requests: int = 0
+    brave_status: str = "NOT_CONFIGURED"
 
 
 class DesktopBackend:
@@ -153,6 +158,7 @@ class DesktopBackend:
             if isinstance(candidate, dict):
                 multi_hop = candidate
         public_matches, rejected_targets, checked_targets = self._phone_public_counts(result)
+        discovery = self._discovery_summary(result)
         summary = DesktopAnalysisSummary(
             case_id=case_id,
             overall_status=result.overall_status.value,
@@ -179,6 +185,11 @@ class DesktopBackend:
             hop_2_count=int(multi_hop.get("hop_2_count", 0)),
             new_relations=sum(int(value) for value in multi_hop.get("new_relations_by_hop", {}).values()),
             stop_reason=str(multi_hop.get("stop_reason", "NOT_AVAILABLE")),
+            discovery_providers=int(discovery.get("providers_executed", 0)),
+            discovery_queries=int(discovery.get("queries_executed", 0)),
+            discovery_candidates=int(discovery.get("candidates_selected", 0)),
+            discovery_requests=int(discovery.get("requests_made", 0)),
+            brave_status=str(discovery.get("brave_status", "NOT_CONFIGURED")),
         )
         self._last_summary = summary
         self._emit(status_callback, "Gotowe.")
@@ -202,6 +213,22 @@ class DesktopBackend:
                 else:
                     rejected += 1
         return verified, rejected, checked
+
+    @staticmethod
+    def _discovery_summary(result: CaseRunResult) -> dict[str, object]:
+        coverage: dict[str, object] = {}
+        brave_status = "NOT_CONFIGURED"
+        for record in result.executions:
+            if record.result is None:
+                continue
+            for observation in record.result.observations:
+                payload = observation.payload
+                candidate = payload.get("discovery_coverage")
+                if isinstance(candidate, dict):
+                    coverage = candidate
+                if payload.get("provider_id") == "brave_search_api":
+                    brave_status = str(payload.get("provider_status") or "UNKNOWN")
+        return {**coverage, "brave_status": brave_status}
 
     def open_report(self, summary: DesktopAnalysisSummary | None = None) -> Path:
         selected = summary or self._last_summary

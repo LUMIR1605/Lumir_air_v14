@@ -168,7 +168,7 @@ def test_dossier_separates_layers_and_professional_failure_state():
 def test_synthetic_benchmark_arena_and_metrics_are_deterministic():
     root = Path(__file__).resolve().parents[1] / "benchmarks" / "osint_lab"
     fixtures = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(root.glob("*.json"))]
-    assert len(fixtures) == 20 and all(item["synthetic"] is True for item in fixtures)
+    assert len(fixtures) == 21 and all(item["synthetic"] is True for item in fixtures)
     expected = ({"id": "relation:a", "label": "TRUE"}, {"id": "hypothesis:b", "label": "UNKNOWN"})
     predicted = ({"id": "relation:a", "label": "TRUE", "independence_group": "g1"},
                  {"id": "hypothesis:b", "label": "UNKNOWN"})

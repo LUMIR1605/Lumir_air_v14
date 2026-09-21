@@ -1,0 +1,1 @@
+{"case":"U","arena":"MULTI_PROVIDER_DISCOVERY","before":{"providers":1,"unique_candidates":1,"verified_phone_occurrences":1,"false_positives":0},"after":{"providers":2,"unique_candidates":2,"verified_phone_occurrences":2,"false_positives":0},"expected":[{"id":"relation:verified-phone-a","label":"TRUE"},{"id":"relation:verified-phone-b","label":"TRUE"}],"synthetic":true}

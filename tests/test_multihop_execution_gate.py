@@ -7,9 +7,11 @@ from osint_lab.agents import (
     Collector,
     CollectorRegistry,
     FindingCandidate,
+    PhonePublicWebCollector,
     RawObservation,
     metadata_for,
 )
+from osint_lab.agents.target_page_fetcher import FetchStatus, TargetPageFetchResult
 from osint_lab.application import create_case_manifest
 from osint_lab.case_manifest import SeedEntity
 from osint_lab.case_runner import CaseRunner
@@ -28,7 +30,10 @@ from osint_lab.orchestrator.service import Orchestrator
 from osint_lab.policies import SourceClass
 from osint_lab.reporting import ReportEngine
 from osint_lab.schemas import FindingStatus
-from osint_lab.sources import build_default_source_registry
+from osint_lab.sources import (
+    DiscoveryBudget, DiscoveryProviderResponse, DiscoveryProviderStatus, DiscoveryResult,
+    MultiProviderDiscoveryEngine, build_default_source_registry,
+)
 
 
 NOW = datetime(2026, 9, 21, 9, 0, tzinfo=timezone.utc)
@@ -77,7 +82,7 @@ def observation(name, seed, raw_status, payload):
     )
 
 
-def collectors(*, phone_has_data=True):
+def collectors(*, phone_has_data=True, phone_collector=None):
     def phone_public(seed):
         if not phone_has_data:
             return (observation("phone_public_web", seed, "UNKNOWN", {
@@ -97,14 +102,14 @@ def collectors(*, phone_has_data=True):
             name="phone_metadata", agent_type="PHONE", source_class=SourceClass.LOCAL,
             observations=lambda seed: (observation("phone_metadata", seed, "VALID", {}),),
         ),
-        SyntheticPathCollector(
+        phone_collector or SyntheticPathCollector(
             name="phone_public_web", agent_type="PHONE", source_class=SourceClass.PASSIVE_WEB,
             observations=phone_public, version="1.1.0",
         ),
         SyntheticPathCollector(
             name="website_metadata", agent_type="WEBSITE", source_class=SourceClass.PASSIVE_WEB,
             observations=lambda seed: (observation("website_metadata", seed, "FOUND", {
-                "final_url": SITE, "public_emails": [EMAIL], "public_phones": [], "organizations": [],
+                "final_url": seed, "public_emails": [EMAIL], "public_phones": [], "organizations": [],
             }),),
         ),
         SyntheticPathCollector(
@@ -129,13 +134,14 @@ def collectors(*, phone_has_data=True):
     return {item.agent_name: item for item in values}
 
 
-def build_runner(tmp_path, *, phone_has_data=True, budget=None):
+def build_runner(tmp_path, *, phone_has_data=True, budget=None, phone_collector=None,
+                 brave_configured=False):
     repo = tmp_path / "repo"
     repo.mkdir(parents=True)
     case_root = tmp_path / "cases"
     audit = AuditLog(repo_root=repo, root=tmp_path / "audit")
     vault = EvidenceVault(repo_root=repo, root=case_root)
-    collector_values = collectors(phone_has_data=phone_has_data)
+    collector_values = collectors(phone_has_data=phone_has_data, phone_collector=phone_collector)
     collector_registry = CollectorRegistry()
     for collector in collector_values.values():
         collector_registry.register(collector, metadata_for(
@@ -150,7 +156,7 @@ def build_runner(tmp_path, *, phone_has_data=True, budget=None):
     for definition in build_default_enricher_registry().definitions:
         if definition.enricher_id in enabled:
             enrichers.register(definition)
-    sources = build_default_source_registry()
+    sources = build_default_source_registry(brave_api_key_present=brave_configured)
     selected_budget = budget or PivotBudget()
     graph_service = GraphService(
         repo_root=repo, case_root=case_root, audit_log=audit, enricher_registry=enrichers,
@@ -171,8 +177,11 @@ def build_runner(tmp_path, *, phone_has_data=True, budget=None):
     return runner, store
 
 
-def run_case(tmp_path, *, phone_has_data=True, budget=None):
-    runner, store = build_runner(tmp_path, phone_has_data=phone_has_data, budget=budget)
+def run_case(tmp_path, *, phone_has_data=True, budget=None, phone_collector=None,
+             brave_configured=False):
+    runner, store = build_runner(tmp_path, phone_has_data=phone_has_data, budget=budget,
+                                 phone_collector=phone_collector,
+                                 brave_configured=brave_configured)
     manifest = create_case_manifest(
         case_id=CASE, case_name="Synthetic multi-hop", authorized_by="fixture",
         purpose="Stage 15.1 offline integration test", legal_note="Synthetic identifiers only",
@@ -180,6 +189,47 @@ def run_case(tmp_path, *, phone_has_data=True, budget=None):
     )
     store.create(manifest)
     return runner.run(manifest)
+
+
+class DiscoveryFixtureProvider:
+    configured = True
+
+    def __init__(self, provider_id, urls):
+        self.provider_id = provider_id
+        self.endpoint = f"https://{provider_id}.example.test/search"
+        self.urls = tuple(urls)
+
+    def search(self, *, query_id, query_text, max_results):
+        results = tuple(DiscoveryResult(
+            provider_id=self.provider_id, query_id=query_id, query_text=query_text,
+            title="Kontakt", url=url, snippet=f"Telefon {PHONE}", rank=rank,
+            discovered_at=NOW, raw_status="FOUND",
+            result_hash=hashlib.sha256(f"{self.provider_id}|{url}".encode()).hexdigest(),
+            source_channels=(self.provider_id,),
+        ) for rank, url in enumerate(self.urls[:max_results], start=1))
+        return DiscoveryProviderResponse(
+            provider_id=self.provider_id, status=DiscoveryProviderStatus.SUCCESS,
+            query_id=query_id, query_text=query_text, results=results, requests_made=1,
+        )
+
+
+class MultiTargetFixtureFetcher:
+    def __init__(self, primary=SITE):
+        self.primary = primary
+
+    def fetch(self, url):
+        body = (
+            f"<html><p>Telefon: {PHONE}</p></html>"
+            if url == self.primary else "<html><p>synthetic directory record without phone context</p></html>"
+        )
+        raw = body.encode()
+        return TargetPageFetchResult(
+            requested_url=url, final_url=url, http_status=200, content_type="text/html",
+            content_length=len(raw), redirected=False, redirect_chain=(), fetched_at=NOW,
+            body_sha256=hashlib.sha256(raw).hexdigest(), body_truncated=False,
+            fetch_status=FetchStatus.SUCCESS, error_code=None, body=body, raw_bytes=raw,
+            response_headers={}, tls_certificate=None,
+        )
 
 
 def test_phone_web_email_domain_executes_real_two_hop_path(tmp_path):
@@ -217,6 +267,47 @@ def test_phone_web_email_domain_executes_real_two_hop_path(tmp_path):
     assert report["investigation_execution_path"]["hop_2_count"] >= 2
     assert "INVESTIGATION EXECUTION PATH" in html
     assert "DIRECT SOURCES" in html and "DOWNSTREAM SOURCES" in html
+
+
+def test_multi_provider_phone_bootstrap_executes_real_hop_one_and_hop_two(tmp_path):
+    website_a = "https://192.0.2.1/contact"
+    website_b = "https://directory.test/fixture"
+    engine = MultiProviderDiscoveryEngine(
+        providers=(
+            DiscoveryFixtureProvider("brave_search_api", (website_a,)),
+            DiscoveryFixtureProvider("duckduckgo_html", (website_a, website_b)),
+        ),
+        budget=DiscoveryBudget(max_queries_per_entity=1, max_queries_per_provider=1),
+    )
+    phone = PhonePublicWebCollector(
+        discovery_engine=engine, target_fetcher=MultiTargetFixtureFetcher(website_a), clock=lambda: NOW)
+    result = run_case(
+        tmp_path, phone_collector=phone, brave_configured=True,
+        budget=PivotBudget(max_auto_pivots=10))
+    names_and_hops = {(item.step.collector_name, item.hop) for item in result.executions}
+    assert ("website_metadata", 1) in names_and_hops
+    assert ("email_local_metadata", 1) in names_and_hops
+    assert ("domain_dns", 1) in names_and_hops
+    assert ("domain_rdap", 1) in names_and_hops
+    assert any(hop == 2 for _, hop in names_and_hops)
+    assert result.multi_hop_summary.hop_1_count > 0
+    assert result.multi_hop_summary.hop_2_count > 0
+    public = next(item for item in result.executions
+                  if item.step.collector_name == "phone_public_web")
+    targets = [item for item in public.result.observations
+               if item.payload.get("stage") == "TARGET_PAGE_VALIDATION"]
+    assert sum(item.payload.get("target_verified") is True for item in targets) == 1
+    matched = next(item for item in targets if item.payload.get("target_verified") is True)
+    channels = matched.payload["discovery_channels"]
+    assert {channel for row in channels for channel in row["source_channels"]} == {
+        "brave_search_api", "duckduckgo_html"}
+    assert {"brave_search_api", "duckduckgo_html"}.issubset(
+        set(result.graph_bundle["dossier"]["executed_source_ids"]))
+    event_types = {item["event_type"] for item in result.graph_bundle["snapshot"]["case_events"]}
+    assert {
+        "DISCOVERY_QUERY_PLANNED", "DISCOVERY_QUERY_EXECUTED", "DISCOVERY_RESULT_FOUND",
+        "TARGET_VERIFICATION_STARTED", "TARGET_VERIFICATION_RESULT",
+    }.issubset(event_types)
 
 
 def test_no_verified_phone_occurrence_stops_without_fabricated_pivots(tmp_path):

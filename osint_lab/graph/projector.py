@@ -4,7 +4,7 @@ from datetime import datetime
 import hashlib
 import ipaddress
 import json
-from typing import Iterable
+from typing import Iterable, Mapping
 from urllib.parse import urlsplit
 
 from osint_lab.case_manifest import CaseManifest
@@ -74,6 +74,8 @@ class GraphProjector:
                 continue
             for index, observation in enumerate(record.result.observations):
                 payload = dict(observation.payload)
+                events.extend(self._discovery_events(
+                    manifest.case_id, record, observation, index, record.result.finished_at))
                 execution_hop = int(getattr(record, "hop", 0))
                 source_ref = str(
                     getattr(record, "source_registry_id", None)
@@ -266,6 +268,82 @@ class GraphProjector:
         return CaseEvent(event_id="evt-" + hashlib.sha256(token.encode()).hexdigest()[:24], case_id=case_id,
                          event_type=event_type, timestamp=timestamp, subject_id=subject_id,
                          evidence_refs=tuple(evidence_refs), attributes=dict(attributes or {}))
+
+    @classmethod
+    def _discovery_events(cls, case_id, record, observation, index, timestamp):
+        payload = observation.payload
+        events = []
+        stage = payload.get("stage")
+        query_id = payload.get("query_id")
+        provider_id = payload.get("provider_id") or payload.get("source_id")
+        if (stage == "SEARCH_DISCOVERY" and isinstance(query_id, str)
+                and not isinstance(payload.get("discovery_queries"), list)):
+            attributes = {
+                "provider_id": provider_id,
+                "query_sha256": payload.get("query_sha256"),
+                "collector": record.step.collector_name,
+            }
+            events.append(cls._case_event(
+                case_id, CaseEventType.DISCOVERY_QUERY_PLANNED, query_id, timestamp, (), attributes))
+            events.append(cls._case_event(
+                case_id, CaseEventType.DISCOVERY_QUERY_EXECUTED, query_id, timestamp, (),
+                {**attributes, "status": payload.get("provider_status"),
+                 "requests_made": payload.get("requests_made")}))
+            if payload.get("provider_status") not in {"SUCCESS", "NO_RESULTS", None}:
+                events.append(cls._case_event(
+                    case_id, CaseEventType.DISCOVERY_PROVIDER_FAILED,
+                    f"{query_id}:{provider_id}", timestamp, (),
+                    {**attributes, "status": payload.get("provider_status"),
+                     "error_code": payload.get("error_code")}))
+        query_rows = payload.get("discovery_queries")
+        if isinstance(query_rows, list):
+            for row in query_rows:
+                if not isinstance(row, Mapping) or not isinstance(row.get("query_id"), str):
+                    continue
+                row_id = str(row["query_id"])
+                row_attributes = {
+                    "provider_id": row.get("provider_id"),
+                    "query_sha256": row.get("query_sha256"),
+                    "collector": record.step.collector_name,
+                }
+                events.append(cls._case_event(
+                    case_id, CaseEventType.DISCOVERY_QUERY_PLANNED, row_id,
+                    timestamp, (), row_attributes))
+                events.append(cls._case_event(
+                    case_id, CaseEventType.DISCOVERY_QUERY_EXECUTED, row_id,
+                    timestamp, (), {**row_attributes, "status": row.get("status"),
+                                     "requests_made": row.get("requests_made")}))
+                if row.get("status") not in {"SUCCESS", "NO_RESULTS", "AUTH_REQUIRED"}:
+                    events.append(cls._case_event(
+                        case_id, CaseEventType.DISCOVERY_PROVIDER_FAILED,
+                        f"{row_id}:{row.get('provider_id')}", timestamp, (),
+                        {**row_attributes, "status": row.get("status"),
+                         "error_code": row.get("error_code")}))
+        channels = payload.get("discovery_channels")
+        if isinstance(channels, list):
+            for position, channel in enumerate(channels):
+                if not isinstance(channel, Mapping):
+                    continue
+                result_hash = channel.get("result_hash")
+                if isinstance(result_hash, str):
+                    events.append(cls._case_event(
+                        case_id, CaseEventType.DISCOVERY_RESULT_FOUND, result_hash,
+                        timestamp, (), {"provider_id": channel.get("provider_id"),
+                                        "query_id": channel.get("query_id"),
+                                        "rank": channel.get("rank")}))
+        if stage == "TARGET_PAGE_VALIDATION":
+            subject = str(payload.get("target_body_sha256") or payload.get("result_url")
+                          or f"{record.result.execution_id}:{index}")
+            safe_subject = "target-" + hashlib.sha256(subject.encode()).hexdigest()[:24]
+            events.append(cls._case_event(
+                case_id, CaseEventType.TARGET_VERIFICATION_STARTED, safe_subject,
+                timestamp, (), {"collector": record.step.collector_name}))
+            events.append(cls._case_event(
+                case_id, CaseEventType.TARGET_VERIFICATION_RESULT, safe_subject,
+                timestamp, (observation.evidence_ref,) if observation.evidence_ref else (),
+                {"verified": payload.get("target_verified"),
+                 "match_type": payload.get("target_match_type") or payload.get("match_level")}))
+        return events
 
     @staticmethod
     def _derive_observation(record, observation):
