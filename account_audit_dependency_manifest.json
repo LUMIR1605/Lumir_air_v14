@@ -1,0 +1,13 @@
+{
+  "package": "holehe",
+  "version": "1.61",
+  "upstream_url": "https://github.com/megadose/holehe",
+  "pypi_url": "https://pypi.org/project/holehe/1.61/",
+  "license": "GPL-3.0-only",
+  "checked_at": "2026-09-21",
+  "artifact": "holehe-1.61.tar.gz",
+  "sha256": "1a02e7c103b9abcb485eb0aaca36d950ac6bff4ec001d644362cc46739916b3b",
+  "integration": "optional isolated Python package via bounded local subprocess bridge",
+  "runtime_validation": "offline adapter and normalization tests; no live provider enumeration",
+  "supported_installer_python": ["3.10", "3.11", "3.12"]
+}

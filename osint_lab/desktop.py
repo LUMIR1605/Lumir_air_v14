@@ -5,8 +5,17 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import threading
 from typing import Callable
 
+from osint_lab.account_audit import (
+    AccountAuditAuthorizationError,
+    AccountAuditBudget,
+    AccountAuditResult,
+    AccountAuditRun,
+    AccountReviewStatus,
+    ProviderDiagnostic,
+)
 from osint_lab.application import ApplicationServices, create_case_manifest
 from osint_lab.case_manifest import SeedEntity
 from osint_lab.case_runner import CaseExecutionPlan, CaseRunResult
@@ -96,6 +105,64 @@ class DesktopBackend:
     @property
     def last_summary(self) -> DesktopAnalysisSummary | None:
         return self._last_summary
+
+    def account_audit_diagnostic(self) -> ProviderDiagnostic:
+        service = self._account_audit_service()
+        return service.diagnose()
+
+    def run_account_audit(
+        self,
+        *,
+        email: str,
+        authorization_confirmed: bool,
+        privacy_disclosure_accepted: bool,
+        progress_callback: Callable[[int, int, AccountAuditResult], None] | None = None,
+        cancel_event: threading.Event | None = None,
+        budget: AccountAuditBudget | None = None,
+    ) -> AccountAuditRun:
+        service = self._account_audit_service()
+        try:
+            return service.run(
+                email=email,
+                authorization_confirmed=authorization_confirmed,
+                privacy_disclosure_accepted=privacy_disclosure_accepted,
+                progress_callback=progress_callback,
+                cancel_event=cancel_event,
+                budget=budget,
+            )
+        except AccountAuditAuthorizationError:
+            raise
+        except ValueError as error:
+            raise DesktopValidationError(str(error)) from error
+        except Exception as error:
+            self.record_error(error)
+            raise DesktopAnalysisError("Nie udało się uruchomić audytu kont.") from error
+
+    def record_account_review(
+        self,
+        *,
+        case_id: str,
+        service_id: str,
+        status: AccountReviewStatus,
+        note: str,
+    ) -> Path:
+        return self._account_audit_service().record_review(
+            case_id=case_id,
+            service_id=service_id,
+            status=status,
+            note=note,
+        )
+
+    def open_account_audit_report(self, run: AccountAuditRun, kind: str = "html") -> Path:
+        candidate = run.report_paths.get(kind)
+        if candidate is None:
+            raise DesktopValidationError("Raport audytu kont nie jest dostępny.")
+        path = Path(candidate).resolve()
+        expected = (self._application.case_store.root / run.case_id / "account_audit" / "reports").resolve()
+        if expected not in path.parents or not path.is_file():
+            raise DesktopValidationError("Nieprawidłowa ścieżka raportu audytu kont.")
+        self._path_opener(str(path))
+        return path
 
     def analyze(
         self,
@@ -299,6 +366,12 @@ class DesktopBackend:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
+
+    def _account_audit_service(self):
+        service = self._application.account_audit
+        if service is None:
+            raise DesktopAnalysisError("Moduł audytu kont nie jest skonfigurowany.")
+        return service
 
     def _unique_case_id(self, value: datetime) -> str:
         base = value.strftime("lumir_%Y%m%d_%H%M%S")

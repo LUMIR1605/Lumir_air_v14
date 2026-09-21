@@ -24,6 +24,7 @@ class AuditEventType(str, Enum):
     AGENT_FINISHED = "AGENT_FINISHED"
     AGENT_FAILED = "AGENT_FAILED"
     REVIEW_DECISION = "REVIEW_DECISION"
+    SELF_AUDIT_AUTHORIZATION_CONFIRMED = "SELF_AUDIT_AUTHORIZATION_CONFIRMED"
 
 
 _SENSITIVE_KEY_PARTS = ("password", "secret", "token", "api_key", "credential")

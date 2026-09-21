@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
+from osint_lab.account_audit import AccountAuditService, HoleheAccountAuditAdapter
 from osint_lab.agents import build_default_registry
 from osint_lab.case_manifest import CaseManifest, CaseStatus, SeedEntity
 from osint_lab.case_runner import CaseRunner, build_default_collectors
@@ -24,6 +25,7 @@ class ApplicationServices:
     case_store: CaseStore
     runner: CaseRunner
     audit_log: AuditLog
+    account_audit: AccountAuditService | None = None
 
 
 def build_application(*, repo_root: Path | None = None) -> ApplicationServices:
@@ -63,7 +65,19 @@ def build_application(*, repo_root: Path | None = None) -> ApplicationServices:
         graph_service=graph_service,
         enrichment_bus=enrichment_bus,
     )
-    return ApplicationServices(case_store=case_store, runner=runner, audit_log=audit)
+    account_audit = AccountAuditService(
+        repo_root=root,
+        case_root=case_store.root,
+        audit_log=audit,
+        provider=HoleheAccountAuditAdapter(repo_root=root),
+        clock=clock,
+    )
+    return ApplicationServices(
+        case_store=case_store,
+        runner=runner,
+        audit_log=audit,
+        account_audit=account_audit,
+    )
 
 
 def create_case_manifest(
