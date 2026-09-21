@@ -6,9 +6,11 @@
 
 Production CaseRunner invokes allowed collector steps through `EnrichmentBus`. The bus repeats eligibility, PolicyGate and budgets, suppresses a persistent execution fingerprint, then delegates to the unchanged Orchestrator. Denied planned steps still go through Orchestrator so the established denial audit remains authoritative.
 
+Stage 15.1 adds fail-closed startup validation for collector/enricher metadata and every non-local `EnricherDefinition.source_id`. Automatic execution additionally requires an enabled, reviewed, automation-allowed `SourceDefinition`. The bus exposes deterministic `collector_id`, `enricher_id`, logical `source_id` and `source_registry_id` mappings; coverage never reconstructs these IDs from an observation payload.
+
 ## PLANNED
 
-- User-selected execution of recommended graph pivots and durable retry disposition.
+- User-selected execution of `MANUAL_REQUIRED` pivots and durable retry disposition.
 
 ## NOT IMPLEMENTED
 

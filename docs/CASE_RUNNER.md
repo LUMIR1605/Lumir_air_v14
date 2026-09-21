@@ -18,9 +18,11 @@ The phone public-web and email DNS follow-up steps are separately registry-valid
 
 Duplicate seeds are skipped deterministically. Unknown seed types, invalid inputs, and unavailable/unregistered collectors are explicit skipped steps with warnings. `dry_run=True` builds and optionally stores the plan without collector execution, audit events, network calls, evidence publication, or receipts.
 
-`CaseRunResult` aggregates execution records, receipts, finding counts for every existing `FindingStatus`, contradiction results, warnings, audit verification, and the report reference. `PARTIAL` is used when successful work is mixed with denied/failed/unknown results. Infrastructure exceptions stop later execution and cannot produce `SUCCESS`.
+`CaseRunResult` aggregates initial and automatic execution records, receipts, finding counts for every existing `FindingStatus`, contradiction results, warnings, audit verification, `MultiHopExecutionSummary`, graph output and the report reference. `PARTIAL` is used when successful work is mixed with denied/failed/unknown results. Infrastructure exceptions stop later execution and cannot produce `SUCCESS`.
 
-In production composition, eligible collector steps use the EnrichmentBus adapter, which delegates to Orchestrator after PolicyGate/budget/fingerprint checks. After collection, CaseRunner projects accepted intelligence into the private graph, generates paths, review challenges, identity candidates, dossier, JSON/GraphML/viewer exports and report schema 1.5. A graph failure degrades the case; it cannot be hidden as full success.
+In production composition, eligible initial steps use the EnrichmentBus adapter, which delegates to Orchestrator after PolicyGate/budget/fingerprint checks. Stage 15.1 projects that batch immediately, then performs bounded planning/execution/projection passes. New entities are visible to the next pass, AUTO results remain ordinary `CaseExecutionRecord` values with receipts/evidence, and hop 2 is a real runtime boundary rather than a report-only proposal. Final analysis generates paths, review challenges, identity candidates, dossier, JSON/GraphML/viewer exports and report schema 1.5. A graph failure degrades the case; it cannot be hidden as full success.
+
+When passive web is explicitly enabled, the generated manifest authorizes the bounded downstream agent-type closure (WEBSITE, EMAIL, DOMAIN, COMPANY/ORGANIZATION and DOCUMENT). Every actual pivot is still independently evaluated by PolicyGate and SourceRegistry; this is not a wildcard or collector bypass.
 
 ## PLANNED
 
