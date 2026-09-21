@@ -45,6 +45,7 @@ class ReliabilityClass(str, Enum):
 
 class ImplementationStatus(str, Enum):
     IMPLEMENTED = "IMPLEMENTED"
+    AUTH_REQUIRED = "AUTH_REQUIRED"
     PLANNED = "PLANNED"
     DISABLED_TERMS = "DISABLED_TERMS"
     DISABLED_CREDENTIALS = "DISABLED_CREDENTIALS"
@@ -105,6 +106,7 @@ class SourceDefinition:
     implementation_status: ImplementationStatus
     parser_version: str
     config_hash: str
+    api_key_present: bool = False
 
     def __post_init__(self) -> None:
         for name in (
@@ -121,9 +123,8 @@ class SourceDefinition:
         if self.enabled and (
             not self.terms_reviewed
             or not self.automation_allowed
-            or self.authentication_required
-            or self.api_key_required
-            or self.paid
+            or ((self.authentication_required or self.api_key_required or self.paid)
+                and not self.api_key_present)
             or self.implementation_status is not ImplementationStatus.IMPLEMENTED
         ):
             raise ValueError("enabled source did not pass the hard source review")
@@ -147,6 +148,7 @@ class SourceDefinition:
             "rate_limit_notes": self.rate_limit_notes, "enabled": self.enabled,
             "reviewed_at": self.reviewed_at, "implementation_status": self.implementation_status.value,
             "parser_version": self.parser_version,
+            "api_key_present": self.api_key_present,
         }
         if include_hash:
             value["config_hash"] = self.config_hash

@@ -79,8 +79,9 @@ def search_html(url="https://example.test/contact"):
 
 def test_source_registry_hard_review_roles_and_config_hash():
     registry = build_default_source_registry()
-    assert len(registry.definitions) == 14
+    assert len(registry.definitions) == 15
     assert sum(item.enabled for item in registry.definitions) == 10
+    assert registry.get("brave_search_api").implementation_status.value == "AUTH_REQUIRED"
     assert len(registry.config_hash) == 64
     assert all(item.roles for item in registry.definitions)
     assert all(not item.enabled or (item.terms_reviewed and item.automation_allowed)

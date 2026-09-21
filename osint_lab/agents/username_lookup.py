@@ -11,6 +11,8 @@ from urllib.parse import quote, urlsplit
 from osint_lab.orchestrator.context import ExecutionContext
 from osint_lab.policies import SourceClass
 from osint_lab.schemas import FindingStatus
+from osint_lab.graph.models import GraphEntityType
+from osint_lab.sources.discovery import MultiProviderDiscoveryEngine
 
 from .base import Collector, FindingCandidate, RawObservation
 from .username_http import (
@@ -38,6 +40,7 @@ class UsernameCollector(Collector):
         providers: tuple[UsernameProvider, ...] = DEFAULT_USERNAME_PROVIDERS,
         http_client=None,
         clock: Callable[[], datetime] | None = None,
+        discovery_engine: MultiProviderDiscoveryEngine | None = None,
     ) -> None:
         super().__init__()
         if not isinstance(providers, tuple) or any(
@@ -51,6 +54,7 @@ class UsernameCollector(Collector):
         if not hasattr(self._http_client, "get"):
             raise ValueError("http_client must provide get()")
         self._clock = clock or (lambda: datetime.now(timezone.utc))
+        self._discovery_engine = discovery_engine
 
     def validate_input(self, seed_reference: str) -> None:
         self._normalize_username(seed_reference)
@@ -61,7 +65,14 @@ class UsernameCollector(Collector):
         seed_reference: str,
     ) -> tuple[RawObservation, ...]:
         username = self._normalize_username(seed_reference)
-        return tuple(self._query_provider(provider, username) for provider in self._providers)
+        values = [self._query_provider(provider, username) for provider in self._providers]
+        if self._discovery_engine is not None:
+            run = self._discovery_engine.discover(
+                case_id=context.case_id, entity_type=GraphEntityType.USERNAME, value=username)
+            coverage = run.coverage.to_dict()
+            values.extend(self._discovery_observation(username, item, coverage)
+                          for item in run.provider_responses)
+        return tuple(values)
 
     def normalize(self, observation: RawObservation) -> FindingCandidate:
         if not isinstance(observation, RawObservation):
@@ -326,6 +337,26 @@ class UsernameCollector(Collector):
         if any(not (character.isascii() and (character.isalnum() or character in "._-")) for character in username):
             raise ValueError("username input contains unsupported global characters")
         return username
+
+    @staticmethod
+    def _discovery_observation(username, response, coverage) -> RawObservation:
+        failure = {
+            "SUCCESS": "SUCCESS", "NO_RESULTS": "NO_MATCH", "AUTH_REQUIRED": "AUTH_REQUIRED",
+            "RATE_LIMITED": "RATE_LIMITED", "TIMEOUT": "TIMEOUT", "PARSER_ERROR": "PARSER_FAILURE",
+        }.get(response.status.value, "UNKNOWN")
+        return RawObservation(
+            raw_status="DISCOVERY_STATUS",
+            value_reference="username-discovery:" + hashlib.sha256(
+                f"{response.provider_id}|{username}".encode()).hexdigest(),
+            notes="Search result is discovery only; it does not confirm profile ownership or identity.",
+            payload={"source_id": response.provider_id, "provider_id": response.provider_id,
+                     "source_role": "DISCOVERY", "stage": "SEARCH_DISCOVERY",
+                     "provider_status": response.status.value, "failure_status": failure,
+                     "query_id": response.query_id,
+                     "query_sha256": hashlib.sha256(response.query_text.encode()).hexdigest(),
+                     "result_count": len(response.results), "error_code": response.error_code,
+                     "discovery_coverage": coverage},
+        )
 
     def _now(self) -> datetime:
         value = self._clock()

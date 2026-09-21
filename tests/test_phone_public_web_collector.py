@@ -620,7 +620,8 @@ def test_default_registry_contains_reviewed_phone_public_collector():
     metadata = registry.validate(collector)
     assert metadata.source_class is SourceClass.PASSIVE_WEB
     assert metadata.network_required is True
-    assert metadata.capabilities["providers"] == ["duckduckgo_html", "mojeek_html_candidate"]
+    assert metadata.capabilities["providers"] == [
+        "brave_search_api", "duckduckgo_html", "mojeek_html_candidate"]
     assert metadata.capabilities["enabled_providers"] == ["duckduckgo_html"]
     changed = PhonePublicWebCollector(providers=(replace(provider(), provider_id="other"),))
     with pytest.raises(PermissionError, match="metadata"):

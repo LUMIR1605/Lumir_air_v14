@@ -3,6 +3,7 @@
 import dns
 import phonenumbers
 import requests
+from osint_lab.sources import build_default_discovery_engine
 
 from .domain_dns import DomainDNSCollector
 from .email_exposure import EmailExposureCollector, EmailLocalMetadataCollector
@@ -24,15 +25,19 @@ def build_default_registry() -> CollectorRegistry:
     registry = CollectorRegistry()
     collectors = (
         (PhoneMetadataCollector(), False, f"phonenumbers:{phonenumbers.__version__}"),
-        (PhonePublicWebCollector(), True, f"requests:{requests.__version__}"),
+        (PhonePublicWebCollector(discovery_engine=build_default_discovery_engine()),
+         True, f"requests:{requests.__version__};brave-search-api;duckduckgo-html"),
         (DomainDNSCollector(), True, f"dnspython:{dns.__version__}"),
-        (UsernameCollector(), True, f"requests:{requests.__version__}"),
+        (UsernameCollector(discovery_engine=build_default_discovery_engine()),
+         True, f"requests:{requests.__version__};multi-provider-discovery"),
         (EmailLocalMetadataCollector(), False, "python-stdlib:idna"),
         (EmailExposureCollector(), True, f"requests:{requests.__version__}"),
-        (EmailPublicWebCollector(), True, f"requests:{requests.__version__}"),
+        (EmailPublicWebCollector(discovery_engine=build_default_discovery_engine()),
+         True, f"requests:{requests.__version__};multi-provider-discovery"),
         (DomainRdapCollector(), True, f"requests:{requests.__version__}"),
         (WebsiteMetadataCollector(), True, f"requests:{requests.__version__}"),
-        (CompanyPublicWebCollector(), True, f"requests:{requests.__version__}"),
+        (CompanyPublicWebCollector(discovery_engine=build_default_discovery_engine()),
+         True, f"requests:{requests.__version__};multi-provider-discovery"),
         (DocumentIntelligenceCollector(), True, f"requests:{requests.__version__};pypdf"),
         (PublicArchiveCollector(), True, f"requests:{requests.__version__}"),
     )

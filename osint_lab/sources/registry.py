@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 
 from osint_lab.graph.models import GraphEntityType as E
 from osint_lab.policies import SourceClass
@@ -16,7 +17,7 @@ from .models import (
 )
 
 
-SOURCE_REGISTRY_VERSION = "2026-09-20-v1"
+SOURCE_REGISTRY_VERSION = "2026-09-21-v2"
 
 
 class SourceRegistry:
@@ -58,6 +59,8 @@ class SourceRegistry:
 def _definition(source_id, name, category, roles, supported, outputs, source_class, access_method,
                 base_url, reliability, gain, *, enabled=True, automation=True, reviewed=True,
                 auth=False, key=False, paid=False, status=I.IMPLEMENTED, parser="1.0.0",
+                api_key_present=False,
+                reviewed_at="2026-09-20",
                 terms_url="https://example.invalid/review-required", privacy="Provider receives the query and source IP.",
                 rate="Bounded locally; provider responses may impose stricter limits."):
     return make_source_definition(
@@ -67,11 +70,14 @@ def _definition(source_id, name, category, roles, supported, outputs, source_cla
         api_key_required=key, paid=paid, automation_allowed=automation, terms_reviewed=reviewed,
         terms_review_url=terms_url, privacy_notes=privacy, reliability_class=reliability,
         expected_information_gain=gain, rate_limit_notes=rate, enabled=enabled,
-        reviewed_at="2026-09-20", implementation_status=status, parser_version=parser,
+        reviewed_at=reviewed_at, implementation_status=status, parser_version=parser,
+        api_key_present=api_key_present,
     )
 
 
-def build_default_source_registry() -> SourceRegistry:
+def build_default_source_registry(*, brave_api_key_present: bool | None = None) -> SourceRegistry:
+    if brave_api_key_present is None:
+        brave_api_key_present = bool(os.environ.get("LUMIR_BRAVE_SEARCH_API_KEY", "").strip())
     registry = SourceRegistry()
     definitions = (
         _definition("first_party_web", "First-party public web", C.FIRST_PARTY_WEB,
@@ -118,6 +124,19 @@ def build_default_source_registry() -> SourceRegistry:
                     (E.WEBSITE, E.DOCUMENT), SourceClass.PASSIVE_WEB, "Public HTML GET",
                     "https://html.duckduckgo.com/html/", Q.AGGREGATOR, 0.55,
                     terms_url="https://duckduckgo.com/terms", rate="Low-volume serial discovery; challenge means UNKNOWN."),
+        _definition("brave_search_api", "Brave Search API", C.SEARCH_ENGINE,
+                    (R.DISCOVERY,), (E.PHONE, E.EMAIL, E.USERNAME, E.DOMAIN, E.COMPANY, E.WEBSITE),
+                    (E.WEBSITE, E.DOMAIN, E.DOCUMENT, E.COMPANY, E.EMAIL, E.USERNAME, E.PHONE),
+                    SourceClass.PASSIVE_WEB, "Official HTTPS JSON API",
+                    "https://api.search.brave.com/res/v1/web/search", Q.AGGREGATOR, 0.72,
+                    enabled=brave_api_key_present, auth=True, key=True, paid=True,
+                    status=I.IMPLEMENTED if brave_api_key_present else I.AUTH_REQUIRED,
+                    parser="brave-web-json-v1", api_key_present=brave_api_key_present,
+                    reviewed_at="2026-09-21",
+                    terms_url="https://brave.com/search/api/terms-of-service/",
+                    privacy=("Brave receives the submitted query and network metadata; the API key is read "
+                             "only from LUMIR_BRAVE_SEARCH_API_KEY and is never persisted."),
+                    rate="Bounded locally to six queries per entity/provider; HTTP 429 is not retried."),
         _definition("common_crawl_index", "Common Crawl URL index", C.PUBLIC_ARCHIVE,
                     (R.DISCOVERY, R.ENRICHMENT), (E.DOMAIN, E.WEBSITE), (E.WEBSITE, E.DOCUMENT),
                     SourceClass.PASSIVE_WEB, "Public CDX index", "https://index.commoncrawl.org/",

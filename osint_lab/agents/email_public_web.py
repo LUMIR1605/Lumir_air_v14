@@ -8,6 +8,8 @@ from urllib.parse import quote, urlsplit
 from osint_lab.orchestrator.context import ExecutionContext
 from osint_lab.policies import SourceClass
 from osint_lab.schemas import FindingStatus
+from osint_lab.graph.models import GraphEntityType
+from osint_lab.sources.discovery import MultiProviderDiscoveryEngine
 
 from .base import Collector, FindingCandidate, RawObservation
 from .email_exposure import normalize_email
@@ -25,7 +27,8 @@ class EmailPublicWebCollector(Collector):
     search_url = "https://html.duckduckgo.com/html/?q={query}"
 
     def __init__(self, *, search_client=None, target_fetcher=None,
-                 clock: Callable[[], datetime] | None = None, max_targets: int = 5) -> None:
+                 clock: Callable[[], datetime] | None = None, max_targets: int = 5,
+                 discovery_engine: MultiProviderDiscoveryEngine | None = None) -> None:
         super().__init__()
         self._search = search_client or RequestsPhonePublicHttpClient()
         self._fetcher = target_fetcher or TargetPageFetcher()
@@ -33,24 +36,32 @@ class EmailPublicWebCollector(Collector):
         if max_targets <= 0:
             raise ValueError("max_targets must be positive")
         self._max_targets = max_targets
+        self._discovery_engine = discovery_engine
 
     def validate_input(self, seed_reference: str) -> None:
         normalize_email(seed_reference)
 
     def _run(self, context: ExecutionContext, seed_reference: str) -> tuple[RawObservation, ...]:
         email, local, domain = normalize_email(seed_reference)
-        request_url = self.search_url.format(query=quote(f'"{email}"', safe=""))
-        try:
-            response = self._search.get(request_url, timeout=8.0,
-                                        headers={"User-Agent": "LumirOSINTLab-EmailPublicWeb/1.0"})
-        except Exception:
-            return (self._unknown(email, "SEARCH_FAILURE"),)
-        if response.status_code == 429:
-            return (self._unknown(email, "RATE_LIMITED"),)
-        if response.status_code != 200 or response.body_truncated:
-            return (self._unknown(email, "SEARCH_UNKNOWN"),)
-        urls = parse_search_urls(response.body, self._max_targets)
         observations = []
+        if self._discovery_engine is not None:
+            run = self._discovery_engine.discover(
+                case_id=context.case_id, entity_type=GraphEntityType.EMAIL, value=email)
+            urls = tuple(item.url for item in run.results[:self._max_targets])
+            observations.extend(self._provider_observation(email, item, run.coverage.to_dict())
+                                for item in run.provider_responses)
+        else:
+            request_url = self.search_url.format(query=quote(f'"{email}"', safe=""))
+            try:
+                response = self._search.get(request_url, timeout=8.0,
+                                            headers={"User-Agent": "LumirOSINTLab-EmailPublicWeb/1.0"})
+            except Exception:
+                return (self._unknown(email, "SEARCH_FAILURE"),)
+            if response.status_code == 429:
+                return (self._unknown(email, "RATE_LIMITED"),)
+            if response.status_code != 200 or response.body_truncated:
+                return (self._unknown(email, "SEARCH_UNKNOWN"),)
+            urls = parse_search_urls(response.body, self._max_targets)
         for url in urls:
             result = self._fetcher.fetch(url)
             if result.fetch_status is not FetchStatus.SUCCESS:
@@ -79,7 +90,31 @@ class EmailPublicWebCollector(Collector):
                          "domain": domain, "body_sha256": result.body_sha256,
                          "collected_at": self._clock().isoformat(), "failure_status": "SUCCESS"},
             ))
-        return tuple(observations) or (self._unknown(email, "NO_MATCH"),)
+        has_match = any(item.raw_status in {
+            "STRUCTURED_EMAIL_MATCH", "EXACT_EMAIL_MATCH", "OBFUSCATED_EMAIL_MATCH"
+        } for item in observations)
+        if has_match or observations:
+            return tuple(observations)
+        return (self._unknown(email, "NO_MATCH"),)
+
+    @staticmethod
+    def _provider_observation(email, response, coverage):
+        failure = {
+            "SUCCESS": "SUCCESS", "NO_RESULTS": "NO_MATCH", "AUTH_REQUIRED": "AUTH_REQUIRED",
+            "RATE_LIMITED": "RATE_LIMITED", "TIMEOUT": "TIMEOUT", "PARSER_ERROR": "PARSER_FAILURE",
+        }.get(response.status.value, "UNKNOWN")
+        return RawObservation(
+            raw_status="DISCOVERY_STATUS", value_reference="email-discovery:" +
+            hashlib.sha256(f"{response.provider_id}|{email}".encode()).hexdigest(),
+            notes="Search result is discovery only and is not evidence.",
+            payload={"source_id": response.provider_id, "provider_id": response.provider_id,
+                     "source_role": "DISCOVERY", "stage": "SEARCH_DISCOVERY",
+                     "provider_status": response.status.value, "failure_status": failure,
+                     "query_id": response.query_id,
+                     "query_sha256": hashlib.sha256(response.query_text.encode()).hexdigest(),
+                     "result_count": len(response.results), "error_code": response.error_code,
+                     "discovery_coverage": coverage},
+        )
 
     def normalize(self, observation: RawObservation) -> FindingCandidate:
         if observation.raw_status in {"EXACT_EMAIL_MATCH", "STRUCTURED_EMAIL_MATCH", "OBFUSCATED_EMAIL_MATCH"}:

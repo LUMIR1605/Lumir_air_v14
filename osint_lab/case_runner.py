@@ -482,17 +482,20 @@ class EnrichmentExecutionLoop:
 
 
 def build_default_collectors() -> dict[str, Collector]:
+    from osint_lab.sources import RateLimiter, RequestBudget, build_default_discovery_engine
+    discovery_limiter = RateLimiter(RequestBudget())
+    discovery_engine = lambda: build_default_discovery_engine(rate_limiter=discovery_limiter)
     collectors: tuple[Collector, ...] = (
         PhoneMetadataCollector(),
-        PhonePublicWebCollector(),
+        PhonePublicWebCollector(discovery_engine=discovery_engine()),
         DomainDNSCollector(),
-        UsernameCollector(),
+        UsernameCollector(discovery_engine=discovery_engine()),
         EmailLocalMetadataCollector(),
         EmailExposureCollector(),
-        EmailPublicWebCollector(),
+        EmailPublicWebCollector(discovery_engine=discovery_engine()),
         DomainRdapCollector(),
         WebsiteMetadataCollector(),
-        CompanyPublicWebCollector(),
+        CompanyPublicWebCollector(discovery_engine=discovery_engine()),
         DocumentIntelligenceCollector(),
         PublicArchiveCollector(),
     )
