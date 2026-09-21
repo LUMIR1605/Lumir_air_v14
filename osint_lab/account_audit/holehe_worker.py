@@ -13,6 +13,15 @@ import pkgutil
 import shutil
 import sys
 
+# When this file is executed directly, its directory contains our adapter
+# named holehe.py. Remove that directory from sys.path so imports resolve
+# to the externally installed Holehe package instead of the local adapter.
+_WORKER_DIR = Path(__file__).resolve().parent
+sys.path[:] = [
+    entry for entry in sys.path
+    if Path(entry or ".").resolve() != _WORKER_DIR
+]
+
 
 _LOGIN = frozenset({
     "amazon", "bitmoji", "ebay", "eventbrite", "evernote", "flickr", "freelancer",
@@ -139,3 +148,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
