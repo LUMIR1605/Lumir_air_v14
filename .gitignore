@@ -25,3 +25,5 @@ shield_report*.pdf
 
 # Logs
 *.log
+
+.holehe-venv/

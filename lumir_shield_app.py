@@ -51,7 +51,7 @@ class LumirShieldApp(tk.Tk):
         panel = ttk.Frame(self, style="Panel.TFrame", padding=32)
         panel.pack(fill="both", expand=True, padx=28, pady=28)
         ttk.Label(panel, text="LUMIR SHIELD", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(panel, text="Bezpieczna kontrola własnych danych  |  RC6", style="Text.TLabel").pack(anchor="w", pady=(4, 2))
+        ttk.Label(panel, text="Bezpieczna kontrola własnych danych  |  RC7", style="Text.TLabel").pack(anchor="w", pady=(4, 2))
         ttk.Label(panel, text="Publiczne źródła i lokalne moduły — bez dostępu do prywatnych kont.", style="Text.TLabel").pack(anchor="w", pady=(0, 22))
 
         ttk.Label(panel, text="Typ danych", style="Text.TLabel").pack(anchor="w")

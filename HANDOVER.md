@@ -32,3 +32,16 @@ Stan produktu: PARTIAL — zintegrowany i sprawdzony offline kod; pełne MVP wym
 ## NASTĘPNY KROK
 - Przejrzeć gałąź RC7, przygotować odrębny build i test GUI bez rzeczywistych skanów. Przed użyciem Holehe ustalić przypiętą wersję i izolowany runner bez autoaktualizacji; dopiero osobna zgoda umożliwia test na własnych danych.
 - Rollback: użyć zachowanego RC6; nie resetować ani usuwać oryginalnej przestrzeni. Backup pozostaje lokalny i nie jest publikowany.
+
+
+## FINAL BUILD — 2026-11-24
+
+WYKONANE: osobny LumirShield-RC7.exe (PyInstaller) i LumirShield-Setup-RC7.exe (Inno Setup 6). Pliki w outputs/RC7 bieżącego zadania; nie zastępują RC6. Instalator ma odrębny AppId i katalog LocalAppData/Lumir SHIELD RC7. Nowy build_rc7.ps1 odtwarza build. Skrypt nie uruchamia instalacji.
+
+WYNIKI TESTÓW: 37/37 pytest offline; GUI Tk z kodu źródłowego uruchomione; rzeczywista metoda GUI _run wygenerowała HTML/PDF/JSON dla email, phone i username z atrapami wszystkich źródeł i blokadą sieci/procesów. JSON sprawdzony, HTML zawiera branding, tekst wszystkich stron PDF odczytany. Powtarzalny test: tools/gui_offline_check.py (PYTHONPATH=repo). Dotychczasowy odbiór wizualny raportów pozostaje aktualny; silnik i raporty nie zostały zmienione w etapie build. RC6 EXE nadal ma SHA-256 005A28C64FEEA4A119EBAAC8403F90BD301592D33A801DBD62DA8E7020504493.
+
+Holehe: izolowany .holehe-venv, pakiet 1.61; pełne wersje zależności w holehe-rc7-lock.txt. W lokalnym core.py zastąpiono check_update funkcją bez efektów ubocznych, oryginał zachowano obok. Narzędzie tools/disable_holehe_updates.py odtwarza patch tylko dla 1.61. Test tools/holehe_offline_check.py: 144 moduły importują się na Python 3.14.6, aktualizator nie kontaktuje sieci; pip check OK. Nie uruchomiono CLI ani żadnego źródła. To kompatybilność importów, nie skuteczność usług. Venv nie jest dołączone do EXE ani PATH systemu; integracja operacyjna Holehe nadal wymaga osobnego odbioru. Brak globalnych instalacji.
+
+NIEWYKONANE / BLOCKED: Windows odmawia uruchomienia gotowego EXE: ShellExecuteW=5, a zwykły Start-Process poza sandboxem potwierdza „Zasady kontroli aplikacji zablokowały ten plik”. Dwie próby zakończone; nie wykonywać dalszych obejść. Nie zmieniano zabezpieczeń. Z tego powodu test GUI/eksportów spakowanego EXE nie jest zaliczony, instalatora nie uruchamiano, skrótu na pulpicie nie utworzono. Testy źródeł nie zastępują odbioru binarnego.
+
+NASTĘPNY KROK: podpisać wydanie akceptowanym certyfikatem lub wykonać zatwierdzony test na innym komputerze bez tej blokady. Nie oznaczać produktu jako gotowego. Main nie jest scalany; publikowany jest tylko kod/receptury/testy i dokumentacja, bez binariów, venv i raportów.
