@@ -26,18 +26,18 @@ def run(scan_type, value, consent_declared=False):
         report["executive_summary"] = ["Analiza nie została uruchomiona: wymagane jest potwierdzenie skanowania własnych danych."]
         return report
 
-    def add(scanner, target, name):
+    def add(scanner, target, name, **kwargs):
         try:
-            module = scanner(target)
+            module = scanner(target, **kwargs)
         except Exception as error:
-            module = module_placeholder(name, "error", f"scanner error: {error}", profile[name])
+            module = module_placeholder(name, "error", f"scanner error: {type(error).__name__}", profile[name])
         module.setdefault("sources", [source_record("local_dns", module.get("scan_status", "completed"), confidence=0.7)])
         modules.append(normalize_module(module, profile[name]))
 
     if scan_type == "email":
         add(email_scan, value, "email_scan")
         add(breach_scan, value, "breach_scan")
-        modules.append(normalize_module(account_exposure_scan(value, consent_declared=consent_declared), profile["account_exposure_scan"]))
+        add(account_exposure_scan, value, "account_exposure_scan", consent_declared=consent_declared)
         add(domain_scan, value.split("@", 1)[1], "domain_scan")
     elif scan_type == "domain":
         add(domain_scan, value, "domain_scan")
@@ -50,6 +50,9 @@ def run(scan_type, value, consent_declared=False):
         modules.extend([module_placeholder("url_scan", "blocked", "direct web probing is not allowlisted", profile["url_scan"]), module_placeholder("domain_scan", "not_applicable", "not independently executed for URL scan", profile["domain_scan"]), module_placeholder("web_security_scan", "blocked", "direct web probing is not allowlisted", profile["web_security_scan"])])
 
     report["modules"] = modules
+    account = next((m for m in modules if m["module"] == "account_exposure_scan"), {})
+    if account.get("services"):
+        report["services"] = account["services"]
     report["request_log"] = [entry for module in modules for entry in module.get("request_log", [])]
     report["requests"] = {"attempted_count": len(report["request_log"]), "completed_count": len([entry for entry in report["request_log"] if entry["status"] == "completed"]), "failed_count": len([entry for entry in report["request_log"] if entry["status"] != "completed"]), "log_entries": report["request_log"]}
     if report["request_log"]:

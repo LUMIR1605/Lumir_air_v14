@@ -21,11 +21,11 @@ def test_holehe_normalizes_found_services():
     assert "stdout" not in result
 
 
-def test_holehe_returns_completed_empty_result():
+def test_holehe_empty_output_is_unverified():
     with patch("shield.holehe_scan.subprocess.run", return_value=_completed("")):
         result = holehe_scan("test@example.com")
 
-    assert result["scan_status"] == "completed"
+    assert result["scan_status"] == "unavailable"
     assert result["services"] == []
     assert result["checked"] == 0
 

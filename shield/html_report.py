@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from html import escape
 from pathlib import Path
+from shield.discovery_report import details as discovery_details
 
 
 TYPE_NAMES = {"email": "adres e-mail", "phone": "numer telefonu", "username": "nick / username"}
@@ -48,7 +49,7 @@ def _details(report: dict) -> list[tuple[str, str]]:
     username = modules.get("username_scan", {})
     profile = username.get("profile") or {}
     return [
-        ("Format nicku", "Potwierdzony"), ("Platforma", _safe(profile.get("platform"))),
+        ("Format nicku", "Potwierdzony" if username.get("username") else "Brak danych"), ("Platforma", _safe(profile.get("platform"))),
         ("Publiczny profil", _safe(profile.get("url"))), ("Typ konta", _safe(profile.get("account_type"))),
         ("Publiczne repozytoria", _safe(profile.get("public_repos"))),
         ("Własność profilu", "Niepotwierdzona — zgodność nicku nie dowodzi tożsamości."),
@@ -89,11 +90,16 @@ def build(report, outfile="shield_report_v2.html"):
     assessment = report.get("security_assessment") or {}
     coverage = report.get("coverage") or {}
     details = "".join(f"<tr><th>{escape(label)}</th><td>{escape(value)}</td></tr>" for label, value in _details(report))
+    discovery = ""
+    if report.get("scan_type") == "email":
+        rows = "".join(f"<tr><th>{escape(k)}</th><td>{escape(v)}</td></tr>" for k, v in discovery_details(report))
+        discovery = f"<section><h2>Account Discovery</h2><table>{rows}</table></section>"
     content = f"""<!doctype html><html lang='pl'><head><meta charset='utf-8'><title>Lumir SHIELD — raport</title>
-<style>body{{font-family:Segoe UI,Arial,sans-serif;background:#06111f;color:#eef7ff;margin:0}}main{{max-width:1040px;margin:auto;padding:42px}}header,.card,section{{background:#0a1a2d;border:1px solid #1b466b;border-radius:16px;padding:22px;margin:18px 0}}h1{{margin:0;color:#5be4ff}}h2{{color:#5be4ff}}h3{{margin:0 0 12px}}.muted{{color:#b9cadb}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}}.card{{margin:0}}table{{width:100%;border-collapse:collapse}}th,td{{text-align:left;padding:10px;border-bottom:1px solid #1b466b;vertical-align:top}}th{{color:#8cecff}}.warn{{color:#ffd36a}}code{{color:#a5efff}}</style></head><body><main>
+<style>body{{font-family:Segoe UI,Arial,sans-serif;background:#06111f;color:#eef7ff;margin:0}}main{{max-width:1040px;margin:auto;padding:42px}}header,.card,section{{background:#0a1a2d;border:1px solid #1b466b;border-radius:16px;padding:22px;margin:18px 0}}h1{{margin:0;color:#5be4ff}}h2{{color:#5be4ff}}h3{{margin:0 0 12px}}.muted{{color:#b9cadb}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}}.card{{margin:0}}table{{overflow-wrap:anywhere;width:100%;border-collapse:collapse}}th,td{{text-align:left;padding:10px;border-bottom:1px solid #1b466b;vertical-align:top}}th{{color:#8cecff}}.warn{{color:#ffd36a}}code{{color:#a5efff}}@media(max-width:600px){{main{{padding:12px}}th,td{{padding:6px}}th{{width:40%}}}}</style></head><body><main>
 <header><h1>LUMIR SHIELD</h1><p class='muted'>Raport własnych danych · {escape(TYPE_NAMES.get(report.get('scan_type'), str(report.get('scan_type'))))}</p><p><b>Cel:</b> {escape(_safe(report.get('target')))}<br><b>Data:</b> {escape(datetime.now().strftime('%d.%m.%Y, %H:%M'))}<br><b>Zgoda:</b> {'potwierdzona' if (report.get('consent') or {}).get('declared') else 'brak — analiza zablokowana'}</p></header>
 <section><h2>Uczciwa ocena zakresu</h2><div class='grid'><article class='card'><b>Wynik techniczny</b><p>{escape(_safe(assessment.get('score')))} / 100</p></article><article class='card'><b>Pokrycie modułów</b><p>{escape(_safe(coverage.get('module_weighted_percent')))}%</p></article><article class='card'><b>Wiarygodność</b><p>{escape(_safe(report.get('assessment_reliability')))}</p></article></div><p class='warn'>{escape(_safe(assessment.get('public_verdict')))}</p></section>
 <section><h2>Wyniki dla wybranego typu danych</h2><table>{details}</table></section>
+{discovery}
 <section><h2>Moduły i statusy</h2><div class='grid'>{_module_cards(report)}</div></section>
 <section><h2>Źródła i poziom pewności</h2><table><tr><th>Źródło</th><th>Status</th><th>Pewność</th><th>Status zasad</th></tr>{_sources(report)}</table><p class='muted'>„Niepotwierdzone” oznacza brak twardego dowodu. Raport nie wyciąga z tego negatywnego wniosku.</p></section>
 <section><h2>Zakres i prywatność</h2><p>Raport korzysta wyłącznie z lokalnych modułów i zatwierdzonych źródeł publicznych. Nie loguje się do kont, nie omija zabezpieczeń i nie potwierdza tożsamości osoby na podstawie samego nicku lub numeru.</p></section>

@@ -33,6 +33,8 @@ def _service_names(stdout):
         name = " ".join(clean_line[3:].split())
         if not name or "email used" in name.casefold():
             continue
+        # Holehe may append recovery addresses, phones and names. Retain only service.
+        name = name.split()[0]
         identifier = name.casefold()
         if identifier not in seen:
             seen.add(identifier)
@@ -65,4 +67,6 @@ def scan(email):
         return _result("error", error_reason="HOLEHE_PROCESS_FAILED", exit_code=exit_code)
 
     checked, services = _service_names(getattr(result, "stdout", "") or "")
+    if not services:
+        return _result("unavailable", error_reason="HOLEHE_NO_RECOGNIZED_EVIDENCE", exit_code=exit_code)
     return _result("completed", checked=checked, services=services, exit_code=exit_code)

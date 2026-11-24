@@ -6,6 +6,8 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
+from shield.discovery_report import details as discovery_details
+
 import reportlab
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -53,7 +55,7 @@ def _details(report):
         return [("Format numeru", "Potwierdzony" if phone.get("valid") else "Niepotwierdzony"), ("Format międzynarodowy", _safe(phone.get("international"))), ("Kraj / obszar", _safe(phone.get("country"))), ("Operator", _safe(phone.get("operator"))), ("Własność numeru", "Niepotwierdzona — aplikacja nie identyfikuje osoby.")]
     username = modules.get("username_scan", {})
     profile = username.get("profile") or {}
-    return [("Format nicku", "Potwierdzony"), ("Platforma", _safe(profile.get("platform"))), ("Publiczny profil", _safe(profile.get("url"))), ("Typ konta", _safe(profile.get("account_type"))), ("Publiczne repozytoria", _safe(profile.get("public_repos"))), ("Własność profilu", "Niepotwierdzona — zgodność nicku nie dowodzi tożsamości.")]
+    return [("Format nicku", "Potwierdzony" if username.get("username") else "Brak danych"), ("Platforma", _safe(profile.get("platform"))), ("Publiczny profil", _safe(profile.get("url"))), ("Typ konta", _safe(profile.get("account_type"))), ("Publiczne repozytoria", _safe(profile.get("public_repos"))), ("Własność profilu", "Niepotwierdzona — zgodność nicku nie dowodzi tożsamości.")]
 
 
 def _paragraph(text, style):
@@ -75,7 +77,7 @@ def build(report, outfile="shield_report.pdf"):
     _register_fonts()
     styles = getSampleStyleSheet()
     title = ParagraphStyle("title", parent=styles["Title"], fontName="LumirBold", fontSize=24, leading=28, textColor=CYAN, spaceAfter=8)
-    h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontName="LumirBold", fontSize=14, leading=18, textColor=CYAN, spaceBefore=14, spaceAfter=8)
+    h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontName="LumirBold", fontSize=14, leading=18, textColor=CYAN, spaceBefore=14, spaceAfter=8, keepWithNext=True)
     body = ParagraphStyle("body", parent=styles["BodyText"], fontName="LumirRegular", fontSize=9.5, leading=13, textColor=TEXT)
     small = ParagraphStyle("small", parent=body, fontSize=8.5, leading=11, textColor=MUTED)
     doc = SimpleDocTemplate(outfile, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=18 * mm, bottomMargin=22 * mm)
@@ -91,18 +93,25 @@ def build(report, outfile="shield_report.pdf"):
     ]
     summary = Table([[ _paragraph(label, small), _paragraph(value, body)] for label, value in summary_rows], colWidths=[48 * mm, 124 * mm])
     summary.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PANEL), ("GRID", (0, 0), (-1, -1), .35, colors.HexColor("#1B466B")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
-    flow.extend([summary, Spacer(1, 5 * mm), Paragraph(_safe(assessment.get("public_verdict")), ParagraphStyle("notice", parent=body, textColor=AMBER))])
+    flow.extend([summary, Spacer(1, 5 * mm), Paragraph(escape(_safe(assessment.get("public_verdict"))), ParagraphStyle("notice", parent=body, textColor=AMBER))])
     flow.append(Paragraph("Wyniki dla wybranego typu danych", h2))
     details = Table([[ _paragraph(label, small), _paragraph(value, body)] for label, value in _details(report)], colWidths=[55 * mm, 117 * mm])
     details.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PANEL), ("GRID", (0, 0), (-1, -1), .35, colors.HexColor("#1B466B")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
     flow.append(details)
-    flow.append(Paragraph("Moduły, źródła i pewność", h2))
+    if report.get("scan_type") == "email":
+        flow.append(Paragraph("Account Discovery", h2))
+        for label, value in discovery_details(report):
+            flow.append(_paragraph(f"{label}: {value}", body))
+    first_module = True
     for module in report.get("modules", []):
         if not isinstance(module, dict):
             continue
         source_text = "; ".join(f"{source.get('source_name', source.get('source_id'))}: {STATUS_NAMES.get(source.get('status'), source.get('status'))}; pewność {source.get('confidence', 'brak')}" for source in module.get("sources", [])) or "Brak wykonanego źródła."
         findings = "; ".join(_safe(item) for item in (module.get("findings") or [module.get("error_reason") or "Brak dodatkowych ustaleń."]))
         section = [Paragraph(escape(str(module.get("module"))), ParagraphStyle("module", parent=body, fontName="LumirBold", textColor=CYAN)), _paragraph(f"Status: {STATUS_NAMES.get(module.get('scan_status'), module.get('scan_status'))}. {findings}", body), _paragraph(f"Źródła: {source_text}", small), Spacer(1, 4 * mm)]
+        if first_module:
+            section.insert(0, Paragraph("Moduły, źródła i pewność", h2))
+            first_module = False
         flow.append(KeepTogether(section))
     flow.extend([Paragraph("Zakres i ograniczenia", h2), _paragraph("Raport korzysta wyłącznie z lokalnych modułów oraz zatwierdzonych źródeł publicznych. Nie loguje się do kont, nie omija zabezpieczeń i nie potwierdza tożsamości osoby na podstawie samego nicku lub numeru. Status „niepotwierdzone” oznacza brak twardego dowodu, a nie negatywny wynik.", body)])
     doc.build(flow, onFirstPage=_footer, onLaterPages=_footer)

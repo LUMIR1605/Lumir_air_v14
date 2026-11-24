@@ -1,0 +1,10 @@
+# Verified Windows Python 3.14.6 environment; no global install required.
+requests==2.34.2
+dnspython==2.8.0
+jinja2==3.1.6
+phonenumbers==9.0.34
+reportlab==5.0.0
+pytest==8.4.2
+pyflakes==3.4.0
+pypdf==6.19.0
+# Holehe is optional, external and not yet approved for operational use.
